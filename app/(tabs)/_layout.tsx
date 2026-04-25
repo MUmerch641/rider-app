@@ -1,59 +1,87 @@
-import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { BellTabIcon, MapIcon, RideIcon } from "@/components/ui/icons";
+import { isRTL } from "@/constants/i18n";
+import { Colors } from "@/constants/theme";
+import { useAppFont } from "@/hooks/useAppFont";
+import { LinearGradient } from "expo-linear-gradient";
+import { Tabs } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { View } from "react-native";
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
-}
+const TAB_SCREENS = [
+  {
+    name: "index",
+    labelKey: "tabs.orders",
+    Icon: RideIcon,
+  },
+  {
+    name: "onmap",
+    labelKey: "tabs.onmap",
+    Icon: MapIcon,
+  },
+  {
+    name: "inbox",
+    labelKey: "tabs.inbox",
+    Icon: BellTabIcon,
+  },
+];
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { t, i18n } = useTranslation();
+  const rtl = isRTL(i18n.language);
+  const font = useAppFont();
+
+  // Reverse tab order for RTL
+  const screens = rtl ? [...TAB_SCREENS].reverse() : TAB_SCREENS;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-        }}
-      />
+        headerShown: false,
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: "#7C7890",
+        tabBarStyle: {
+          backgroundColor: Colors.card,
+          borderTopColor: "#FFFFFFE5",
+          height: 100,
+          paddingTop: 20,
+          padding: 5,
+        },
+        tabBarLabelStyle: {
+          fontFamily: font.semibold,
+          fontSize: 11,
+        },
+        tabBarBackground: () => (
+          <>
+            <LinearGradient
+              colors={["rgba(0, 0, 0, 0.03)", "transparent"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 10,
+                zIndex: 1,
+              }}
+            />
+            <View style={{ flex: 1, backgroundColor: Colors.card }} />
+          </>
+        ),
+      }}
+    >
+      {screens.map(({ name, labelKey, Icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title: t(labelKey),
+            tabBarIcon: ({ color, focused }) => (
+              <Icon variant={"outline"} color={color} />
+            ),
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

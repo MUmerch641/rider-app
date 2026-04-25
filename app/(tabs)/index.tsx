@@ -1,31 +1,38 @@
-import { StyleSheet } from 'react-native';
+import { Colors } from "@/constants/theme";
+import { storage } from "@/utils/storage";
+import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import OrdersScreen from "../orders";
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+export default function Index() {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
-export default function TabOneScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
-    </View>
-  );
+  useEffect(() => {
+    storage.get("user_token").then((token) => {
+      setIsLoggedIn(!!token);
+    });
+  }, []);
+
+  // Still checking
+  if (isLoggedIn === null) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: Colors.card,
+        }}
+      >
+        <ActivityIndicator color={Colors.primary} />
+      </View>
+    );
+  }
+
+  // Not logged in → go to auth
+  if (!isLoggedIn) return <Redirect href="/auth/auth_screen" />;
+
+  // Logged in → show dashboard
+  return <OrdersScreen />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
-  },
-});
