@@ -91,11 +91,7 @@ export default function RevenueScreen() {
           ]}
         >
           {/* Orders */}
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => router.push("./revenue_screen")}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>
             <View
               style={[
                 styles.statIconWrapper,
@@ -117,11 +113,7 @@ export default function RevenueScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.statCard}
-            onPress={() => router.push("./revenue_screen")}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>
             <View
               style={[
                 styles.statIconWrapper,

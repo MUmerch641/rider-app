@@ -2,11 +2,11 @@ import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
-    fontSize,
-    radius,
-    scale,
-    spacing,
-    verticalScale,
+  fontSize,
+  radius,
+  scale,
+  spacing,
+  verticalScale,
 } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -16,11 +16,10 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 import MapView, { Circle, Marker } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -110,14 +109,6 @@ export default function OrderRadiusScreen() {
   return (
     <SafeAreaView style={styles.root} edges={{}}>
       <View style={styles.mapBg}>
-        {locationLoading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#2F80FF" />
-            <Text style={[styles.loadingText, { fontFamily: font.regular }]}>
-              {t("orderRadius.findLoading")}
-            </Text>
-          </View>
-        )}
         <MapView
           style={StyleSheet.absoluteFillObject}
           initialRegion={{

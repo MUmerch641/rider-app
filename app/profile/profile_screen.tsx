@@ -107,39 +107,38 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
+      {/* ── Header ── */}
+      <View style={[styles.header, { flexDirection: row }]}>
+        {/* Back button */}
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.75}
+        >
+          <Ionicons
+            name={rtl ? "arrow-forward" : "arrow-back"}
+            size={scale(20)}
+            color={Colors.textPrimary}
+          />
+        </TouchableOpacity>
+
+        {/* Title */}
+        <Text
+          style={[
+            styles.headerTitle,
+            { fontFamily: font.semibold, textAlign: "center" },
+          ]}
+        >
+          {t("profile.title", "Profile")}
+        </Text>
+
+        {/* Language toggle */}
+        <LanguageSelector />
+      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* ── Header ── */}
-        <View style={[styles.header, { flexDirection: row }]}>
-          {/* Back button */}
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => router.back()}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name={rtl ? "arrow-forward" : "arrow-back"}
-              size={scale(20)}
-              color={Colors.textPrimary}
-            />
-          </TouchableOpacity>
-
-          {/* Title */}
-          <Text
-            style={[
-              styles.headerTitle,
-              { fontFamily: font.semibold, textAlign: "center" },
-            ]}
-          >
-            {t("profile.title", "Profile")}
-          </Text>
-
-          {/* Language toggle */}
-          <LanguageSelector />
-        </View>
-
         {/* ── Driver Balance Card ── */}
         <DriverBalanceCard
           name="Ahmad Mohammad"
@@ -316,6 +315,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
+    marginHorizontal: verticalScale(8),
   },
   headerBtn: {
     width: scale(40),

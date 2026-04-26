@@ -166,57 +166,58 @@ export function OrderHeader({
   });
 
   return (
-    <View style={styles.wrapper}>
-      {/* Single unified animated container */}
-      <Animated.View style={[styles.card, { height: heightAnim }]}>
-        {/* ── Header row ── */}
-        <View
-          style={[
-            styles.headerRow,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
-          {/* Back button */}
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={onBack}
-            activeOpacity={0.75}
+    <TouchableOpacity
+      onPress={() => setExpanded((v) => !v)}
+      activeOpacity={0.9}
+    >
+      <View style={styles.wrapper}>
+        {/* Single unified animated container */}
+        <Animated.View style={[styles.card, { height: heightAnim }]}>
+          {/* ── Header row ── */}
+          <View
+            style={[
+              styles.headerRow,
+              { flexDirection: rtl ? "row-reverse" : "row" },
+            ]}
           >
-            <Ionicons
-              name={rtl ? "arrow-forward" : "arrow-back"}
-              size={scale(20)}
-              color="#fff"
-            />
-          </TouchableOpacity>
-
-          {/* Center — order title + status */}
-          <View style={styles.centerBlock}>
-            <Text
-              style={[
-                styles.orderTitle,
-                { fontFamily: font.bold, letterSpacing: rtl ? 0 : 0.3 },
-              ]}
+            {/* Back button */}
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={onBack}
+              activeOpacity={0.75}
             >
-              {t("orderHeader.order", "Order")} #{orderNumber}
-            </Text>
-            <Text
-              style={[
-                styles.statusLabel,
-                {
-                  fontFamily: font.semibold,
-                  letterSpacing: rtl ? 0 : scale(1.5),
-                },
-              ]}
-            >
-              {t(statusKey, statusFallback)}
-            </Text>
-          </View>
+              <Ionicons
+                name={rtl ? "arrow-forward" : "arrow-back"}
+                size={scale(20)}
+                color="#fff"
+              />
+            </TouchableOpacity>
 
-          {/* Dollar icon button */}
-          <TouchableOpacity
-            onPress={() => setExpanded((v) => !v)}
-            activeOpacity={0.75}
-          >
+            {/* Center — order title + status */}
+            <View style={styles.centerBlock}>
+              <Text
+                style={[
+                  styles.orderTitle,
+                  { fontFamily: font.bold, letterSpacing: rtl ? 0 : 0.3 },
+                ]}
+              >
+                {t("orderHeader.order", "Order")} #{orderNumber}
+              </Text>
+              <Text
+                style={[
+                  styles.statusLabel,
+                  {
+                    fontFamily: font.semibold,
+                    letterSpacing: rtl ? 0 : scale(1.5),
+                  },
+                ]}
+              >
+                {t(statusKey, statusFallback)}
+              </Text>
+            </View>
+
+            {/* Dollar icon button */}
+
             <Animated.View
               style={[styles.iconBtn, { backgroundColor: iconBgColor }]}
             >
@@ -224,63 +225,68 @@ export function OrderHeader({
                 <SvgXml xml={DOLLAR_SVG} width={scale(22)} height={scale(22)} />
               </Animated.View>
             </Animated.View>
-          </TouchableOpacity>
-        </View>
-        {/* ── Earnings panel ── */}
-        <Animated.View
-          style={{
-            opacity: earningsOpacity,
-            transform: [{ translateY: earningsTranslateY }],
-          }}
-        >
-          <LinearGradient
-            colors={
-              rtl
-                ? ["#121212", "#121212", "#121212", "#7e22ce21"]
-                : ["#7E22CE33", "#121212", "#121212", "#121212"]
-            }
-            locations={rtl ? [1, 0.75, 0.4, 0] : [0, 0.4, 0.75, 1]}
-            start={{ x: rtl ? 0 : 1.1, y: 0.5 }}
-            end={{ x: rtl ? 0.8 : 0, y: 0.5 }}
-            style={[
-              styles.earningsPanel,
-              {
-                alignItems: rtl ? "flex-end" : "flex-start",
-              },
-            ]}
+          </View>
+          {/* ── Earnings panel ── */}
+          <Animated.View
+            style={{
+              opacity: earningsOpacity,
+              transform: [{ translateY: earningsTranslateY }],
+            }}
           >
-            <Text
+            <LinearGradient
+              colors={
+                rtl
+                  ? ["#121212", "#121212", "#121212", "#7e22ce21"]
+                  : ["#7E22CE33", "#121212", "#121212", "#121212"]
+              }
+              locations={rtl ? [1, 0.75, 0.4, 0] : [0, 0.4, 0.75, 1]}
+              start={{ x: rtl ? 0 : 1.1, y: 0.5 }}
+              end={{ x: rtl ? 0.8 : 0, y: 0.5 }}
               style={[
-                styles.earningsLabel,
+                styles.earningsPanel,
                 {
-                  fontFamily: font.semibold,
-                  textAlign: rtl ? "right" : "left",
-                  letterSpacing: rtl ? 0 : scale(1.2),
+                  alignItems: rtl ? "flex-end" : "flex-start",
                 },
               ]}
             >
-              {t("orderHeader.estimatedEarnings", "ESTIMATED EARNINGS")}
-            </Text>
-
-            <View
-              style={[
-                styles.earningsAmountRow,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
-              <Text style={[styles.earningsAmount, { fontFamily: font.bold }]}>
-                {estimatedEarnings.toLocaleString()}
-              </Text>
               <Text
-                style={[styles.earningsCurrency, { fontFamily: font.semibold }]}
+                style={[
+                  styles.earningsLabel,
+                  {
+                    fontFamily: font.semibold,
+                    textAlign: rtl ? "right" : "left",
+                    letterSpacing: rtl ? 0 : scale(1.2),
+                  },
+                ]}
               >
-                {t(currencyKey, currencyFallback)}
+                {t("orderHeader.estimatedEarnings", "ESTIMATED EARNINGS")}
               </Text>
-            </View>
-          </LinearGradient>
+
+              <View
+                style={[
+                  styles.earningsAmountRow,
+                  { flexDirection: rtl ? "row-reverse" : "row" },
+                ]}
+              >
+                <Text
+                  style={[styles.earningsAmount, { fontFamily: font.bold }]}
+                >
+                  {estimatedEarnings.toLocaleString()}
+                </Text>
+                <Text
+                  style={[
+                    styles.earningsCurrency,
+                    { fontFamily: font.semibold },
+                  ]}
+                >
+                  {t(currencyKey, currencyFallback)}
+                </Text>
+              </View>
+            </LinearGradient>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
-    </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
