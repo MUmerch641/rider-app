@@ -16,10 +16,11 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import MapView, { Circle, Marker } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -144,7 +145,14 @@ export default function OrderRadiusScreen() {
             {t("orderRadius.title")}
           </Text>
         </View>
-
+        {locationLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#2F80FF" />
+            <Text style={[styles.loadingText, { fontFamily: font.regular }]}>
+              {t("orderRadius.findLoading")}
+            </Text>
+          </View>
+        )}
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
