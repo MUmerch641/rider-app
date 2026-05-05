@@ -1,3 +1,4 @@
+import { authApi, type ApiError } from "@/api";
 import { Button, Input, PhoneInput, ScreenHeader } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize } from "@/constants/theme";
@@ -37,7 +38,7 @@ export default function ForgotPasswordScreen() {
   const [phoneError, setPhoneError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     let valid = true;
     if (mode === "email") {
       if (!email) {
@@ -57,9 +58,33 @@ export default function ForgotPasswordScreen() {
       } else setPhoneError("");
     }
     if (!valid) return;
+
+    const contact =
+      mode === "email"
+        ? email.trim()
+        : `${countryCode}${phone.replace(/\D/g, "")}`;
+
     setLoading(true);
-    router.push("/auth/otp_screen");
-    setTimeout(() => setLoading(false), 1500);
+    try {
+      await authApi.forgotPassword({ contact, channel: mode });
+      router.push({
+        pathname: "/auth/otp_screen",
+        params: { contact, channel: mode },
+      });
+    } catch (err) {
+      const apiErr = err as ApiError;
+      const contactFieldError = apiErr?.fields?.contact?.[0];
+      const fallbackMessage =
+        apiErr?.message ||
+        (mode === "email" ? t("auth.emailError") : t("auth.phoneError"));
+      if (mode === "email") {
+        setEmailError(contactFieldError || fallbackMessage);
+      } else {
+        setPhoneError(contactFieldError || fallbackMessage);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

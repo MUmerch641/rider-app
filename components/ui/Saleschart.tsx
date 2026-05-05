@@ -67,12 +67,22 @@ const DATA: Record<ChartTab, number[]> = {
   profit: [20, 40, 55, 35, 65, 45, 70, 40, 60, 35, 65, 45],
 };
 
+export interface SalesChartData {
+  revenue: number[];
+  order: number[];
+  profit: number[];
+  /** Optional override for X-axis labels. Defaults to MONTHS (12 months Jan–Dec). */
+  monthLabels?: string[];
+}
+
 interface SalesChartProps {
   onFullReport?: () => void;
   style?: ViewStyle;
+  /** Live data for the three tabs. When omitted, the component renders mock data. */
+  data?: SalesChartData;
 }
 
-export function SalesChart({ onFullReport, style }: SalesChartProps) {
+export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartProps) {
   const font = useAppFont();
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
@@ -86,8 +96,13 @@ export function SalesChart({ onFullReport, style }: SalesChartProps) {
     { key: "profit", label: t("revenue.profit") },
   ];
 
-  const data = DATA[activeTab];
-  const maxVal = Math.max(...data);
+  const dataMap: Record<ChartTab, number[]> = dataProp
+    ? { revenue: dataProp.revenue, order: dataProp.order, profit: dataProp.profit }
+    : DATA;
+  const data = dataMap[activeTab];
+  // Guard against an all-zero series (e.g. no deliveries this year for the active tab)
+  // — Math.max(...[0,0,...]) = 0 would NaN the SVG path. Floor at 1 to keep a flat baseline.
+  const maxVal = Math.max(1, ...data);
 
   const padding = {
     top: verticalScale(30),
@@ -262,7 +277,7 @@ export function SalesChart({ onFullReport, style }: SalesChartProps) {
 
         {/* Month labels */}
         <View style={styles.monthsRow}>
-          {MONTHS.map((m) => (
+          {(dataProp?.monthLabels ?? MONTHS).map((m) => (
             <Text
               key={m}
               style={[styles.monthLabel, { fontFamily: font.regular }]}

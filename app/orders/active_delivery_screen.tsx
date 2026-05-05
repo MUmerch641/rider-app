@@ -1,15 +1,25 @@
+import {
+  ordersApi,
+  type ApiError,
+  type DriverNextStatus,
+  type OrderAssignment,
+} from "@/api";
 import { OrderHeader } from "@/components/ui/OrderHeader";
 import { OrderProgressCard } from "@/components/ui/OrderProgressCard";
 import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
+import { formatNumber } from "@/utils/format";
+import { localizeName, type LangKey } from "@/utils/localize";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -138,23 +148,35 @@ const PROFILE_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type OrderItem = {
+type CardOrderItem = {
   id: string;
   qty: number;
   name: string;
   price: number;
 };
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const ORDER_ITEMS: OrderItem[] = [
-  { id: "1", qty: 2, name: "Chicken Burger", price: 12000 },
-  { id: "2", qty: 1, name: "Pepsi", price: 1500 },
-];
+const FALLBACK_LOGO =
+  "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain";
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-function RestaurantCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
+function RestaurantCard({
+  rtl,
+  font,
+  t,
+  name,
+  address,
+  logoUrl,
+  onNavigate,
+}: {
+  rtl: boolean;
+  font: any;
+  t: any;
+  name: string;
+  address: string;
+  logoUrl: string;
+  onNavigate: () => void;
+}) {
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
   return (
@@ -162,9 +184,7 @@ function RestaurantCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
       <View style={[cardStyles.topRow, { flexDirection: row }]}>
         <View style={cardStyles.logoWrap}>
           <Image
-            source={{
-              uri: "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain",
-            }}
+            source={{ uri: logoUrl || FALLBACK_LOGO }}
             style={cardStyles.logo}
             resizeMode="contain"
           />
@@ -176,12 +196,12 @@ function RestaurantCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
               { fontFamily: font.bold, textAlign: align },
             ]}
           >
-            The Grill Restaurant
+            {name}
           </Text>
           <View style={[cardStyles.locRow, { flexDirection: row }]}>
             <SvgXml xml={LOCATION_SVG} width={scale(14)} height={scale(14)} />
             <Text style={[cardStyles.locText, { fontFamily: font.regular }]}>
-              Sulaimany-baxtyari
+              {address}
             </Text>
           </View>
         </View>
@@ -189,7 +209,7 @@ function RestaurantCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
       <TouchableOpacity
         activeOpacity={0.85}
         style={cardStyles.navBtn}
-        onPress={() => router.push("/orders/delivery_route")}
+        onPress={onNavigate}
       >
         <SvgXml xml={NAV_SVG} width={scale(20)} height={scale(20)} />
         <Text style={[cardStyles.navBtnText, { fontFamily: font.bold }]}>
@@ -200,7 +220,25 @@ function RestaurantCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
   );
 }
 
-function CustomerCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
+function CustomerCard({
+  rtl,
+  font,
+  t,
+  name,
+  address,
+  onNavigate,
+  onCall,
+  onChat,
+}: {
+  rtl: boolean;
+  font: any;
+  t: any;
+  name: string;
+  address: string;
+  onNavigate: () => void;
+  onCall?: () => void;
+  onChat?: () => void;
+}) {
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
   return (
@@ -216,7 +254,7 @@ function CustomerCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
               { fontFamily: font.bold, textAlign: align },
             ]}
           >
-            Ahmed J.
+            {name}
           </Text>
           <Text
             style={[
@@ -232,10 +270,18 @@ function CustomerCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
           </Text>
         </View>
         <View style={[cardStyles.actionBtns, { flexDirection: row }]}>
-          <TouchableOpacity style={cardStyles.actionBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={cardStyles.actionBtn}
+            activeOpacity={0.8}
+            onPress={onChat}
+          >
             <SvgXml xml={CHAT_SVG} width={scale(20)} height={scale(20)} />
           </TouchableOpacity>
-          <TouchableOpacity style={cardStyles.actionBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={cardStyles.actionBtn}
+            activeOpacity={0.8}
+            onPress={onCall}
+          >
             <SvgXml xml={PHONE_SVG} width={scale(20)} height={scale(20)} />
           </TouchableOpacity>
         </View>
@@ -245,10 +291,14 @@ function CustomerCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
         <Text
           style={[cardStyles.customerLocText, { fontFamily: font.regular }]}
         >
-          Sulaimany - Sarshaqam
+          {address}
         </Text>
       </View>
-      <TouchableOpacity activeOpacity={0.85} style={cardStyles.navBtn}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={cardStyles.navBtn}
+        onPress={onNavigate}
+      >
         <SvgXml xml={NAV_SVG} width={scale(20)} height={scale(20)} />
         <Text style={[cardStyles.navBtnText, { fontFamily: font.bold }]}>
           {t("delivery.navigateToCustomer")}
@@ -258,10 +308,21 @@ function CustomerCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
   );
 }
 
-function OrderItemsCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
+function OrderItemsCard({
+  rtl,
+  font,
+  t,
+  items,
+  total,
+}: {
+  rtl: boolean;
+  font: any;
+  t: any;
+  items: CardOrderItem[];
+  total: number;
+}) {
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
-  const total = ORDER_ITEMS.reduce((s, i) => s + i.price, 0);
   return (
     <View style={[cardStyles.card, { paddingBottom: spacing.lg }]}>
       <Text
@@ -276,7 +337,7 @@ function OrderItemsCard({ rtl, font, t }: { rtl: boolean; font: any; t: any }) {
       >
         {t("delivery.orderItems")}
       </Text>
-      {ORDER_ITEMS.map((item) => (
+      {items.map((item) => (
         <View key={item.id}>
           <View style={[cardStyles.itemRow, { flexDirection: row }]}>
             <Text
@@ -412,6 +473,153 @@ export default function ActiveDeliveryScreen() {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
+  const langKey: LangKey = (i18n.language as LangKey) || "en";
+
+  const params = useLocalSearchParams<{ id?: string }>();
+  const orderId = typeof params.id === "string" ? params.id : "";
+
+  const [assignment, setAssignment] = useState<OrderAssignment | null>(null);
+  const [ctaBusy, setCtaBusy] = useState(false);
+
+  useEffect(() => {
+    if (!orderId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await ordersApi.getById(orderId);
+        if (!cancelled) setAssignment(data);
+      } catch (err) {
+        console.warn("Fetch order failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
+  // Map assignment.status → progress card step states
+  const stepStatuses = useMemo(() => {
+    const s = assignment?.status;
+    if (s === "accepted") {
+      return { shop: "active" as const, pickup: "inactive" as const, deliver: "inactive" as const };
+    }
+    if (s === "arrived_store") {
+      return { shop: "active" as const, pickup: "inactive" as const, deliver: "inactive" as const };
+    }
+    if (s === "picked_up") {
+      return { shop: "active" as const, pickup: "active" as const, deliver: "inactive" as const };
+    }
+    if (s === "on_the_way") {
+      return { shop: "active" as const, pickup: "active" as const, deliver: "inactive" as const };
+    }
+    if (s === "arrived" || s === "delivered") {
+      return { shop: "active" as const, pickup: "active" as const, deliver: "active" as const };
+    }
+    return { shop: "inactive" as const, pickup: "inactive" as const, deliver: "inactive" as const };
+  }, [assignment?.status]);
+
+  // Map assignment.status → next CTA action
+  const ctaConfig = useMemo<{ key: string; defaultLabel: string; next: DriverNextStatus | null }>(() => {
+    const s = assignment?.status;
+    switch (s) {
+      case "accepted":
+        return { key: "delivery.arrivedAtRestaurant", defaultLabel: "Arrived at Restaurant", next: "arrived_store" };
+      case "arrived_store":
+        return { key: "delivery.pickedUp", defaultLabel: "Picked Up", next: "picked_up" };
+      case "picked_up":
+        return { key: "delivery.onTheWay", defaultLabel: "On the Way", next: "on_the_way" };
+      case "on_the_way":
+        return { key: "delivery.arrivedAtCustomer", defaultLabel: "Arrived at Customer", next: "arrived" };
+      case "arrived":
+        return { key: "delivery.delivered", defaultLabel: "Delivered", next: "delivered" };
+      default:
+        return { key: "delivery.arrivedAtRestaurant", defaultLabel: "Arrived at Restaurant", next: null };
+    }
+  }, [assignment?.status]);
+
+  const orderNumber = assignment?.order?.orderNumber
+    ? Number(assignment.order.orderNumber.replace(/\D/g, "")) || 0
+    : 0;
+  const estimatedEarnings = assignment?.totalEarnings
+    ? Number(assignment.totalEarnings)
+    : 0;
+
+  const restaurantName = localizeName(assignment?.order?.store?.name, langKey);
+  const restaurantAddress = assignment?.order?.store?.address ?? "";
+  const restaurantLogo = assignment?.order?.store?.avatar ?? FALLBACK_LOGO;
+
+  const customerName = assignment?.order?.customer?.name ?? "—";
+  const customerPhone = assignment?.order?.customer?.phone ?? "";
+  const customerAddress = (() => {
+    const da = assignment?.order?.deliveryAddress;
+    if (!da) return "";
+    const parts = [da.building, da.street].filter(Boolean) as string[];
+    return parts.length ? parts.join(", ") : "";
+  })();
+
+  const items: CardOrderItem[] = useMemo(
+    () =>
+      (assignment?.order?.orderItems ?? []).map((it) => ({
+        id: it.id,
+        qty: it.quantity,
+        name: localizeName(it.storeItem?.name, langKey),
+        price: Number(it.unitPrice) * it.quantity,
+      })),
+    [assignment, langKey],
+  );
+  const total = items.reduce((s, it) => s + it.price, 0);
+
+  const distanceLabel = assignment?.distanceKm
+    ? `${Number(assignment.distanceKm).toFixed(1)} km`
+    : "";
+  const durationLabel = assignment?.estimatedMinutes
+    ? `${Math.round(Number(assignment.estimatedMinutes))} min`
+    : "";
+  const paymentMethod = (assignment?.order?.paymentMethod ?? "CASH") as
+    | "CASH"
+    | "CARD"
+    | "ONLINE";
+
+  const handleNavigateRestaurant = () => {
+    if (!orderId) return;
+    router.push({
+      pathname: "/orders/delivery_route",
+      params: { id: orderId, phase: "pickup" },
+    });
+  };
+
+  const handleNavigateCustomer = () => {
+    if (!orderId) return;
+    router.push({
+      pathname: "/orders/delivery_route",
+      params: { id: orderId, phase: "dropoff" },
+    });
+  };
+
+  const handleCallCustomer = () => {
+    if (customerPhone) Linking.openURL(`tel:${customerPhone}`).catch(() => undefined);
+  };
+
+  const handleChatCustomer = () => {
+    // Support chat is not yet wired — stub no-op for now.
+  };
+
+  const handleCtaPress = async () => {
+    if (!orderId || !ctaConfig.next || ctaBusy) return;
+    setCtaBusy(true);
+    try {
+      await ordersApi.updateStatus(orderId, { status: ctaConfig.next });
+      const refreshed = await ordersApi.getById(orderId).catch(() => null);
+      if (refreshed) setAssignment(refreshed);
+      if (ctaConfig.next === "delivered") {
+        router.replace("/(tabs)");
+      }
+    } catch (err) {
+      console.warn("Status update failed:", (err as ApiError)?.message);
+    } finally {
+      setCtaBusy(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -423,10 +631,10 @@ export default function ActiveDeliveryScreen() {
         }}
       >
         <OrderHeader
-          orderNumber={8821}
+          orderNumber={orderNumber}
           statusKey="delivery.activeDelivery"
           statusFallback="ACTIVE DELIVERY"
-          estimatedEarnings={13500}
+          estimatedEarnings={estimatedEarnings}
           currencyKey="common.iqd"
           currencyFallback="IQD"
           onBack={() => router.back()}
@@ -442,29 +650,52 @@ export default function ActiveDeliveryScreen() {
       >
         <View style={styles.section}>
           <OrderProgressCard
-            shopStatus="active"
-            pickupStatus="inactive"
-            deliverStatus="inactive"
+            shopStatus={stepStatuses.shop}
+            pickupStatus={stepStatuses.pickup}
+            deliverStatus={stepStatuses.deliver}
             shopLabel={t("delivery.goToShop")}
             pickupLabel={t("delivery.pickUp")}
             deliverLabel={t("delivery.deliver")}
-            distance="3.2 km"
-            duration="18 min"
-            paymentMethod="CASH"
+            distance={distanceLabel}
+            duration={durationLabel}
+            paymentMethod={paymentMethod}
             activeColor="#6B21E8"
           />
         </View>
 
         <View style={styles.section}>
-          <RestaurantCard rtl={rtl} font={font} t={t} />
+          <RestaurantCard
+            rtl={rtl}
+            font={font}
+            t={t}
+            name={restaurantName}
+            address={restaurantAddress}
+            logoUrl={restaurantLogo}
+            onNavigate={handleNavigateRestaurant}
+          />
         </View>
 
         <View style={styles.section}>
-          <CustomerCard rtl={rtl} font={font} t={t} />
+          <CustomerCard
+            rtl={rtl}
+            font={font}
+            t={t}
+            name={customerName}
+            address={customerAddress}
+            onNavigate={handleNavigateCustomer}
+            onCall={handleCallCustomer}
+            onChat={handleChatCustomer}
+          />
         </View>
 
         <View style={styles.section}>
-          <OrderItemsCard rtl={rtl} font={font} t={t} />
+          <OrderItemsCard
+            rtl={rtl}
+            font={font}
+            t={t}
+            items={items}
+            total={total}
+          />
         </View>
 
         <View style={styles.section}>
@@ -485,7 +716,12 @@ export default function ActiveDeliveryScreen() {
           end={{ x: 1, y: 0 }}
           style={styles.arrivedBtn}
         >
-          <TouchableOpacity activeOpacity={0.88} style={styles.arrivedBtnInner}>
+          <TouchableOpacity
+            activeOpacity={0.88}
+            style={styles.arrivedBtnInner}
+            disabled={!ctaConfig.next || ctaBusy}
+            onPress={handleCtaPress}
+          >
             <SvgXml xml={CHECK_SVG} width={scale(22)} height={scale(22)} />
             <Text
               style={[
@@ -493,7 +729,7 @@ export default function ActiveDeliveryScreen() {
                 { fontFamily: font.bold, letterSpacing: rtl ? 0 : 0.3 },
               ]}
             >
-              {t("delivery.arrivedAtRestaurant")}
+              {t(ctaConfig.key, { defaultValue: ctaConfig.defaultLabel })}
             </Text>
           </TouchableOpacity>
         </LinearGradient>

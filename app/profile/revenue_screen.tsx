@@ -1,3 +1,4 @@
+import { walletApi, type ApiError, type WalletSummary } from "@/api";
 import { PeriodTabs, SalesChart } from "@/components/ui";
 import { CartIcon, ChartIcon } from "@/components/ui/icons";
 import { RevenueBalanceCard } from "@/components/ui/RevenueBalanceCard";
@@ -9,7 +10,7 @@ import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ScrollView,
@@ -28,6 +29,114 @@ export default function RevenueScreen() {
   const align = rtl ? "right" : "left";
 
   const [period, setPeriod] = useState("revenue.today");
+  const [balance, setBalance] = useState<number>(0);
+  const [orders, setOrders] = useState<number>(0);
+  const [acceptance, setAcceptance] = useState<number>(0);
+  const [rating, setRating] = useState<number>(0);
+  const [onTimeRate, setOnTimeRate] = useState<number>(0);
+
+  // Yearly chart series — fetched once and stable across period changes.
+  const [chartData, setChartData] = useState<{
+    revenue: number[];
+    order: number[];
+    profit: number[];
+  }>({
+    revenue: Array(12).fill(0),
+    order: Array(12).fill(0),
+    profit: Array(12).fill(0),
+  });
+
+  // Map active period tab → ISO date range (YYYY-MM-DD).
+  const range = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    const startOf = (d: Date) => d.toISOString().slice(0, 10);
+
+    if (period === "revenue.today") {
+      return { startDate: todayStr, endDate: todayStr };
+    }
+    if (period === "revenue.thisWeek") {
+      const d = new Date(today);
+      d.setDate(d.getDate() - 6);
+      return { startDate: startOf(d), endDate: todayStr };
+    }
+    if (period === "revenue.thisMonth") {
+      const d = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { startDate: startOf(d), endDate: todayStr };
+    }
+    if (period === "revenue.thisYear") {
+      const d = new Date(today.getFullYear(), 0, 1);
+      return { startDate: startOf(d), endDate: todayStr };
+    }
+    return { startDate: todayStr, endDate: todayStr };
+  }, [period]);
+
+  // Year-wide series for the chart. Fetched once on mount; not tied to period tabs.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const year = new Date().getFullYear();
+        const startDate = `${year}-01-01`;
+        const endDate = `${year}-12-31`;
+        const summary: WalletSummary = await walletApi.summary({
+          startDate,
+          endDate,
+          groupBy: "month",
+        });
+        if (cancelled) return;
+        const revenueByMonth = Array(12).fill(0);
+        const orderByMonth = Array(12).fill(0);
+        for (const point of summary?.series ?? []) {
+          const monthIndex = new Date(point.date).getMonth();
+          if (monthIndex >= 0 && monthIndex < 12) {
+            revenueByMonth[monthIndex] = Math.round(Number(point.earnings) || 0);
+            orderByMonth[monthIndex] = Number(point.count) || 0;
+          }
+        }
+        // No backend profit calc yet — mirror revenue so the third tab still draws.
+        setChartData({
+          revenue: revenueByMonth,
+          order: orderByMonth,
+          profit: revenueByMonth.slice(),
+        });
+      } catch (err) {
+        console.warn("Yearly chart fetch failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const summary = await walletApi.summary({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          groupBy: "day",
+        });
+        if (cancelled) return;
+        const totalEarnings = Number(summary?.summary?.totalEarnings ?? 0);
+        const deliveryCount = Number(summary?.summary?.deliveryCount ?? 0);
+        const acc = Number(summary?.summary?.acceptanceRate ?? 0);
+        const rt = Number(summary?.summary?.rating ?? 0);
+        const onTime = Number(summary?.summary?.onTimeRate ?? 0);
+        setBalance(Number.isFinite(totalEarnings) ? totalEarnings : 0);
+        setOrders(Number.isFinite(deliveryCount) ? deliveryCount : 0);
+        setAcceptance(Number.isFinite(acc) ? acc : 0);
+        setRating(Number.isFinite(rt) ? rt : 0);
+        setOnTimeRate(Number.isFinite(onTime) ? onTime : 0);
+      } catch (err) {
+        console.warn("Wallet summary fetch failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [range.startDate, range.endDate]);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -78,7 +187,7 @@ export default function RevenueScreen() {
         contentContainerStyle={styles.scroll}
       >
         {/*Delivery Card Balance */}
-        <RevenueBalanceCard balance={120000} />
+        <RevenueBalanceCard balance={balance} />
 
         {/* ── Stats row ── */}
         <LinearGradient
@@ -109,7 +218,7 @@ export default function RevenueScreen() {
                 { fontFamily: font.medium, textAlign: align },
               ]}
             >
-              456
+              {String(orders)}
             </Text>
           </TouchableOpacity>
 
@@ -148,7 +257,11 @@ export default function RevenueScreen() {
         </LinearGradient>
 
         {/* ── Sales Chart ── */}
-        <SalesChart onFullReport={() => {}} style={styles.section} />
+        <SalesChart
+          onFullReport={() => {}}
+          style={styles.section}
+          data={chartData}
+        />
 
         {/* ── Reports ── */}
         <Text
@@ -165,9 +278,21 @@ export default function RevenueScreen() {
             { flexDirection: rtl ? "row-reverse" : "row" },
           ]}
         >
-          <StatCircleCard label="stats.acceptance" value={89} progress={89} />
-          <StatCircleCard label="stats.onTime" value={100} progress={100} />
-          <StatCircleCard label="stats.rating" value={4.5} progress={90} />
+          <StatCircleCard
+            label="stats.acceptance"
+            value={Math.round(acceptance)}
+            progress={Math.min(100, Math.max(0, acceptance))}
+          />
+          <StatCircleCard
+            label="stats.onTime"
+            value={Math.round(onTimeRate)}
+            progress={Math.min(100, Math.max(0, onTimeRate))}
+          />
+          <StatCircleCard
+            label="stats.rating"
+            value={Number(rating.toFixed(1))}
+            progress={Math.min(100, Math.max(0, (rating / 5) * 100))}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

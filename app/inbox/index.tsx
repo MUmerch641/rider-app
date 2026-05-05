@@ -1,5 +1,13 @@
+import {
+    notificationsApi,
+    supportApi,
+    type ApiError,
+    type DriverNotification,
+    type SupportThread,
+} from "@/api";
 import { isRTL } from "@/constants/i18n";
 import { Colors, Radius, Shadow } from "@/constants/theme";
+import { useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
     fontSize,
@@ -10,10 +18,11 @@ import {
 } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     Image,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -26,112 +35,140 @@ type InboxTab = "notification" | "support";
 
 const AVATAR = "https://i.pravatar.cc/150?img=12";
 
-const NOTIFICATIONS = [
-  {
-    id: "1",
-    group: "inbox.today",
-    items: [
-      {
-        id: "n1",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: true,
-      },
-      {
-        id: "n2",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: true,
-      },
-      {
-        id: "n3",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: false,
-      },
-    ],
-  },
-  {
-    id: "2",
-    group: "inbox.yesterday",
-    items: [
-      {
-        id: "n4",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: true,
-      },
-      {
-        id: "n5",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: true,
-      },
-      {
-        id: "n6",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: false,
-      },
-      {
-        id: "n7",
-        title: "Onway Team Support",
-        body: "A new version of the app is available please update",
-        time: "26 min ago",
-        unread: false,
-      },
-    ],
-  },
-];
+type InboxNotificationItem = {
+  id: string;
+  title: string;
+  body: string;
+  time: string;
+  unread: boolean;
+};
 
-const CHATS = [
-  {
-    id: "c1",
-    title: "Onway Support",
-    body: "Your food delivery problem has been resolved",
-    date: "13 - 5 - 2026",
-    active: false,
-  },
-  {
-    id: "c2",
-    title: "Onway Support",
-    body: "Your food delivery problem has been resolved",
-    date: "13 - 5 - 2026",
-    active: true,
-  },
-  {
-    id: "c3",
-    title: "Onway Support",
-    body: "Your food delivery problem has been resolved",
-    date: "13 - 5 - 2026",
-    active: false,
-  },
-  {
-    id: "c4",
-    title: "Onway Support",
-    body: "Your food delivery problem has been resolved",
-    date: "13 - 5 - 2026",
-    active: false,
-  },
-  {
-    id: "c5",
-    title: "Onway Support",
-    body: "Your food delivery problem has been resolved",
-    date: "13 - 5 - 2026",
-    active: false,
-  },
-];
+type InboxNotificationGroup = {
+  id: string;
+  group: string;
+  items: InboxNotificationItem[];
+};
 
-const CHAT_GROUPS = [
-  { id: "g1", group: "inbox.today", items: CHATS.slice(0, 2) },
-  { id: "g2", group: "inbox.yesterday", items: CHATS.slice(2) },
-];
+function formatRelativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return "";
+  const diff = Date.now() - then;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return `${Math.max(1, seconds)}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function dayKey(iso: string): string {
+  return new Date(iso).toISOString().slice(0, 10);
+}
+
+function groupNotifications(
+  list: DriverNotification[],
+): InboxNotificationGroup[] {
+  const today = dayKey(new Date().toISOString());
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yesterday = dayKey(y.toISOString());
+
+  const buckets: Record<string, InboxNotificationItem[]> = {
+    today: [],
+    yesterday: [],
+    earlier: [],
+  };
+
+  for (const n of list) {
+    const k = dayKey(n.createdAt);
+    const item: InboxNotificationItem = {
+      id: n.id,
+      title: n.title,
+      body: n.body,
+      time: formatRelativeTime(n.createdAt),
+      unread: !n.isRead,
+    };
+    if (k === today) buckets.today.push(item);
+    else if (k === yesterday) buckets.yesterday.push(item);
+    else buckets.earlier.push(item);
+  }
+
+  const groups: InboxNotificationGroup[] = [];
+  if (buckets.today.length)
+    groups.push({ id: "today", group: "inbox.today", items: buckets.today });
+  if (buckets.yesterday.length)
+    groups.push({
+      id: "yesterday",
+      group: "inbox.yesterday",
+      items: buckets.yesterday,
+    });
+  if (buckets.earlier.length)
+    groups.push({ id: "earlier", group: "inbox.earlier", items: buckets.earlier });
+  return groups;
+}
+
+type ChatRow = {
+  id: string;
+  title: string;
+  body: string;
+  date: string;
+  active: boolean;
+  threadId: string;
+};
+
+type ChatGroup = { id: string; group: string; items: ChatRow[] };
+
+function formatChatDate(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return Number.isFinite(d.getTime())
+    ? `${d.getDate()} - ${d.getMonth() + 1} - ${d.getFullYear()}`
+    : "";
+}
+
+function groupChatThreads(threads: SupportThread[]): ChatGroup[] {
+  const today = new Date().toISOString().slice(0, 10);
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  const yesterday = y.toISOString().slice(0, 10);
+
+  const buckets: Record<string, ChatRow[]> = {
+    today: [],
+    yesterday: [],
+    earlier: [],
+  };
+
+  for (const t of threads) {
+    const dayIso = (t.lastMessageAt ?? "").slice(0, 10);
+    const row: ChatRow = {
+      id: t.id,
+      title: t.title ?? "Onway Support",
+      body: "",
+      date: formatChatDate(t.lastMessageAt ?? null),
+      active: t.status === "open" && (t.unreadCount ?? 0) > 0,
+      threadId: t.id,
+    };
+    if (dayIso === today) buckets.today.push(row);
+    else if (dayIso === yesterday) buckets.yesterday.push(row);
+    else buckets.earlier.push(row);
+  }
+
+  const groups: ChatGroup[] = [];
+  if (buckets.today.length)
+    groups.push({ id: "today", group: "inbox.today", items: buckets.today });
+  if (buckets.yesterday.length)
+    groups.push({
+      id: "yesterday",
+      group: "inbox.yesterday",
+      items: buckets.yesterday,
+    });
+  if (buckets.earlier.length)
+    groups.push({ id: "earlier", group: "inbox.earlier", items: buckets.earlier });
+  return groups;
+}
 
 export default function InboxScreen() {
   const router = useRouter();
@@ -139,6 +176,59 @@ export default function InboxScreen() {
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
   const [activeTab, setActiveTab] = useState<InboxTab>("notification");
+
+  const { pushedNotification } = useSocket();
+  const [notificationList, setNotificationList] = useState<DriverNotification[]>([]);
+  const [threads, setThreads] = useState<SupportThread[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [list, threadsList] = await Promise.all([
+        notificationsApi.list({ page: 1, limit: 50 }),
+        supportApi.listThreads(),
+      ]);
+      setNotificationList(list);
+      setThreads(threadsList);
+    } catch (err) {
+      console.warn("Inbox refresh failed:", (err as ApiError)?.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Refresh whenever a socket-pushed notification lands.
+  useEffect(() => {
+    if (pushedNotification) refresh();
+  }, [pushedNotification, refresh]);
+
+  const onPullRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }, [refresh]);
+
+  const groups = useMemo(
+    () => groupNotifications(notificationList),
+    [notificationList],
+  );
+  const chatGroups = useMemo(() => groupChatThreads(threads), [threads]);
+
+  const handleNotificationPress = async (id: string) => {
+    // Optimistic local update
+    setNotificationList((prev) =>
+      prev.map((n) =>
+        n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n,
+      ),
+    );
+    try {
+      await notificationsApi.markRead(id);
+    } catch (err) {
+      console.warn("Mark-read failed:", (err as ApiError)?.message);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -165,8 +255,15 @@ export default function InboxScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onPullRefresh}
+              tintColor={Colors.primary}
+            />
+          }
         >
-          {NOTIFICATIONS.map((group) => (
+          {groups.map((group) => (
             <View key={group.id}>
               <Text
                 style={[
@@ -177,7 +274,14 @@ export default function InboxScreen() {
                   },
                 ]}
               >
-                {t(group.group)}
+                {t(group.group, {
+                  defaultValue:
+                    group.id === "today"
+                      ? "Today"
+                      : group.id === "yesterday"
+                      ? "Yesterday"
+                      : "Earlier",
+                })}
               </Text>
               <View style={styles.group}>
                 {group.items.map((item) => (
@@ -188,6 +292,7 @@ export default function InboxScreen() {
                       { flexDirection: rtl ? "row-reverse" : "row" },
                     ]}
                     activeOpacity={0.75}
+                    onPress={() => handleNotificationPress(item.id)}
                   >
                     <Image source={{ uri: AVATAR }} style={styles.avatar} />
                     <View
@@ -274,7 +379,7 @@ export default function InboxScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
           >
-            {CHAT_GROUPS.map((group) => (
+            {chatGroups.map((group) => (
               <View key={group.id}>
                 <Text
                   style={[
@@ -285,7 +390,14 @@ export default function InboxScreen() {
                     },
                   ]}
                 >
-                  {t(group.group)}
+                  {t(group.group, {
+                    defaultValue:
+                      group.id === "today"
+                        ? "Today"
+                        : group.id === "yesterday"
+                          ? "Yesterday"
+                          : "Earlier",
+                  })}
                 </Text>
                 <View style={styles.group}>
                   {group.items.map((chat) => (
@@ -297,7 +409,12 @@ export default function InboxScreen() {
                         { flexDirection: rtl ? "row-reverse" : "row" },
                       ]}
                       activeOpacity={0.75}
-                      onPress={() => router.push("/inbox/support_chat")}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/inbox/support_chat",
+                          params: { threadId: chat.threadId },
+                        })
+                      }
                     >
                       <View style={styles.avatarWrapper}>
                         <Image source={{ uri: AVATAR }} style={styles.avatar} />

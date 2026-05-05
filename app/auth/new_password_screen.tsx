@@ -1,3 +1,4 @@
+import { authApi, type ApiError } from "@/api";
 import { Button, Input, ScreenHeader } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
@@ -5,7 +6,7 @@ import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,6 +24,9 @@ export default function NewPasswordScreen() {
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();
+
+  const params = useLocalSearchParams<{ resetToken?: string }>();
+  const resetToken = typeof params.resetToken === "string" ? params.resetToken : "";
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -50,14 +54,29 @@ export default function NewPasswordScreen() {
     return valid;
   };
 
-  const handleChange = () => {
+  const handleChange = async () => {
     if (!validate()) return;
+    if (!resetToken) {
+      setNewPasswordError(apiErrorFallback());
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await authApi.resetPassword({ resetToken, newPassword });
       setShowSuccess(true);
-    }, 1500);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setNewPasswordError(apiErr?.message || apiErrorFallback());
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Localized fallback for missing/expired reset token.
+  // Keeping it inline (not a separate helper) preserves the file's structure.
+  function apiErrorFallback() {
+    return t("newPassword.passwordEmpty");
+  }
 
   const handleContinue = () => {
     setShowSuccess(false);

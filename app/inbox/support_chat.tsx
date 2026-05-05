@@ -1,12 +1,14 @@
+import { supportApi, type ApiError, type SupportMessage } from "@/api";
 import { Button } from "@/components/ui";
 import { SendIcon, SupportIcon } from "@/components/ui/icons";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
+import { useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   FlatList,
@@ -48,25 +50,29 @@ function SeenIcon({ seen }: { seen: boolean }) {
   );
 }
 
-// ─── Mock Messages ────────────────────────────────────────────────────────────
-const INITIAL_MESSAGES = [
-  {
-    id: "1",
-    text: "Clint asked for long rice which not available right now , call him and tell him",
-    time: "10.45",
-    fromSupport: true,
-    seen: true,
-  },
-  {
-    id: "2",
-    text: "Hi there , OK got it!",
-    time: "10.45",
-    fromSupport: false,
-    seen: true,
-  },
-];
+type Message = {
+  id: string;
+  text: string;
+  time: string;
+  fromSupport: boolean;
+  seen: boolean;
+};
 
-type Message = (typeof INITIAL_MESSAGES)[0];
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function toUiMessage(m: SupportMessage): Message {
+  return {
+    id: m.id,
+    text: m.body,
+    time: formatTime(m.createdAt),
+    fromSupport: m.senderType === "support",
+    seen: !!m.seen,
+  };
+}
 
 export default function SupportChatScreen() {
   const router = useRouter();
@@ -75,8 +81,68 @@ export default function SupportChatScreen() {
   const rtl = isRTL(i18n.language);
   const listRef = useRef<FlatList>(null);
 
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const params = useLocalSearchParams<{ threadId?: string; orderId?: string }>();
+  const initialThreadId = typeof params.threadId === "string" ? params.threadId : "";
+  const orderIdParam = typeof params.orderId === "string" ? params.orderId : undefined;
+
+  const [threadId, setThreadId] = useState<string>(initialThreadId);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const { socket } = useSocket();
+
+  // Resolve a thread id: use param if present, else create a new one.
+  useEffect(() => {
+    if (threadId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const created = await supportApi.createThread({
+          orderId: orderIdParam,
+        });
+        if (!cancelled) setThreadId(created.id);
+      } catch (err) {
+        console.warn("Create thread failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId, orderIdParam]);
+
+  // Fetch messages whenever threadId is set.
+  useEffect(() => {
+    if (!threadId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await supportApi.listMessages(threadId, 1, 100);
+        if (!cancelled) setMessages(list.map(toUiMessage));
+      } catch (err) {
+        console.warn("List messages failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId]);
+
+  // Socket: append new messages addressed to this thread.
+  useEffect(() => {
+    if (!socket || !threadId) return;
+    const handler = (msg: SupportMessage) => {
+      if (msg.threadId !== threadId) return;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, toUiMessage(msg)];
+      });
+    };
+    socket.on("support:message:new", handler);
+    return () => {
+      socket.off("support:message:new", handler);
+    };
+  }, [socket, threadId]);
 
   const getBubbleRadius = (fromSupport: boolean) => {
     if (fromSupport) {
@@ -89,11 +155,15 @@ export default function SupportChatScreen() {
       : { borderTopLeftRadius: scale(4), borderTopRightRadius: Radius.lg };
   };
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      text: input.trim(),
+  const sendMessage = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || !threadId || sending) return;
+    setSending(true);
+    // Optimistic message with a temp id.
+    const tempId = `local-${Date.now()}`;
+    const optimistic: Message = {
+      id: tempId,
+      text: trimmed,
       time: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -101,9 +171,23 @@ export default function SupportChatScreen() {
       fromSupport: false,
       seen: false,
     };
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => [...prev, optimistic]);
     setInput("");
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const real = await supportApi.sendMessage(threadId, { body: trimmed });
+      // Replace the temp message with the server-issued one.
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
+      );
+    } catch (err) {
+      console.warn("Send message failed:", (err as ApiError)?.message);
+      // Roll back the optimistic message on failure.
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -261,12 +345,13 @@ export default function SupportChatScreen() {
                 { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
               ]}
               returnKeyType="send"
-              onSubmitEditing={() => {}}
+              onSubmitEditing={sendMessage}
               multiline={false}
             />
             <Button
               label=""
-              onPress={() => {}}
+              onPress={sendMessage}
+              loading={sending}
               variant="primary"
               size="md"
               fullWidth={false}

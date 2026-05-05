@@ -1,38 +1,43 @@
+import { reviewsApi, type ApiError, type Review } from "@/api";
 import { ScreenHeader, StarRating } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
 import { Colors, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const USER = {
-  id: "u1",
-  name: "Ahmed Mohammed",
-  rating: 4,
-  reviewCount: 20,
-};
-
-const REVIEWS = [
-  {
-    id: "uv1",
-    text: "He arrived on time",
-    rating: 4.5,
-  },
-  {
-    id: "uv2",
-    text: "Greate service, keep it up",
-    rating: 4.5,
-  },
-];
 
 export default function ReviewsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
+
+  const [reviewsList, setReviewsList] = useState<Review[]>([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [summary, list] = await Promise.all([
+          reviewsApi.summary(),
+          reviewsApi.list({ page: 1, limit: 50 }),
+        ]);
+        if (cancelled) return;
+        setTotalReviews(summary?.totalReviews ?? 0);
+        setReviewsList(list);
+      } catch (err) {
+        console.warn("Reviews fetch failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -56,13 +61,13 @@ export default function ReviewsScreen() {
           ]}
         >
           {t("reviews.reviewsCount", {
-            count: USER.reviewCount,
+            count: totalReviews,
           })}
         </Text>
 
         {/* Review Cards */}
         <View style={styles.reviewsList}>
-          {REVIEWS.map((review) => (
+          {reviewsList.map((review) => (
             <View
               key={review.id}
               style={[
@@ -79,7 +84,7 @@ export default function ReviewsScreen() {
                   },
                 ]}
               >
-                {review.text}
+                {review.comment ?? ""}
               </Text>
               <View
                 style={[
@@ -91,7 +96,7 @@ export default function ReviewsScreen() {
                 <Text
                   style={[styles.reviewRatingText, { fontFamily: font.bold }]}
                 >
-                  {review.rating}
+                  {Number(review.rating).toFixed(1)}
                 </Text>
               </View>
             </View>

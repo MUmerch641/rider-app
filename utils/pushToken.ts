@@ -1,0 +1,58 @@
+import * as Device from "expo-device";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+
+let configured = false;
+
+/**
+ * Configure how foreground push notifications are displayed.
+ * Idempotent — safe to call multiple times.
+ */
+export function configurePushHandler(): void {
+    if (configured) return;
+    configured = true;
+    try {
+        Notifications.setNotificationHandler({
+            handleNotification: async () => ({
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: false,
+                shouldShowBanner: true,
+                shouldShowList: true,
+            }),
+        });
+    } catch {
+        // Handler may not be available in some Expo Go contexts — ignore.
+    }
+}
+
+/**
+ * Request permission and return the device push token.
+ * Returns null when running on a simulator, when permission is denied,
+ * or when the API isn't available (Expo Go on iOS, web, etc.).
+ */
+export async function registerForPushNotifications(): Promise<string | null> {
+    try {
+        if (!Device.isDevice) return null;
+
+        const { status: existing } = await Notifications.getPermissionsAsync();
+        let finalStatus = existing;
+        if (existing !== "granted") {
+            const { status } = await Notifications.requestPermissionsAsync();
+            finalStatus = status;
+        }
+        if (finalStatus !== "granted") return null;
+
+        if (Platform.OS === "android") {
+            await Notifications.setNotificationChannelAsync("default", {
+                name: "default",
+                importance: Notifications.AndroidImportance.MAX,
+            });
+        }
+
+        const token = await Notifications.getDevicePushTokenAsync();
+        return token?.data ?? null;
+    } catch {
+        return null;
+    }
+}

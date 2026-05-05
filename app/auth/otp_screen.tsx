@@ -1,10 +1,11 @@
+import { authApi, type ApiError } from "@/api";
 import { Button, ScreenHeader } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -25,6 +26,11 @@ export default function OtpScreen() {
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();
+
+  const params = useLocalSearchParams<{ contact?: string; channel?: string }>();
+  const contact = typeof params.contact === "string" ? params.contact : "";
+  const channel: "phone" | "email" =
+    params.channel === "email" ? "email" : "phone";
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState("");
@@ -67,7 +73,7 @@ export default function OtpScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const code = otp.join("");
     if (!code) {
       setError(t("otp.codeEmpty"));
@@ -77,23 +83,50 @@ export default function OtpScreen() {
       setError(t("otp.codeIncomplete"));
       return;
     }
+    if (!contact) {
+      setError(t("otp.codeInvalid"));
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const { resetToken } = await authApi.verifyOtp({ contact, code });
+      router.push({
+        pathname: "/auth/new_password_screen",
+        params: { resetToken },
+      });
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr?.message || t("otp.codeInvalid"));
+    } finally {
       setLoading(false);
-      router.push("/auth/new_password_screen");
-    }, 1500);
+    }
   };
 
-  const handleResend = () => {
-    if (!canResend) return;
-    setOtp(Array(OTP_LENGTH).fill(""));
-    setError("");
-    setSeconds(RESEND_SECONDS);
-    setCanResend(false);
-    inputs.current[0]?.focus();
+  const handleResend = async () => {
+    if (!canResend || !contact) return;
+    try {
+      await authApi.resendOtp(contact);
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setError("");
+      setSeconds(RESEND_SECONDS);
+      setCanResend(false);
+      inputs.current[0]?.focus();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      setError(apiErr?.message || "");
+    }
   };
 
-  const phoneDisplay = "+964 7503954432";
+  const phoneDisplay = (() => {
+    if (!contact) return "";
+    if (channel === "email") return contact;
+    // Insert a single space after a 4-character country code (e.g. "+964 7001234567")
+    if (contact.startsWith("+") && contact.length > 4) {
+      return `${contact.slice(0, 4)} ${contact.slice(4)}`;
+    }
+    return contact;
+  })();
 
   return (
     <View style={styles.root}>

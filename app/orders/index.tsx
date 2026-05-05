@@ -1,12 +1,26 @@
+import {
+  ordersApi,
+  walletApi,
+  type ApiError,
+  type OrderAssignment,
+} from "@/api";
 import { OpenStatusToggle } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
+import { useAuth, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
+import {
+  formatCurrency,
+  formatDurationMinutes,
+  formatNumber,
+} from "@/utils/format";
+import { localizeName, type LangKey } from "@/utils/localize";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Image,
@@ -18,37 +32,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const ACTIVE_ORDER = {
-  id: "a1",
-  restaurant: "The Grill",
-  customer: "Ahmed J.",
-  price: "4,000IQD",
-  distance: "2.4",
-  location: "Sulaymany-baxtyari",
-  timer: "12:45",
-  logo: "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain",
-};
+const FALLBACK_LOGO =
+  "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain";
+const FALLBACK_AVATAR =
+  "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4=";
 
-const NEARBY_ORDERS = [
-  {
-    id: "n1",
-    restaurant: "The Grill",
-    location: "Sulaymany-baxtyari",
-    price: "4,000IQD",
-    pickup: "Baxtyary",
-    dropoff: "Ashty Street",
-    logo: "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain",
-  },
-  {
-    id: "n2",
-    restaurant: "The Grill",
-    location: "Sulaymany-baxtyari",
-    price: "4,000IQD",
-    pickup: "Baxtyary",
-    dropoff: "Ashty Street",
-    logo: "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain",
-  },
-];
+const ACTIVE_STATUSES = new Set([
+  "accepted",
+  "arrived_store",
+  "picked_up",
+  "on_the_way",
+  "arrived",
+]);
 
 export default function OrdersScreen() {
   const font = useAppFont();
@@ -56,11 +51,108 @@ export default function OrdersScreen() {
   const router = useRouter();
   const rtl = isRTL(i18n.language);
   const dir = rtl ? "row-reverse" : "row";
+  const langKey: LangKey = (i18n.language as LangKey) || "en";
 
-  const [isOpen, setIsOpen] = useState(true);
+  const { driver, updateStatus } = useAuth();
+  const { newOrder, cancelledOrder } = useSocket();
 
-  const handleToggle = (value: boolean) => {
-    setIsOpen(value);
+  const [assignments, setAssignments] = useState<OrderAssignment[]>([]);
+  const [todayEarnings, setTodayEarnings] = useState<string>("0");
+  const [todayCount, setTodayCount] = useState<number>(0);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [acting, setActing] = useState<Record<string, boolean>>({});
+
+  const refreshAssignments = useCallback(async () => {
+    try {
+      const list = await ordersApi.list();
+      setAssignments(list);
+    } catch (err) {
+      console.warn("Fetch orders failed:", (err as ApiError)?.message);
+    }
+  }, []);
+
+  const refreshSummary = useCallback(async () => {
+    if (!driver?.id) return;
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const s = await walletApi.summary({ startDate: today, endDate: today });
+      setTodayEarnings(formatNumber(s?.summary?.totalEarnings));
+      setTodayCount(s?.summary?.deliveryCount ?? 0);
+    } catch {
+      // ignore — keep last-known values
+    }
+  }, [driver?.id]);
+
+  // Refresh on every focus (mount + return-to-tab) so post-delivery state surfaces.
+  useFocusEffect(
+    useCallback(() => {
+      refreshAssignments();
+      refreshSummary();
+    }, [refreshAssignments, refreshSummary]),
+  );
+
+  // Also refresh whenever a new socket event lands (accept/cancel may originate
+  // from elsewhere — e.g. a customer-side cancellation while we're on this tab).
+  useEffect(() => {
+    if (newOrder || cancelledOrder) {
+      refreshAssignments();
+      refreshSummary();
+    }
+  }, [newOrder, cancelledOrder, refreshAssignments, refreshSummary]);
+
+  const activeOrders = useMemo(
+    () => assignments.filter((a) => ACTIVE_STATUSES.has(a.status)),
+    [assignments],
+  );
+  const nearbyOrders = useMemo(
+    () => assignments.filter((a) => a.status === "assigned"),
+    [assignments],
+  );
+  const activeOrder = activeOrders[0] ?? null;
+
+  const handleToggle = useCallback(
+    async (_value: boolean) => {
+      if (statusBusy || !driver) return;
+      setStatusBusy(true);
+      try {
+        await updateStatus(!driver.isOnline);
+      } catch (err) {
+        console.warn("Status toggle failed:", (err as ApiError)?.message);
+      } finally {
+        setStatusBusy(false);
+      }
+    },
+    [statusBusy, driver, updateStatus],
+  );
+
+  const handleAcceptNearby = async (orderId: string) => {
+    if (acting[orderId]) return;
+    setActing((m) => ({ ...m, [orderId]: true }));
+    try {
+      await ordersApi.accept(orderId);
+      await refreshAssignments();
+      router.push({
+        pathname: "/orders/active_delivery_screen",
+        params: { id: orderId },
+      });
+    } catch (err) {
+      console.warn("Accept failed:", (err as ApiError)?.message);
+    } finally {
+      setActing((m) => ({ ...m, [orderId]: false }));
+    }
+  };
+
+  const handleDeclineNearby = async (orderId: string) => {
+    if (acting[orderId]) return;
+    setActing((m) => ({ ...m, [orderId]: true }));
+    try {
+      await ordersApi.reject(orderId, { reason: "too_far" });
+      await refreshAssignments();
+    } catch (err) {
+      console.warn("Decline failed:", (err as ApiError)?.message);
+    } finally {
+      setActing((m) => ({ ...m, [orderId]: false }));
+    }
   };
 
   return (
@@ -73,15 +165,21 @@ export default function OrdersScreen() {
           >
             <View style={styles.profileWrap}>
               <Image
-                source={{
-                  uri: "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4=",
-                }}
+                source={{ uri: driver?.avatar ?? FALLBACK_AVATAR }}
                 style={styles.profileImg}
               />
-              <View style={styles.onlineDot} />
+              <View
+                style={[
+                  styles.onlineDot,
+                  !driver?.isOnline && { backgroundColor: "#9ca3af" },
+                ]}
+              />
             </View>
           </TouchableOpacity>
-          <OpenStatusToggle isOpen={isOpen} onToggle={handleToggle} />
+          <OpenStatusToggle
+            isOpen={driver?.isOnline ?? false}
+            onToggle={handleToggle}
+          />
         </View>
 
         {/* ── Today's Summary Card ── */}
@@ -103,7 +201,7 @@ export default function OrdersScreen() {
                 {t("orders.earnings")}
               </Text>
               <Text style={[styles.earningsAmount, { fontFamily: font.bold }]}>
-                25,000 {t("common.iqd")}
+                {todayEarnings} {t("common.iqd")}
               </Text>
             </View>
             <View style={{ alignItems: rtl ? "flex-start" : "flex-end" }}>
@@ -116,7 +214,7 @@ export default function OrdersScreen() {
                 {t("orders.ordersLabel")}
               </Text>
               <Text style={[styles.ordersCount, { fontFamily: font.bold }]}>
-                08
+                {String(todayCount).padStart(2, "0")}
               </Text>
             </View>
           </View>
@@ -128,12 +226,15 @@ export default function OrdersScreen() {
             {t("orders.activeOrders")}
           </Text>
           <View style={[styles.badge, { left: scale(190) }]}>
-            <Text style={[styles.badgeText, { fontFamily: font.bold }]}>1</Text>
+            <Text style={[styles.badgeText, { fontFamily: font.bold }]}>
+              {activeOrders.length}
+            </Text>
           </View>
         </View>
 
         {/* Active Order Card */}
-        <View style={styles.activeCard}>
+        {activeOrder && (
+          <View style={styles.activeCard}>
           <View style={[styles.activeTop, { flexDirection: dir }]}>
             <View
               style={[
@@ -146,32 +247,42 @@ export default function OrdersScreen() {
               ]}
             >
               <Image
-                source={{ uri: ACTIVE_ORDER.logo }}
+                source={{
+                  uri: activeOrder.order?.store?.avatar ?? FALLBACK_LOGO,
+                }}
                 style={styles.restaurantLogo}
               />
               <View
-                style={{ flex: 1, alignItems: rtl ? "flex-end" : "flex-start" }}
+                style={{
+                  flex: 1,
+                  alignItems: rtl ? "flex-end" : "flex-start",
+                }}
               >
                 <Text
                   style={[styles.restaurantName, { fontFamily: font.bold }]}
                 >
-                  {ACTIVE_ORDER.restaurant}
+                  {localizeName(activeOrder.order?.store?.name, langKey)}
                 </Text>
                 <Text
                   style={[styles.customerName, { fontFamily: font.regular }]}
                 >
-                  {t("orders.customer")}: {ACTIVE_ORDER.customer}
+                  {t("orders.customer")}:{" "}
+                  {activeOrder.order?.customer?.name ?? "—"}
                 </Text>
               </View>
             </View>
             <View style={{ alignItems: rtl ? "flex-start" : "flex-end" }}>
               <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
-                {ACTIVE_ORDER.price}
+                {formatCurrency(
+                  activeOrder.order?.total,
+                  activeOrder.order?.currency ?? "IQD",
+                )}
               </Text>
               <Text
                 style={[styles.orderDistance, { fontFamily: font.regular }]}
               >
-                {ACTIVE_ORDER.distance} {t("orders.kmAway")}
+                {Number(activeOrder.distanceKm ?? 0).toFixed(1)}{" "}
+                {t("orders.kmAway")}
               </Text>
             </View>
           </View>
@@ -188,13 +299,13 @@ export default function OrdersScreen() {
                 color={Colors.textSecondary}
               />
               <Text style={[styles.locationText, { fontFamily: font.regular }]}>
-                {ACTIVE_ORDER.location}
+                {activeOrder.order?.store?.address ?? ""}
               </Text>
             </View>
             <View style={[styles.timerPill, { flexDirection: dir }]}>
               <Ionicons name="time-outline" size={scale(13)} color="#e05c7a" />
               <Text style={[styles.timerText, { fontFamily: font.medium }]}>
-                {ACTIVE_ORDER.timer}
+                {formatDurationMinutes(activeOrder.estimatedMinutes)}
               </Text>
             </View>
           </View>
@@ -209,7 +320,12 @@ export default function OrdersScreen() {
             <TouchableOpacity
               style={styles.startBtnInner}
               activeOpacity={0.85}
-              onPress={() => router.push("/orders/active_delivery_screen")}
+              onPress={() =>
+                router.push({
+                  pathname: "/orders/active_delivery_screen",
+                  params: { id: activeOrder.orderId },
+                })
+              }
             >
               <Text
                 style={[styles.startBtnText, { fontFamily: font.semibold }]}
@@ -218,7 +334,8 @@ export default function OrdersScreen() {
               </Text>
             </TouchableOpacity>
           </LinearGradient>
-        </View>
+          </View>
+        )}
 
         {/* ── New Orders Nearby ── */}
         <View style={styles.newOrder}>
@@ -230,13 +347,29 @@ export default function OrdersScreen() {
               style={[styles.badge, { left: rtl ? scale(185) : scale(150) }]}
             >
               <Text style={[styles.badgeText, { fontFamily: font.bold }]}>
-                {NEARBY_ORDERS.length}
+                {nearbyOrders.length}
               </Text>
             </View>
           </View>
 
-          {NEARBY_ORDERS.map((order) => (
-            <View key={order.id} style={styles.nearbyCard}>
+          {nearbyOrders.map((a) => {
+            const restaurant = localizeName(a.order?.store?.name, langKey);
+            const location = a.order?.store?.address ?? "";
+            const logo = a.order?.store?.avatar ?? FALLBACK_LOGO;
+            const price = formatCurrency(
+              a.order?.total,
+              a.order?.currency ?? "IQD",
+            );
+            const pickup = a.order?.store?.address ?? "";
+            const dropoffText = (() => {
+              const da = a.order?.deliveryAddress;
+              if (!da) return "";
+              const parts = [da.building, da.street].filter(Boolean) as string[];
+              return parts.join(", ");
+            })();
+            const isActing = !!acting[a.orderId];
+            return (
+            <View key={a.id} style={styles.nearbyCard}>
               {/* Top row */}
               <View style={[styles.nearbyTop, { flexDirection: dir }]}>
                 <View
@@ -250,7 +383,7 @@ export default function OrdersScreen() {
                   ]}
                 >
                   <Image
-                    source={{ uri: order.logo }}
+                    source={{ uri: logo }}
                     style={styles.nearbyLogo}
                   />
                   <View
@@ -262,7 +395,7 @@ export default function OrdersScreen() {
                     <Text
                       style={[styles.restaurantName, { fontFamily: font.bold }]}
                     >
-                      {order.restaurant}
+                      {restaurant}
                     </Text>
                     <View
                       style={[
@@ -284,13 +417,13 @@ export default function OrdersScreen() {
                           { fontFamily: font.regular },
                         ]}
                       >
-                        {order.location}
+                        {location}
                       </Text>
                     </View>
                   </View>
                 </View>
                 <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
-                  {order.price}
+                  {price}
                 </Text>
               </View>
 
@@ -312,7 +445,7 @@ export default function OrdersScreen() {
                   <Text
                     style={[styles.routeText, { fontFamily: font.regular }]}
                   >
-                    {t("orders.pickup")}: {order.pickup}
+                    {t("orders.pickup")}: {pickup}
                   </Text>
                 </View>
                 <View
@@ -330,7 +463,7 @@ export default function OrdersScreen() {
                   <Text
                     style={[styles.routeText, { fontFamily: font.regular }]}
                   >
-                    {t("orders.dropoff")}: {order.dropoff}
+                    {t("orders.dropoff")}: {dropoffText}
                   </Text>
                 </View>
               </View>
@@ -340,6 +473,8 @@ export default function OrdersScreen() {
                 <TouchableOpacity
                   style={styles.declineBtn}
                   activeOpacity={0.75}
+                  disabled={isActing}
+                  onPress={() => handleDeclineNearby(a.orderId)}
                 >
                   <Text
                     style={[styles.declineBtnText, { fontFamily: font.medium }]}
@@ -347,7 +482,12 @@ export default function OrdersScreen() {
                     {t("orders.decline")}
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.acceptBtn} activeOpacity={0.85}>
+                <TouchableOpacity
+                  style={styles.acceptBtn}
+                  activeOpacity={0.85}
+                  disabled={isActing}
+                  onPress={() => handleAcceptNearby(a.orderId)}
+                >
                   <Text
                     style={[
                       styles.acceptBtnText,
@@ -359,7 +499,8 @@ export default function OrdersScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>

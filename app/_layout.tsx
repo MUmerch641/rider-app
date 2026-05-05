@@ -1,6 +1,7 @@
 import { LanguageOnboarding } from "@/components/ui/LanguageOnboarding";
 import "@/constants/i18n";
 import i18n, { isRTL, LANGUAGE_STORAGE_KEY } from "@/constants/i18n";
+import { AuthProvider, NotificationProvider, SocketProvider, useAuth, useNotifications, useSocket } from "@/context";
 import {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -17,12 +18,65 @@ import {
   Vazirmatn_700Bold,
 } from "@expo-google-fonts/vazirmatn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { I18nManager } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
+
+function RouteGuard({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const inAuthGroup = segments[0] === "auth";
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/auth/auth_screen");
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [isAuthenticated, isLoading, segments, router]);
+
+  return <>{children}</>;
+}
+
+function SocketBridges() {
+  const { newOrder, pushedNotification, clearPushedNotification } = useSocket();
+  const { addNotification } = useNotifications();
+  const lastNewOrderIdRef = useRef<string | null>(null);
+
+  // Mirror "notification:new" socket events into local notifications list.
+  useEffect(() => {
+    if (!pushedNotification) return;
+    addNotification(pushedNotification);
+    clearPushedNotification();
+  }, [pushedNotification, addNotification, clearPushedNotification]);
+
+  // Add a local notification whenever a new order arrives via socket.
+  useEffect(() => {
+    if (!newOrder) return;
+    if (lastNewOrderIdRef.current === newOrder.orderId) return;
+    lastNewOrderIdRef.current = newOrder.orderId;
+
+    const storeName = newOrder.store?.name;
+    const storeLabel =
+      typeof storeName === "string"
+        ? storeName
+        : storeName?.en ?? storeName?.ar ?? storeName?.ku ?? "store";
+
+    addNotification({
+      type: "new_order",
+      title: `Order #${newOrder.orderNumber}`,
+      body: `New delivery from ${storeLabel}`,
+      data: { orderId: newOrder.orderId },
+    });
+  }, [newOrder, addNotification]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -55,7 +109,6 @@ export default function RootLayout() {
       if (I18nManager.isRTL !== shouldBeRTL) {
         I18nManager.allowRTL(shouldBeRTL);
         I18nManager.forceRTL(shouldBeRTL);
-        // Just hide splash — user needs to restart app once for RTL to apply
         SplashScreen.hideAsync();
         return;
       }
@@ -68,13 +121,19 @@ export default function RootLayout() {
   if (!loaded || !notoLoaded) return null;
 
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="auth" />
-      </Stack>
-
-      <LanguageOnboarding />
-    </>
+    <AuthProvider>
+      <NotificationProvider>
+        <SocketProvider>
+          <SocketBridges />
+          <RouteGuard>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="auth" />
+            </Stack>
+          </RouteGuard>
+          <LanguageOnboarding />
+        </SocketProvider>
+      </NotificationProvider>
+    </AuthProvider>
   );
 }

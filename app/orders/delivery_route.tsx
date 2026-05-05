@@ -1,18 +1,27 @@
+import {
+  ordersApi,
+  type ApiError,
+  type DriverNextStatus,
+  type OrderAssignment,
+} from "@/api";
 import { DeliveryBottomSheet } from "@/components/ui";
 import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
 import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
+import { formatNumber } from "@/utils/format";
+import { localizeName, type LangKey } from "@/utils/localize";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,6 +31,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
+const FALLBACK_LOGO =
+  "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain";
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 const GOOGLE_DIRECTIONS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -185,19 +196,87 @@ export default function DeliveryRoute() {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
+  const langKey: LangKey = (i18n.language as LangKey) || "en";
   const mapRef = useRef<MapView>(null);
 
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ["20%", "45%"], []);
 
-  const [sheetHeight, setSheetHeight] = useState(verticalScale(160)); // default collapsed height
+  // ─── Route params ───────────────────────────────────────────────────────
+  const params = useLocalSearchParams<{ id?: string; phase?: string }>();
+  const orderId = typeof params.id === "string" ? params.id : "";
+  const phase: "pickup" | "dropoff" =
+    params.phase === "dropoff" ? "dropoff" : "pickup";
+
+  // ─── Assignment ─────────────────────────────────────────────────────────
+  const [assignment, setAssignment] = useState<OrderAssignment | null>(null);
+  const [arrivedBusy, setArrivedBusy] = useState(false);
+
+  useEffect(() => {
+    if (!orderId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await ordersApi.getById(orderId);
+        if (!cancelled) setAssignment(data);
+      } catch (err) {
+        console.warn("Fetch order failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId]);
+
+  // Pickup destination = store coordinates; Dropoff destination = customer/delivery address.
+  const destination = useMemo(() => {
+    if (!assignment?.order) return null;
+    if (phase === "pickup") {
+      const g = assignment.order.store?.geoLocation;
+      if (g?.lat == null || g?.lng == null) return null;
+      return { latitude: g.lat, longitude: g.lng };
+    }
+    const g = assignment.order.deliveryAddress?.geoLocation;
+    if (g?.lat == null || g?.lng == null) return null;
+    return { latitude: g.lat, longitude: g.lng };
+  }, [assignment, phase]);
+
+  const sheetTitle = useMemo(() => {
+    if (!assignment?.order) return "";
+    if (phase === "pickup") {
+      return localizeName(assignment.order.store?.name, langKey);
+    }
+    return assignment.order.customer?.name ?? "";
+  }, [assignment, phase, langKey]);
+
+  const sheetSubtitle = useMemo(() => {
+    if (!assignment?.order) return "";
+    if (phase === "pickup") {
+      return assignment.order.store?.address ?? "";
+    }
+    const da = assignment.order.deliveryAddress;
+    if (!da) return "";
+    const parts = [da.building, da.street].filter(Boolean) as string[];
+    return parts.join(", ");
+  }, [assignment, phase]);
+
+  const markerImage =
+    phase === "pickup"
+      ? assignment?.order?.store?.avatar ?? FALLBACK_LOGO
+      : assignment?.order?.customer?.avatar ?? FALLBACK_LOGO;
+
+  const callPhone =
+    phase === "pickup"
+      ? assignment?.order?.store?.phone ?? ""
+      : assignment?.order?.customer?.phone ?? "";
+
+  const [sheetHeight, setSheetHeight] = useState(verticalScale(160));
 
   const handleSheetChange = (index: number) => {
-    // manually track position based on snap index
     if (index === 0) {
-      setSheetHeight(verticalScale(160)); // collapsed ~20%
+      setSheetHeight(verticalScale(160));
     } else {
-      setSheetHeight(verticalScale(350)); // expanded ~45%
+      setSheetHeight(verticalScale(350));
     }
   };
   const [locating, setLocating] = useState(false);
@@ -240,14 +319,21 @@ export default function DeliveryRoute() {
     };
     mapRef.current?.animateToRegion(newRegion, 300);
   };
-  // Fetch directions from API
+  // Fetch directions from API. Destination defaults to current state value.
   const loadRoute = useCallback(
-    async (origin: { latitude: number; longitude: number }) => {
+    async (
+      origin: { latitude: number; longitude: number },
+      dest: { latitude: number; longitude: number } | null = destination,
+    ) => {
+      if (!dest) {
+        setLoadingRoute(false);
+        return;
+      }
       setLoadingRoute(true);
       setRouteError(false);
 
       try {
-        const result = await fetchDirections(origin, DESTINATION);
+        const result = await fetchDirections(origin, dest);
 
         if (result) {
           setRouteCoordinates(result.coordinates);
@@ -256,24 +342,24 @@ export default function DeliveryRoute() {
             duration: result.duration,
           });
         } else {
-          // Fallback to straight line
-          setRouteCoordinates(generateStraightLine(origin, DESTINATION));
+          setRouteCoordinates(generateStraightLine(origin, dest));
           setRouteError(true);
         }
       } catch {
-        setRouteCoordinates(generateStraightLine(origin, DESTINATION));
+        setRouteCoordinates(generateStraightLine(origin, dest));
         setRouteError(true);
       }
 
       setLoadingRoute(false);
     },
-    [],
+    [destination],
   );
 
-  // Initial route load
+  // Initial route load — waits for destination to be resolved.
   useEffect(() => {
-    loadRoute(STARTING_POINT);
-  }, [loadRoute]);
+    if (!destination) return;
+    loadRoute(userLocation ?? STARTING_POINT, destination);
+  }, [destination, loadRoute, userLocation]);
 
   // Fit map to show entire route
   useEffect(() => {
@@ -351,8 +437,7 @@ export default function DeliveryRoute() {
       mapRef.current?.animateToRegion(newRegion, 600);
       await reverseGeocode(newLocation.latitude, newLocation.longitude);
 
-      // Refetch route from new location
-      await loadRoute(newLocation);
+      if (destination) await loadRoute(newLocation, destination);
     } catch (e) {
       console.warn(e);
     }
@@ -360,6 +445,35 @@ export default function DeliveryRoute() {
   };
 
   const getOriginForRoute = () => userLocation ?? STARTING_POINT;
+
+  const handleCall = () => {
+    if (callPhone) Linking.openURL(`tel:${callPhone}`).catch(() => undefined);
+  };
+
+  const handleArrived = async () => {
+    if (!orderId || arrivedBusy) return;
+    const next: DriverNextStatus = phase === "pickup" ? "arrived_store" : "arrived";
+    setArrivedBusy(true);
+    try {
+      await ordersApi.updateStatus(orderId, { status: next });
+      router.back();
+    } catch (err) {
+      console.warn("Arrived update failed:", (err as ApiError)?.message);
+    } finally {
+      setArrivedBusy(false);
+    }
+  };
+
+  const handleOrderDetails = () => {
+    if (!orderId) {
+      router.push("/orders");
+      return;
+    }
+    router.push({
+      pathname: "/orders/active_delivery_screen",
+      params: { id: orderId },
+    });
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -425,25 +539,25 @@ export default function DeliveryRoute() {
                 lineJoin="round"
               />
             )}
-            <Marker
-              coordinate={DESTINATION}
-              anchor={{ x: 0.5, y: 1 }}
-              centerOffset={{ x: 0, y: -scale(12) }}
-              zIndex={10}
-            >
-              <View style={styles.destinationMarker}>
-                <View style={styles.destinationMarkerInner}>
-                  <Image
-                    source={{
-                      uri: "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain&o=7&rm=3",
-                    }}
-                    style={styles.markerAvatar}
-                    resizeMode="cover"
-                  />
+            {destination && (
+              <Marker
+                coordinate={destination}
+                anchor={{ x: 0.5, y: 1 }}
+                centerOffset={{ x: 0, y: -scale(12) }}
+                zIndex={10}
+              >
+                <View style={styles.destinationMarker}>
+                  <View style={styles.destinationMarkerInner}>
+                    <Image
+                      source={{ uri: markerImage || FALLBACK_LOGO }}
+                      style={styles.markerAvatar}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.markerPointer} />
                 </View>
-                <View style={styles.markerPointer} />
-              </View>
-            </Marker>
+              </Marker>
+            )}
             <Marker
               coordinate={getOriginForRoute()}
               anchor={{ x: 0.5, y: 0.5 }}
@@ -513,16 +627,14 @@ export default function DeliveryRoute() {
         >
           <BottomSheetView style={styles.sheetContent}>
             <DeliveryBottomSheet
-              restaurantName="The Grill Restaurant"
-              restaurantLocation="Sulaimany-baxtyari"
+              restaurantName={sheetTitle}
+              restaurantLocation={sheetSubtitle}
               activeTab="navigate"
-              onCall={() => {}}
-              onArrived={() => {}}
-              onCancelDelivery={() => {}}
+              onCall={handleCall}
+              onArrived={handleArrived}
+              onCancelDelivery={() => router.back()}
               onNavigate={() => {}}
-              onOrderDetails={() => {
-                router.push("/orders");
-              }}
+              onOrderDetails={handleOrderDetails}
               onSupport={() => {
                 router.push("/inbox/support_chat");
               }}

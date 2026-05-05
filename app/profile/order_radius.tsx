@@ -1,5 +1,7 @@
+import type { ApiError } from "@/api";
 import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
+import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
   fontSize,
@@ -17,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -41,13 +44,37 @@ export default function OrderRadiusScreen() {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
-  const [radiusKm, setRadiusKm] = useState(5);
+  const { driver, updateProfile } = useAuth();
+  const [radiusKm, setRadiusKm] = useState<number>(driver?.orderRadiusKm ?? 5);
+  const [saving, setSaving] = useState(false);
   const mapRef = useRef<MapView>(null);
   const [locationLoading, setLocationLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
+
+  // Hydrate when driver becomes available after first render.
+  useEffect(() => {
+    if (driver?.orderRadiusKm != null) setRadiusKm(driver.orderRadiusKm);
+  }, [driver?.orderRadiusKm]);
+
+  const handleSetRadius = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await updateProfile({ orderRadiusKm: radiusKm });
+      router.back();
+    } catch (err) {
+      const apiErr = err as ApiError;
+      Alert.alert(
+        t("orderRadius.saveFailed", { defaultValue: "Save failed" }),
+        apiErr?.message ?? "",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
@@ -244,15 +271,30 @@ export default function OrderRadiusScreen() {
             colors={["#B894FF", "#8B45FF", "#B894FF"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.buttonGrad}
+            style={[styles.buttonGrad, saving && { opacity: 0.7 }]}
           >
-            <TouchableOpacity style={styles.button} activeOpacity={0.85}>
-              <View style={styles.checkCircle}>
-                <Ionicons name="checkmark" size={scale(14)} color="#9B5BFF" />
-              </View>
-              <Text style={[styles.buttonText, { fontFamily: font.bold }]}>
-                {t("orderRadius.setRadius")}
-              </Text>
+            <TouchableOpacity
+              style={styles.button}
+              activeOpacity={0.85}
+              onPress={handleSetRadius}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <View style={styles.checkCircle}>
+                    <Ionicons
+                      name="checkmark"
+                      size={scale(14)}
+                      color="#9B5BFF"
+                    />
+                  </View>
+                  <Text style={[styles.buttonText, { fontFamily: font.bold }]}>
+                    {t("orderRadius.setRadius")}
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </LinearGradient>
         </View>

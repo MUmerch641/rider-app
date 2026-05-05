@@ -1,8 +1,10 @@
+import { walletApi, type ApiError } from "@/api";
 import { DriverBalanceCard } from "@/components/ui/DriverBalanceCard";
 import { CartIcon, ChartIcon, StarIcon } from "@/components/ui/icons";
 import LanguageSelector from "@/components/ui/LanguageButton";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
+import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
   fontSize,
@@ -14,6 +16,7 @@ import {
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ScrollView,
@@ -93,9 +96,65 @@ export default function ProfileScreen() {
   const rtl = isRTL(i18n.language);
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
-  const handleSignOut = () => {
-    // replace with real sign out logic
-    router.replace("/auth/auth_screen");
+
+  const { driver, logout } = useAuth();
+  const [lifetimeBalance, setLifetimeBalance] = useState<number>(0);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Fetch lifetime earnings from wallet.summary with a wide date range.
+  // (Replaced by GET /wallet/balance in a later task.)
+  useEffect(() => {
+    if (!driver?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const summary = await walletApi.summary({
+          startDate: "2020-01-01",
+          endDate: today,
+        });
+        if (!cancelled) {
+          const total = Number(summary?.summary?.totalEarnings ?? 0);
+          setLifetimeBalance(Number.isFinite(total) ? total : 0);
+        }
+      } catch (err) {
+        console.warn("Wallet summary failed:", (err as ApiError)?.message);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [driver?.id]);
+
+  const driverDisplayName = useMemo(() => {
+    if (!driver) return "";
+    const first = driver.firstName?.trim();
+    const last = driver.lastName?.trim();
+    if (first || last) return [first, last].filter(Boolean).join(" ");
+    return driver.username ?? "";
+  }, [driver]);
+
+  const ratingDisplay = useMemo(() => {
+    const r = driver?.rating;
+    if (r == null) return "—";
+    const n = typeof r === "number" ? r : Number(r);
+    return Number.isFinite(n) ? n.toFixed(1) : String(r);
+  }, [driver?.rating]);
+
+  const ordersDisplay = String(driver?.totalDeliveries ?? 0);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+    } catch {
+      // Local logout still happens inside auth.logout().
+    } finally {
+      setSigningOut(false);
+      // RouteGuard will redirect on isAuthenticated flip; this is belt-and-suspenders.
+      router.replace("/auth/auth_screen");
+    }
   };
 
   const handleLanguageToggle = () => {
@@ -141,11 +200,13 @@ export default function ProfileScreen() {
       >
         {/* ── Driver Balance Card ── */}
         <DriverBalanceCard
-          name="Ahmad Mohammad"
-          phone="07702111245"
-          balance={120000}
+          name={driverDisplayName}
+          phone={driver?.phone ?? ""}
+          balance={lifetimeBalance}
           avatar={{
-            uri: "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4=",
+            uri:
+              driver?.avatar ??
+              "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4=",
           }}
           style={styles.balanceCard}
         />
@@ -183,7 +244,7 @@ export default function ProfileScreen() {
                 { fontFamily: font.medium, textAlign: align },
               ]}
             >
-              456
+              {ordersDisplay}
             </Text>
           </TouchableOpacity>
 
@@ -247,7 +308,7 @@ export default function ProfileScreen() {
                 { fontFamily: font.medium, textAlign: align },
               ]}
             >
-              4.5
+              {ratingDisplay}
             </Text>
           </TouchableOpacity>
         </LinearGradient>

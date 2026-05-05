@@ -1,8 +1,10 @@
+import type { ApiError } from "@/api";
 import { isRTL } from "@/constants/i18n";
+import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -25,12 +27,68 @@ export default function PersonalInformationScreen() {
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
 
+  const { driver, updateProfile } = useAuth();
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [nickname, setNickname] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Hydrate fields from the cached driver profile.
+  useEffect(() => {
+    if (!driver) return;
+    setFirstName(driver.firstName ?? "");
+    setLastName(driver.lastName ?? "");
+    setNickname(driver.nickname ?? "");
+    setDateOfBirth(driver.dateOfBirth ?? "");
+  }, [driver]);
+
+  const handleSave = async () => {
+    if (saving) return;
+    // Trim before sending. Empty strings → null to clear the column.
+    const norm = (s: string) => {
+      const v = s.trim();
+      return v.length === 0 ? null : v;
+    };
+    // Validate dateOfBirth shape if provided.
+    const dobTrim = dateOfBirth.trim();
+    if (dobTrim && !/^\d{4}-\d{2}-\d{2}$/.test(dobTrim)) {
+      Alert.alert(
+        t("personalInfo.invalidDate", { defaultValue: "Invalid date" }),
+        t("personalInfo.invalidDateHint", {
+          defaultValue: "Please use YYYY-MM-DD format.",
+        }),
+      );
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateProfile({
+        firstName: norm(firstName) ?? undefined,
+        lastName: norm(lastName) ?? undefined,
+        nickname: norm(nickname) ?? undefined,
+        dateOfBirth: dobTrim ? dobTrim : undefined,
+      });
+      Alert.alert(
+        t("personalInfo.savedTitle", { defaultValue: "Saved" }),
+        t("personalInfo.savedMessage", {
+          defaultValue: "Your profile has been updated.",
+        }),
+      );
+    } catch (err) {
+      const apiErr = err as ApiError;
+      Alert.alert(
+        t("personalInfo.saveFailed", { defaultValue: "Save failed" }),
+        apiErr?.message ?? "",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const getInputBorder = (field: string, value: string) => {
     if (focusedField === field) return "#5E28C6";
@@ -218,12 +276,18 @@ export default function PersonalInformationScreen() {
 
           {/* Save Button */}
           <TouchableOpacity
-            style={[styles.saveBtn, { opacity: 0.6 }]}
+            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
             activeOpacity={0.8}
+            onPress={handleSave}
+            disabled={saving}
           >
-            <Text style={[styles.saveBtnText, { fontFamily: font.semibold }]}>
-              {t("personalInfo.save")}
-            </Text>
+            {saving ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={[styles.saveBtnText, { fontFamily: font.semibold }]}>
+                {t("personalInfo.save")}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -250,7 +314,7 @@ export default function PersonalInformationScreen() {
                 {t("personalInfo.emailAddress")}
               </Text>
               <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
-                {t("personalInfo.notSet")}
+                {driver?.email ?? t("personalInfo.notSet")}
               </Text>
             </View>
             <TouchableOpacity
@@ -291,7 +355,7 @@ export default function PersonalInformationScreen() {
                 {t("personalInfo.phoneNumber")}
               </Text>
               <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
-                {t("personalInfo.notSet")}
+                {driver?.phone ?? t("personalInfo.notSet")}
               </Text>
             </View>
             <TouchableOpacity

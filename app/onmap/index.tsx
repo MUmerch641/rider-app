@@ -1,3 +1,4 @@
+import { ordersApi, walletApi, type ApiError } from "@/api";
 import {
     AcceptedOrderItem,
     AcceptedOrdersSheet,
@@ -7,12 +8,20 @@ import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
 import OrderRequestCard from "@/components/ui/OrderRequestCard";
 import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
+import { useAuth, useSocket } from "@/context";
+import {
+    formatCurrency,
+    formatDistanceKm,
+    formatDurationMinutes,
+    formatNumber,
+} from "@/utils/format";
+import { localizeName, type LangKey } from "@/utils/localize";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { t } from "i18next";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
@@ -187,7 +196,6 @@ export default function OnMap() {
   const [acceptedOrders, setAcceptedOrders] = useState<AcceptedOrderItem[]>([]);
   // ─── State ─────────────────────────────────────────────────────────────
   const [showOrder, setShowOrder] = useState(true);
-  const [currentRequestIndex, setCurrentRequestIndex] = useState(0);
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [sheetHeight, setSheetHeight] = useState(verticalScale(160));
   const [locating, setLocating] = useState(false);
@@ -216,170 +224,159 @@ export default function OnMap() {
     longitude: DEFAULT_REGION.longitude,
   });
   const [currentRegion, setCurrentRegion] = useState<Region>(DEFAULT_REGION);
-  type MockRequestOrder = {
-    id: string;
-    restaurantName: string;
-    restaurantLocation: string;
-    restaurantLogo: string;
+  // ─── Live data hooks ────────────────────────────────────────────────────
+  const { driver, updateStatus, updateLocation } = useAuth();
+  const {
+    newOrder,
+    cancelledOrder,
+    clearNewOrder,
+    clearCancelledOrder,
+  } = useSocket();
 
-    restaurantCoordinate: {
-      latitude: number;
-      longitude: number;
+  const langKey: LangKey = (i18n.language as LangKey) || "en";
+
+  const [todayEarnings, setTodayEarnings] = useState<string>("0");
+  const [statusBusy, setStatusBusy] = useState(false);
+
+  const driverDisplayName = useMemo(() => {
+    if (!driver) return "";
+    const first = driver.firstName?.trim();
+    const last = driver.lastName?.trim();
+    if (first || last) return [first, last].filter(Boolean).join(" ");
+    return driver.username ?? "";
+  }, [driver]);
+
+  // ─── Map socket newOrder → component-shape currentRequest ───────────────
+  const currentRequest = useMemo(() => {
+    if (!newOrder) return null;
+
+    const storeGeo = newOrder.store?.location;
+    const restaurantCoordinate = {
+      latitude: storeGeo?.lat ?? DEFAULT_REGION.latitude,
+      longitude: storeGeo?.lng ?? DEFAULT_REGION.longitude,
     };
 
-    totalDistance: string;
-    totalDuration: string;
-    price: string;
-    pickupLocation: string;
-    dropoffLocation: string;
-    items: {
-      id: string;
-      quantity: number;
-      name: string;
-      price: number;
-    }[];
-  };
+    return {
+      id: newOrder.orderId,
+      restaurantName: localizeName(newOrder.store?.name, langKey),
+      restaurantLocation: newOrder.store?.address ?? "",
+      restaurantLogo: newOrder.store?.logoUrl ?? "",
+      restaurantCoordinate,
+      totalDistance: formatDistanceKm(newOrder.distanceKm),
+      totalDuration: formatDurationMinutes(newOrder.estimatedMinutes),
+      price: formatCurrency(newOrder.total, newOrder.currency ?? "IQD"),
+      pickupLocation: newOrder.store?.address ?? "",
+      dropoffLocation: newOrder.customer?.address ?? "",
+      items: (newOrder.items ?? []).map((it) => ({
+        id: it.id,
+        quantity: it.quantity,
+        name: localizeName(it.name, langKey),
+        price: typeof it.price === "string" ? Number(it.price) : it.price,
+      })),
+      expiresInSeconds: newOrder.expiresInSeconds ?? 30,
+    };
+  }, [newOrder, langKey]);
 
-  const mockRequestOrders: MockRequestOrder[] = [
-    {
-      id: "req-1",
-      restaurantName: "The Grill Restaurant",
-      restaurantLocation: "Sulaimany-baxtyari",
-      restaurantCoordinate: {
-        latitude: 35.5642,
-        longitude: 45.4321,
-      },
-      restaurantLogo:
-        "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain",
-      totalDistance: "3.2 km",
-      totalDuration: "12 min",
-      price: "4,000IQD",
-      pickupLocation: "Baxtyary",
-      dropoffLocation: "Ashty Street",
-      items: [
-        { id: "1", quantity: 2, name: "Chicken Burger", price: 12000 },
-        { id: "2", quantity: 1, name: "Pepsi", price: 1500 },
-      ],
-    },
-    {
-      id: "req-2",
-      restaurantName: "Pizza House",
-      restaurantLocation: "Salim Street",
-      restaurantLogo:
-        "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200",
-
-      restaurantCoordinate: {
-        latitude: 35.5665,
-        longitude: 45.4208,
-      },
-
-      totalDistance: "2.1 km",
-      totalDuration: "8 min",
-      price: "3,500IQD",
-      pickupLocation: "Salim Street",
-      dropoffLocation: "Bakrajo",
-      items: [
-        { id: "1", quantity: 1, name: "Pepperoni Pizza", price: 15000 },
-        { id: "2", quantity: 2, name: "Cola", price: 2000 },
-      ],
-    },
-    {
-      id: "req-3",
-      restaurantName: "Burger City",
-      restaurantLocation: "Majidi Mall",
-      restaurantLogo:
-        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=200",
-
-      restaurantCoordinate: {
-        latitude: 35.5589,
-        longitude: 45.4355,
-      },
-
-      totalDistance: "4.5 km",
-      totalDuration: "18 min",
-      price: "5,000IQD",
-      pickupLocation: "Majidi Mall",
-      dropoffLocation: "Toya Malik",
-      items: [
-        { id: "1", quantity: 1, name: "Double Burger", price: 13000 },
-        { id: "2", quantity: 1, name: "Fries", price: 3000 },
-      ],
-    },
-  ];
-  const currentRequest = mockRequestOrders[currentRequestIndex];
-  const handleAcceptOrder = () => {
-    if (!currentRequest) return;
+  const handleAcceptOrder = async () => {
+    if (!currentRequest || !newOrder) return;
 
     const newOrderId = currentRequest.id;
 
-    setAcceptedOrders((prev) => [
-      {
-        id: newOrderId,
-        restaurantName: currentRequest.restaurantName,
-        restaurantAvatar: currentRequest.restaurantLogo,
-        price: currentRequest.price,
-        pickupLocation: currentRequest.pickupLocation,
-        dropoffLocation: currentRequest.dropoffLocation,
-        actionType: "go_to_restaurant",
+    try {
+      await ordersApi.accept(newOrderId);
+    } catch (err) {
+      console.warn("Accept failed:", (err as ApiError)?.message);
+      // Clear so a new dispatch can come in.
+      clearNewOrder();
+      return;
+    }
 
-        onGoToRestaurant: () => {
-          if (activeDeliveryId) return;
+    const accepted: AcceptedOrderItem = {
+      id: newOrderId,
+      restaurantName: currentRequest.restaurantName,
+      restaurantAvatar: currentRequest.restaurantLogo,
+      price: currentRequest.price,
+      pickupLocation: currentRequest.pickupLocation,
+      dropoffLocation: currentRequest.dropoffLocation,
+      actionType: "go_to_restaurant",
 
-          setActiveDeliveryId(newOrderId);
+      onGoToRestaurant: () => {
+        if (activeDeliveryId) return;
 
-          setActiveDestination(currentRequest.restaurantCoordinate);
-          setActiveMarkerImage(currentRequest.restaurantLogo);
+        setActiveDeliveryId(newOrderId);
+        setActiveDestination(currentRequest.restaurantCoordinate);
+        setActiveMarkerImage(currentRequest.restaurantLogo);
 
-          loadRoute(STARTING_POINT, currentRequest.restaurantCoordinate);
+        loadRoute(userLocation ?? STARTING_POINT, currentRequest.restaurantCoordinate);
 
-          setAcceptedOrders((orders) =>
-            orders.map((order) =>
-              order.id === newOrderId
-                ? {
-                    ...order,
-                    actionType: "deliver",
-                    onDeliver: () => {
-                      setAcceptedOrders((items) =>
-                        items.filter((item) => item.id !== newOrderId),
-                      );
-
-                      setActiveDeliveryId(null);
-                      setActiveMarkerImage(null);
-                    },
-                  }
-                : order,
-            ),
-          );
-        },
-
-        onCancel: () => {
-          setAcceptedOrders((orders) =>
-            orders.filter((order) => order.id !== newOrderId),
-          );
-        },
+        setAcceptedOrders((orders) =>
+          orders.map((order) =>
+            order.id === newOrderId
+              ? {
+                  ...order,
+                  actionType: "deliver",
+                  onDeliver: async () => {
+                    try {
+                      await ordersApi.updateStatus(newOrderId, { status: "delivered" });
+                    } catch (e) {
+                      console.warn("Delivered update failed:", (e as ApiError)?.message);
+                    }
+                    setAcceptedOrders((items) =>
+                      items.filter((item) => item.id !== newOrderId),
+                    );
+                    setActiveDeliveryId(null);
+                    setActiveMarkerImage(null);
+                  },
+                }
+              : order,
+          ),
+        );
       },
-      ...prev,
-    ]);
 
-    const nextIndex = currentRequestIndex + 1;
+      onCancel: () => {
+        setAcceptedOrders((orders) =>
+          orders.filter((order) => order.id !== newOrderId),
+        );
+      },
+    };
 
-    if (nextIndex < mockRequestOrders.length) {
-      setCurrentRequestIndex(nextIndex);
-      setShowOrder(true);
-    } else {
-      setShowOrder(false);
+    setAcceptedOrders((prev) => [accepted, ...prev]);
+    clearNewOrder();
+  };
+
+  const handleDecline = async () => {
+    if (!newOrder) return;
+    const orderId = newOrder.orderId;
+    clearNewOrder();
+    try {
+      await ordersApi.reject(orderId, { reason: "too_far" });
+    } catch (err) {
+      console.warn("Decline failed:", (err as ApiError)?.message);
     }
   };
-  const showNextRequest = () => {
-    const nextIndex = currentRequestIndex + 1;
 
-    if (nextIndex < mockRequestOrders.length) {
-      setCurrentRequestIndex(nextIndex);
-      setShowOrder(true);
-    } else {
-      setShowOrder(false);
+  const handleTimerEnd = async () => {
+    if (!newOrder) return;
+    const orderId = newOrder.orderId;
+    clearNewOrder();
+    try {
+      await ordersApi.reject(orderId, { reason: "timeout" });
+    } catch (err) {
+      console.warn("Auto-decline failed:", (err as ApiError)?.message);
     }
   };
+
+  const handleStatusToggle = useCallback(async () => {
+    if (statusBusy || !driver) return;
+    setStatusBusy(true);
+    try {
+      await updateStatus(!driver.isOnline);
+    } catch (err) {
+      console.warn("Status toggle failed:", (err as ApiError)?.message);
+    } finally {
+      setStatusBusy(false);
+    }
+  }, [statusBusy, driver, updateStatus]);
   // ─── Zoom Handlers ──────────────────────────────────────────────────────
   const handleZoomIn = () => {
     const newRegion = {
@@ -451,6 +448,64 @@ export default function OnMap() {
       return () => clearTimeout(timer);
     }
   }, [routeCoordinates]);
+
+  // ─── Wallet summary (today's earnings) ──────────────────────────────────
+  useEffect(() => {
+    if (!driver?.id) return;
+    const today = new Date().toISOString().slice(0, 10);
+    walletApi
+      .summary({ startDate: today, endDate: today })
+      .then((s) => {
+        setTodayEarnings(formatNumber(s?.summary?.totalEarnings));
+      })
+      .catch(() => undefined);
+  }, [driver?.id]);
+
+  // ─── GPS heartbeat while online ─────────────────────────────────────────
+  useEffect(() => {
+    if (!driver?.isOnline) return;
+    let cancelled = false;
+    let watcher: Location.LocationSubscription | null = null;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted" || cancelled) return;
+      watcher = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+          distanceInterval: 10,
+        },
+        (loc) => {
+          if (cancelled) return;
+          setUserLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+          updateLocation({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            heading: loc.coords.heading ?? undefined,
+          }).catch(() => undefined);
+        },
+      );
+    })();
+    return () => {
+      cancelled = true;
+      if (watcher) watcher.remove();
+    };
+  }, [driver?.isOnline, updateLocation]);
+
+  // ─── Socket cancellation → drop from accepted list ──────────────────────
+  useEffect(() => {
+    if (!cancelledOrder) return;
+    const orderId = cancelledOrder.orderId;
+    setAcceptedOrders((orders) => orders.filter((o) => o.id !== orderId));
+    if (activeDeliveryId === orderId) {
+      setActiveDeliveryId(null);
+      setActiveMarkerImage(null);
+    }
+    clearCancelledOrder();
+  }, [cancelledOrder, clearCancelledOrder, activeDeliveryId]);
 
   // ─── Geocoding ──────────────────────────────────────────────────────────
   const reverseGeocode = async (lat: number, lng: number) => {
@@ -534,11 +589,11 @@ export default function OnMap() {
             ]}
           >
             <DriverStatusHeader
-              name="Ahmed Mohammed"
-              avatar="https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4="
-              earnings="18,500"
-              isOnline={true}
-              onToggleStatus={() => {}}
+              name={driverDisplayName}
+              avatar={driver?.avatar ?? "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4="}
+              earnings={todayEarnings}
+              isOnline={driver?.isOnline ?? false}
+              onToggleStatus={handleStatusToggle}
             />
           </View>
 
@@ -679,13 +734,13 @@ export default function OnMap() {
             restaurantLogo={currentRequest.restaurantLogo}
             totalDistance={currentRequest.totalDistance}
             totalDuration={currentRequest.totalDuration}
-            timerSeconds={10}
+            timerSeconds={currentRequest.expiresInSeconds}
             currency="IQD"
             isRTL={rtl}
             items={currentRequest.items}
             onAccept={handleAcceptOrder}
-            onDecline={showNextRequest}
-            onTimerEnd={showNextRequest}
+            onDecline={handleDecline}
+            onTimerEnd={handleTimerEnd}
           />
         )}
 

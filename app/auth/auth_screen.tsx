@@ -1,9 +1,10 @@
+import type { ApiError } from "@/api";
 import { Button, Input, PhoneInput } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
+import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
-import { storage } from "@/utils/storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -70,6 +71,7 @@ export default function AuthScreen() {
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();
+  const { login } = useAuth();
 
   const [countryCode, setCountryCode] = useState("+964");
   const [phone, setPhone] = useState("");
@@ -94,12 +96,27 @@ export default function AuthScreen() {
     } else setPasswordError("");
 
     if (!valid) return;
+
     setLoginLoading(true);
-    setTimeout(async () => {
-      await storage.set("user_token", "test_token_123");
-      setLoginLoading(false);
+    try {
+      const digits = phone.replace(/\D/g, "");
+      const fullPhone = `${countryCode}${digits}`;
+      await login({ phone: fullPhone, password });
+      // RouteGuard in app/_layout.tsx will redirect once isAuthenticated flips.
+      // Replace is kept as belt-and-suspenders for instant transition.
       router.replace("/(tabs)");
-    }, 1500);
+    } catch (err) {
+      const apiErr = err as ApiError;
+      if (apiErr?.fields?.phone?.length) {
+        setPhoneError(apiErr.fields.phone[0]);
+      } else if (apiErr?.fields?.password?.length) {
+        setPasswordError(apiErr.fields.password[0]);
+      } else {
+        setPasswordError(apiErr?.message || t("auth.passwordError"));
+      }
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   return (
