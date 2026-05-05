@@ -45,8 +45,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "0813a8b2-41b8-4d62-8350-4fd42cff066e"
+        "projectId": "8508ee9b-23df-4f4b-9fd3-02830b4d05ea"
       }
-    }
+    },
+    "owner": "samxfrmat"
   }
 }
