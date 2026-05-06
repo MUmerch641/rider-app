@@ -19,11 +19,11 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff",
-        "config": {
-          "googleMaps": {
-            "apiKey": "AIzaSyCCQ2e9r0KOyxW3XXjVH6YmkKUvj1I0e0c"
-          }
+        "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCCQ2e9r0KOyxW3XXjVH6YmkKUvj1I0e0c"
         }
       },
       "edgeToEdgeEnabled": true,
