@@ -15,10 +15,26 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "credentialsSource": "local"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "tola.hussaini.uk@gmail.com",
+        "ascAppId": "6767235738",
+        "appleTeamId": "UGB327LMQQ",
+        "ascApiKeyPath": "../.secrets/AuthKey_5DW7PA46D7.p8",
+        "ascApiKeyId": "5DW7PA46D7",
+        "ascApiKeyIssuerId": "bb133f63-409a-4dec-83b2-590278eca2fc"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./PLACEHOLDER_google-play-key.json",
+        "track": "internal"
+      }
+    }
   }
 }

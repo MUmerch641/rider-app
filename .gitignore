@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local EAS credentials (contains .p12 password)
+credentials.json

@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "6972432061",
+    "project_id": "onwayiraq",
+    "storage_bucket": "onwayiraq.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6972432061:android:cac9fc4a0344d2c24621d4",
+        "android_client_info": {
+          "package_name": "com.onwayiraq.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlYfMaPjYRNXCaz8eQJhVjDdqmY3Mpv7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6972432061:android:ef4fed604314c3e44621d4",
+        "android_client_info": {
+          "package_name": "com.onwayiraq.merchant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlYfMaPjYRNXCaz8eQJhVjDdqmY3Mpv7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6972432061:android:ba69b470726d42ee4621d4",
+        "android_client_info": {
+          "package_name": "com.onwayiraq.users"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlYfMaPjYRNXCaz8eQJhVjDdqmY3Mpv7M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
