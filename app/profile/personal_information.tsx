@@ -1,4 +1,5 @@
 import type { ApiError } from "@/api";
+import { authApi } from "@/api/auth";
 import { isRTL } from "@/constants/i18n";
 import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -27,7 +28,7 @@ export default function PersonalInformationScreen() {
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
 
-  const { driver, updateProfile } = useAuth();
+  const { driver, updateProfile, logout } = useAuth();
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -36,6 +37,27 @@ export default function PersonalInformationScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await authApi.deleteAccount();
+      // Apple 5.1.1(v): user's data is gone server-side; clear local session too.
+      await logout();
+      router.replace("/auth/auth_screen");
+    } catch (err) {
+      const apiErr = err as ApiError;
+      Alert.alert(
+        t("personalInfo.deleteFailed", { defaultValue: "Delete failed" }),
+        apiErr?.message ?? "",
+      );
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
 
   // Hydrate fields from the cached driver profile.
   useEffect(() => {
@@ -374,6 +396,23 @@ export default function PersonalInformationScreen() {
           </View>
         </View>
 
+        {/* Delete Account trigger — required by Apple guideline 5.1.1(v) */}
+        <TouchableOpacity
+          style={styles.deleteAccountBtn}
+          activeOpacity={0.8}
+          onPress={() => setShowDeleteModal(true)}
+        >
+          <Ionicons name="trash-outline" size={20} color="#DC2626" />
+          <Text
+            style={[
+              styles.deleteAccountBtnText,
+              { fontFamily: font.medium },
+            ]}
+          >
+            {t("personalInfo.deleteAccount")}
+          </Text>
+        </TouchableOpacity>
+
         <View style={{ height: insets.bottom + 40 }} />
       </ScrollView>
 
@@ -402,6 +441,8 @@ export default function PersonalInformationScreen() {
                 <TouchableOpacity
                   style={styles.deleteModalCloseBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  onPress={() => setShowDeleteModal(false)}
+                  disabled={deleting}
                 >
                   <Ionicons name="close" size={24} color="#7C7890" />
                 </TouchableOpacity>
@@ -439,22 +480,32 @@ export default function PersonalInformationScreen() {
 
               <View style={styles.deleteModalActions}>
                 <TouchableOpacity
-                  style={[styles.deleteModalPrimaryBtn, { opacity: 0.7 }]}
+                  style={[
+                    styles.deleteModalPrimaryBtn,
+                    deleting && { opacity: 0.7 },
+                  ]}
                   activeOpacity={0.85}
+                  onPress={handleDeleteAccount}
+                  disabled={deleting}
                 >
-                  <ActivityIndicator color="#FFFFFF" />
-                  <Text
-                    style={[
-                      styles.deleteModalPrimaryText,
-                      { fontFamily: font.medium },
-                    ]}
-                  >
-                    {t("personalInfo.delete")}
-                  </Text>
+                  {deleting ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.deleteModalPrimaryText,
+                        { fontFamily: font.medium },
+                      ]}
+                    >
+                      {t("personalInfo.delete")}
+                    </Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.deleteModalSecondaryBtn}
                   activeOpacity={0.85}
+                  onPress={() => setShowDeleteModal(false)}
+                  disabled={deleting}
                 >
                   <Text
                     style={[
@@ -630,4 +681,17 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   deleteModalSecondaryText: { fontSize: 16, color: "#A8A5B8" },
+  deleteAccountBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+    backgroundColor: "#FEF2F2",
+  },
+  deleteAccountBtnText: { fontSize: 15, color: "#DC2626" },
 });

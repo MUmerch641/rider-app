@@ -49,6 +49,11 @@ export const authApi = {
     return unwrap(env);
   },
 
+  async deleteAccount(): Promise<void> {
+    const env = (await apiClient.delete(ENDPOINTS.auth.deleteAccount)) as Envelope<unknown>;
+    if (env && env.success === false) throw new Error(env.message ?? "Failed to delete account");
+  },
+
   async forgotPassword(body: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
     const env = (await apiClient.post(ENDPOINTS.auth.forgotPassword, body)) as Envelope<ForgotPasswordResponse>;
     return unwrap(env);

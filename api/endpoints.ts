@@ -5,6 +5,7 @@ export const ENDPOINTS = {
     logout: "/auth/logout",
     profile: "/auth/profile",
     updateProfile: "/auth/profile",
+    deleteAccount: "/auth/profile",
     forgotPassword: "/auth/forgot-password",
     verifyOtp: "/auth/verify-otp",
     resendOtp: "/auth/resend-otp",
