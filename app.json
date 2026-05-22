@@ -39,9 +39,6 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
         "POST_NOTIFICATIONS",
         "WAKE_LOCK"
       ],
@@ -70,10 +67,10 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "OnWay Driver uses your location in the background during active deliveries to track your route and provide live updates to customers.",
+          "locationAlwaysAndWhenInUsePermission": "OnWay Driver uses your location during active deliveries to track your route and provide live updates to customers.",
           "locationWhenInUsePermission": "OnWay Driver uses your location to receive nearby delivery orders and navigate to pickup and drop-off locations.",
-          "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
         }
       ],
       [
