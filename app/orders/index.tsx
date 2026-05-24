@@ -84,10 +84,15 @@ export default function OrdersScreen() {
   }, [driver?.id]);
 
   // Refresh on every focus (mount + return-to-tab) so post-delivery state surfaces.
+  // Also poll every 15s while focused as a safety net for missed socket events.
   useFocusEffect(
     useCallback(() => {
       refreshAssignments();
       refreshSummary();
+      const id = setInterval(() => {
+        refreshAssignments();
+      }, 15_000);
+      return () => clearInterval(id);
     }, [refreshAssignments, refreshSummary]),
   );
 

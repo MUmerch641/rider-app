@@ -168,6 +168,7 @@ function RestaurantCard({
   address,
   logoUrl,
   onNavigate,
+  navActive = true,
 }: {
   rtl: boolean;
   font: any;
@@ -176,6 +177,7 @@ function RestaurantCard({
   address: string;
   logoUrl: string;
   onNavigate: () => void;
+  navActive?: boolean;
 }) {
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
@@ -207,9 +209,10 @@ function RestaurantCard({
         </View>
       </View>
       <TouchableOpacity
-        activeOpacity={0.85}
-        style={cardStyles.navBtn}
-        onPress={onNavigate}
+        activeOpacity={navActive ? 0.85 : 1}
+        style={[cardStyles.navBtn, !navActive && cardStyles.navBtnDim]}
+        onPress={navActive ? onNavigate : undefined}
+        disabled={!navActive}
       >
         <SvgXml xml={NAV_SVG} width={scale(20)} height={scale(20)} />
         <Text style={[cardStyles.navBtnText, { fontFamily: font.bold }]}>
@@ -229,6 +232,7 @@ function CustomerCard({
   onNavigate,
   onCall,
   onChat,
+  navActive = true,
 }: {
   rtl: boolean;
   font: any;
@@ -238,6 +242,7 @@ function CustomerCard({
   onNavigate: () => void;
   onCall?: () => void;
   onChat?: () => void;
+  navActive?: boolean;
 }) {
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
@@ -295,9 +300,10 @@ function CustomerCard({
         </Text>
       </View>
       <TouchableOpacity
-        activeOpacity={0.85}
-        style={cardStyles.navBtn}
-        onPress={onNavigate}
+        activeOpacity={navActive ? 0.85 : 1}
+        style={[cardStyles.navBtn, !navActive && cardStyles.navBtnDim]}
+        onPress={navActive ? onNavigate : undefined}
+        disabled={!navActive}
       >
         <SvgXml xml={NAV_SVG} width={scale(20)} height={scale(20)} />
         <Text style={[cardStyles.navBtnText, { fontFamily: font.bold }]}>
@@ -672,6 +678,7 @@ export default function ActiveDeliveryScreen() {
             address={restaurantAddress}
             logoUrl={restaurantLogo}
             onNavigate={handleNavigateRestaurant}
+            navActive={assignment?.status === "accepted"}
           />
         </View>
 
@@ -685,6 +692,10 @@ export default function ActiveDeliveryScreen() {
             onNavigate={handleNavigateCustomer}
             onCall={handleCallCustomer}
             onChat={handleChatCustomer}
+            navActive={
+              assignment?.status === "picked_up" ||
+              assignment?.status === "on_the_way"
+            }
           />
         </View>
 
@@ -781,6 +792,10 @@ const cardStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: scale(8),
+  },
+  navBtnDim: {
+    backgroundColor: "#D6D2DE",
+    opacity: 0.6,
   },
   navBtnText: { fontSize: scale(15), color: "#FFFFFF" },
 
