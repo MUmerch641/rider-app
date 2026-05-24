@@ -32,7 +32,7 @@
         "ascApiKeyIssuerId": "bb133f63-409a-4dec-83b2-590278eca2fc"
       },
       "android": {
-        "serviceAccountKeyPath": "./PLACEHOLDER_google-play-key.json",
+        "serviceAccountKeyPath": "./play-service-account.json",
         "track": "internal"
       }
     }

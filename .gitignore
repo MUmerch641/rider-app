@@ -42,3 +42,9 @@ yarn-error.*
 
 # Local EAS credentials (contains .p12 password)
 credentials.json
+
+# Google Play service account key (private key — never commit)
+play-service-account.json
+
+# Local iOS build artifacts
+*.ipa
