@@ -4,6 +4,20 @@ import { I18nManager } from "react-native";
 import ar from "../locales/ar.json";
 import en from "../locales/en.json";
 import ku from "../locales/ku.json";
+import * as Localization from "expo-localization";
+
+// #8: initial language follows the device/OS locale (reflects the per-app
+// language chosen in iOS Settings → App → Language). Kurdish variants → `ku`.
+function getDeviceLanguage(): "en" | "ar" | "ku" {
+  try {
+    const code = (Localization.getLocales()[0]?.languageCode || "").toLowerCase();
+    if (code === "ar") return "ar";
+    if (code === "ku" || code === "ckb" || code === "kur" || code === "kmr") return "ku";
+  } catch {
+    // ignore — fall back to English
+  }
+  return "en";
+}
 
 export const LANGUAGE_STORAGE_KEY = "app_language";
 export const RTL_LANGS = ["ar", "ku"];
@@ -23,7 +37,7 @@ i18n.use(initReactI18next).init({
     ar: { translation: ar },
     ku: { translation: ku },
   },
-  lng: "en",
+  lng: getDeviceLanguage(),
   fallbackLng: "en",
 });
 
