@@ -1,15 +1,16 @@
-import { isRTL, LANGUAGE_STORAGE_KEY } from "@/constants/i18n";
+import {
+  LANGUAGE_STORAGE_KEY,
+  setAppLanguage,
+  type AppLanguage,
+} from "@/constants/i18n";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, scaledFont, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Updates from "expo-updates";
 import React, { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  I18nManager,
   Modal,
   StyleSheet,
   Text,
@@ -25,7 +26,6 @@ const LANGUAGES = [
 
 export function LanguageOnboarding() {
   const font = useAppFont();
-  const { i18n } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [selected, setSelected] = useState("en");
   const [loading, setLoading] = useState(false);
@@ -39,17 +39,10 @@ export function LanguageOnboarding() {
   const handleContinue = async () => {
     if (loading) return;
     setLoading(true);
-    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, selected);
-    i18n.changeLanguage(selected);
-    const shouldBeRTL = isRTL(selected);
-    if (I18nManager.isRTL !== shouldBeRTL) {
-      I18nManager.allowRTL(shouldBeRTL);
-      I18nManager.forceRTL(shouldBeRTL);
-      if (!__DEV__) {
-        await Updates.reloadAsync();
-        return;
-      }
-    }
+    // Single source of truth: persists, switches i18next, and reloads once
+    // (only when LTR<->RTL flips). If it flips, the app reloads shortly and
+    // the dismiss below is moot; otherwise we just close the sheet.
+    await setAppLanguage(selected as AppLanguage);
     setLoading(false);
     setVisible(false);
   };
