@@ -16,6 +16,8 @@
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": ["en", "ar", "ckb"],
         "NSLocationWhenInUseUsageDescription": "OnWay Driver uses your location to receive nearby delivery orders and navigate to pickup and drop-off locations.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "OnWay Driver uses your location in the background during active deliveries to track your route and provide live updates to customers.",
         "UIBackgroundModes": [
