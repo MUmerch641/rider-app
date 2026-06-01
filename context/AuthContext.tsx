@@ -130,13 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // network failure shouldn't block local logout
-    }
-    await clearAllAuth();
+    // Optimistic logout (bug #1): tell the server in the background (best-effort)
+    // and clear local auth + driver state immediately so the app returns to the
+    // login screen at once. Previously this awaited authApi.logout() first, so a
+    // slow/hanging request (or the 401→refresh retry) made logout take ~10s.
+    void authApi.logout().catch(() => {
+      // best-effort; the session is already cleared locally
+    });
     setDriver(null);
+    await clearAllAuth();
   }, []);
 
   const refreshProfile = useCallback(async (): Promise<Driver | null> => {
