@@ -7,7 +7,7 @@ import {
 } from "@/api";
 import { isRTL } from "@/constants/i18n";
 import { Colors, Radius, Shadow } from "@/constants/theme";
-import { useSocket } from "@/context";
+import { useNotifications, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
     fontSize,
@@ -21,6 +21,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    Alert,
     Image,
     RefreshControl,
     ScrollView,
@@ -30,6 +31,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 type InboxTab = "notification" | "support";
 
@@ -178,6 +180,11 @@ export default function InboxScreen() {
   const [activeTab, setActiveTab] = useState<InboxTab>("notification");
 
   const { pushedNotification } = useSocket();
+  const {
+    setNotifications,
+    markAsRead,
+    clearAll: clearAllNotifications,
+  } = useNotifications();
   const [notificationList, setNotificationList] = useState<DriverNotification[]>([]);
   const [threads, setThreads] = useState<SupportThread[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -190,10 +197,12 @@ export default function InboxScreen() {
       ]);
       setNotificationList(list);
       setThreads(threadsList);
+      // Keep the tab-bar dot in sync with server truth.
+      setNotifications(list);
     } catch (err) {
       console.warn("Inbox refresh failed:", (err as ApiError)?.message);
     }
-  }, []);
+  }, [setNotifications]);
 
   useEffect(() => {
     refresh();
@@ -223,11 +232,37 @@ export default function InboxScreen() {
         n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n,
       ),
     );
+    // Decrement the tab-bar dot for this item.
+    markAsRead(id);
     try {
       await notificationsApi.markRead(id);
     } catch (err) {
       console.warn("Mark-read failed:", (err as ApiError)?.message);
     }
+  };
+
+  const handleClearAll = () => {
+    if (notificationList.length === 0) return;
+    Alert.alert(t("inbox.clearAllTitle"), t("inbox.clearAllBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("inbox.clearAll"),
+        style: "destructive",
+        onPress: async () => {
+          const prev = notificationList;
+          setNotificationList([]);
+          // Clear the context so the tab-bar dot turns off immediately.
+          clearAllNotifications();
+          try {
+            await notificationsApi.clearAll();
+          } catch (err) {
+            console.warn("Clear-all failed:", (err as ApiError)?.message);
+            setNotificationList(prev); // restore on failure
+            refresh(); // refresh() re-syncs the context from the server
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -263,6 +298,31 @@ export default function InboxScreen() {
             />
           }
         >
+          {notificationList.length > 0 && (
+            <TouchableOpacity
+              onPress={handleClearAll}
+              activeOpacity={0.75}
+              accessibilityLabel={t("inbox.clearAll")}
+              style={{
+                flexDirection: rtl ? "row-reverse" : "row",
+                alignItems: "center",
+                alignSelf: rtl ? "flex-start" : "flex-end",
+                gap: scale(6),
+                paddingVertical: verticalScale(6),
+              }}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={scale(16)}
+                color={Colors.primary}
+              />
+              <Text
+                style={{ fontFamily: font.medium, color: Colors.primary }}
+              >
+                {t("inbox.clearAll")}
+              </Text>
+            </TouchableOpacity>
+          )}
           {groups.map((group) => (
             <View key={group.id}>
               <Text

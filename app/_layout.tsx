@@ -21,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
+import * as Location from "expo-location";
 import { I18nManager } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
@@ -78,6 +79,46 @@ function SocketBridges() {
   return null;
 }
 
+// App-wide GPS heartbeat: while the driver is online, watch position and push
+// it to the backend (which relays order:location_update to the customer for
+// live tracking). Previously this lived only on the On-Map screen, so the
+// customer saw no live driver location unless the rider had that screen open.
+function DriverLocationBroadcaster() {
+  const { driver, updateLocation } = useAuth();
+  const isOnline = driver?.isOnline;
+
+  useEffect(() => {
+    if (!isOnline) return;
+    let cancelled = false;
+    let watcher: Location.LocationSubscription | null = null;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted" || cancelled) return;
+      watcher = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+          distanceInterval: 10,
+        },
+        (loc) => {
+          if (cancelled) return;
+          updateLocation({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            heading: loc.coords.heading ?? undefined,
+          }).catch(() => undefined);
+        },
+      );
+    })();
+    return () => {
+      cancelled = true;
+      if (watcher) watcher.remove();
+    };
+  }, [isOnline, updateLocation]);
+
+  return null;
+}
+
 export default function RootLayout() {
   const [loaded] = useFonts({
     Poppins_400Regular,
@@ -125,6 +166,7 @@ export default function RootLayout() {
       <NotificationProvider>
         <SocketProvider>
           <SocketBridges />
+          <DriverLocationBroadcaster />
           <RouteGuard>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" />

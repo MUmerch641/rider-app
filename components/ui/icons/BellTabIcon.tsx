@@ -13,7 +13,7 @@ export function BellTabIcon({
   size = 24,
   color = "#7C7890",
   variant = "outline",
-  showDot = true,
+  showDot = false,
   dotColor = "#FF0000",
 }: IconProps) {
   return (

@@ -205,12 +205,26 @@ export default function DeliveryRoute() {
   // ─── Route params ───────────────────────────────────────────────────────
   const params = useLocalSearchParams<{ id?: string; phase?: string }>();
   const orderId = typeof params.id === "string" ? params.id : "";
-  const phase: "pickup" | "dropoff" =
+  const paramPhase: "pickup" | "dropoff" =
     params.phase === "dropoff" ? "dropoff" : "pickup";
 
   // ─── Assignment ─────────────────────────────────────────────────────────
   const [assignment, setAssignment] = useState<OrderAssignment | null>(null);
   const [arrivedBusy, setArrivedBusy] = useState(false);
+
+  // Derive the phase from the order's ACTUAL status, not just the nav param.
+  // Once the rider has picked up, this screen must show the dropoff action
+  // (Arrived at customer) — never the pickup action — otherwise tapping it
+  // would push the status backward to arrived_store and loop the rider.
+  const phase: "pickup" | "dropoff" = useMemo(() => {
+    const s = assignment?.order?.status;
+    if (!s) return paramPhase; // assignment still loading — trust the nav intent
+    // Post-pickup statuses ⇒ the rider is heading to the customer.
+    if (s === "picked_up" || s === "on_the_way" || s === "arrived" || s === "delivered")
+      return "dropoff";
+    // Everything earlier (…driver_assigned / driver_arrived at store) ⇒ pickup.
+    return "pickup";
+  }, [assignment?.order?.status, paramPhase]);
 
   useEffect(() => {
     if (!orderId) return;
@@ -629,6 +643,11 @@ export default function DeliveryRoute() {
             <DeliveryBottomSheet
               restaurantName={sheetTitle}
               restaurantLocation={sheetSubtitle}
+              primaryActionLabel={
+                phase === "pickup"
+                  ? t("delivery.arrivedAtRestaurant")
+                  : t("delivery.arrivedAtCustomer")
+              }
               activeTab="navigate"
               onCall={handleCall}
               onArrived={handleArrived}

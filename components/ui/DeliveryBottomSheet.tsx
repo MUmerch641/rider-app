@@ -54,6 +54,10 @@ type TabKey = "navigate" | "orderDetails" | "support";
 interface DeliveryBottomSheetProps {
   restaurantName?: string;
   restaurantLocation?: string;
+  /** Label for the primary (arrived) button. Phase-aware: "Arrived at
+   *  Restaurant" while heading to the store, "Arrived at Customer" while
+   *  heading to the customer. Falls back to the restaurant label. */
+  primaryActionLabel?: string;
   onCall?: () => void;
   onArrived?: () => void;
   onCancelDelivery?: () => void;
@@ -68,6 +72,7 @@ interface DeliveryBottomSheetProps {
 export function DeliveryBottomSheet({
   restaurantName = "The Grill Restaurant",
   restaurantLocation = "Sulaimany-baxtyari",
+  primaryActionLabel,
   onCall,
   onArrived,
   onCancelDelivery,
@@ -147,7 +152,7 @@ export function DeliveryBottomSheet({
         >
           <SvgXml xml={CHECK_CIRCLE_SVG} width={scale(22)} height={scale(22)} />
           <Text style={[styles.arrivedBtnText, { fontFamily: font.semibold }]}>
-            {t("delivery.arrivedAtRestaurant")}
+            {primaryActionLabel ?? t("delivery.arrivedAtRestaurant")}
           </Text>
         </TouchableOpacity>
       </LinearGradient>

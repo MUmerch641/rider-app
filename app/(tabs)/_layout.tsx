@@ -1,6 +1,7 @@
 import { BellTabIcon, MapIcon, RideIcon } from "@/components/ui/icons";
 import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
+import { useNotifications } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { LinearGradient } from "expo-linear-gradient";
 import { Tabs } from "expo-router";
@@ -29,6 +30,7 @@ export default function TabLayout() {
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();
+  const { unreadCount } = useNotifications();
 
   // Reverse tab order for RTL
   const screens = rtl ? [...TAB_SCREENS].reverse() : TAB_SCREENS;
@@ -77,7 +79,11 @@ export default function TabLayout() {
           options={{
             title: t(labelKey),
             tabBarIcon: ({ color, focused }) => (
-              <Icon variant={"outline"} color={color} />
+              <Icon
+                variant={"outline"}
+                color={color}
+                showDot={name === "inbox" && unreadCount > 0}
+              />
             ),
           }}
         />

@@ -30,7 +30,8 @@ export default function ForgotPasswordScreen() {
   const font = useAppFont();
   const row = rtl ? "row-reverse" : "row";
 
-  const [mode, setMode] = useState<Mode>("email");
+  // Default to phone — drivers register/sign in by phone, not email.
+  const [mode, setMode] = useState<Mode>("phone");
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [countryCode, setCountryCode] = useState("+964");

@@ -169,6 +169,10 @@ export type Order = {
   orderNumber: string;
   userId: string;
   storeId: string;
+  // Global order status (e.g. driver_assigned, picked_up, on_the_way, arrived,
+  // delivered). Returned by the driver order-details endpoint; used to derive
+  // the pickup-vs-dropoff phase on the route screen.
+  status?: string;
   total?: string | number;
   currency?: string;
   paymentMethod?: "CASH" | "CARD" | "ONLINE";
