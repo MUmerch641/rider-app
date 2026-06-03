@@ -1,7 +1,7 @@
 import { ordersApi, walletApi, type ApiError } from "@/api";
 import {
-    AcceptedOrderItem,
-    AcceptedOrdersSheet,
+  AcceptedOrderItem,
+  AcceptedOrdersSheet,
 } from "@/components/ui/AcceptedOrdersSheet";
 import DriverStatusHeader from "@/components/ui/DriverStatusHeader";
 import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
@@ -10,10 +10,10 @@ import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAuth, useSocket } from "@/context";
 import {
-    formatCurrency,
-    formatDistanceKm,
-    formatDurationMinutes,
-    formatNumber,
+  formatCurrency,
+  formatDistanceKm,
+  formatDurationMinutes,
+  formatNumber,
 } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
@@ -24,12 +24,12 @@ import { t } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    ActivityIndicator,
-    Image,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
@@ -37,34 +37,40 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
 
-// ─── Configuration ───────────────────────────────────────────────────────────
+// ─── Configuration ────────────────────────────────────────────────────────────
 const GOOGLE_DIRECTIONS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+// Default map region (center of Sulaymaniyah) — only used for initial camera,
+// never as a fake origin / destination coordinate.
 const DEFAULT_REGION: Region = {
   latitude: 35.5642,
   longitude: 45.4321,
-  latitudeDelta: 0.01,
-  longitudeDelta: 0.01,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
 };
 
-const DESTINATION = {
-  latitude: 35.5642,
-  longitude: 45.4321,
-};
-
-const STARTING_POINT = {
-  latitude: 35.555,
-  longitude: 45.418,
-};
-
-// ─── Polyline Decoder ────────────────────────────────────────────────────────
-interface DecodedCoordinate {
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Coordinate {
   latitude: number;
   longitude: number;
 }
 
-function decodePolyline(encoded: string): DecodedCoordinate[] {
-  const coordinates: DecodedCoordinate[] = [];
+interface LocationInfo {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface RouteInfo {
+  coordinates: Coordinate[];
+  distance: string;
+  duration: string;
+}
+
+// ─── Polyline Decoder ─────────────────────────────────────────────────────────
+function decodePolyline(encoded: string): Coordinate[] {
+  const coordinates: Coordinate[] = [];
   let index = 0;
   let latitude = 0;
   let longitude = 0;
@@ -105,24 +111,10 @@ function decodePolyline(encoded: string): DecodedCoordinate[] {
   return coordinates;
 }
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface LocationInfo {
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-}
-
-interface RouteInfo {
-  coordinates: DecodedCoordinate[];
-  distance: string;
-  duration: string;
-}
-
-// ─── Directions API ──────────────────────────────────────────────────────────
+// ─── Directions API ───────────────────────────────────────────────────────────
 async function fetchDirections(
-  origin: { latitude: number; longitude: number },
-  destination: { latitude: number; longitude: number },
+  origin: Coordinate,
+  destination: Coordinate,
 ): Promise<RouteInfo | null> {
   if (!GOOGLE_DIRECTIONS_API_KEY) {
     console.warn(
@@ -131,16 +123,16 @@ async function fetchDirections(
     return null;
   }
 
-  const originStr = `${origin.latitude},${origin.longitude}`;
-  const destinationStr = `${destination.latitude},${destination.longitude}`;
-  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originStr}&destination=${destinationStr}&mode=driving&key=${GOOGLE_DIRECTIONS_API_KEY}`;
+  const url =
+    `https://maps.googleapis.com/maps/api/directions/json` +
+    `?origin=${origin.latitude},${origin.longitude}` +
+    `&destination=${destination.latitude},${destination.longitude}` +
+    `&mode=driving` +
+    `&key=${GOOGLE_DIRECTIONS_API_KEY}`;
 
   try {
     const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const data = await response.json();
 
@@ -149,17 +141,16 @@ async function fetchDirections(
       return null;
     }
 
-    if (!data.routes || data.routes.length === 0) {
+    if (!data.routes?.length) {
       console.warn("No routes found");
       return null;
     }
 
     const route = data.routes[0];
     const leg = route.legs[0];
-    const encodedPolyline = route.overview_polyline.points;
 
     return {
-      coordinates: decodePolyline(encodedPolyline),
+      coordinates: decodePolyline(route.overview_polyline.points),
       distance: leg.distance.text,
       duration: leg.duration.text,
     };
@@ -169,54 +160,55 @@ async function fetchDirections(
   }
 }
 
+// Straight-line fallback when Directions API fails
 function generateStraightLine(
-  start: { latitude: number; longitude: number },
-  end: { latitude: number; longitude: number },
-): DecodedCoordinate[] {
+  start: Coordinate,
+  end: Coordinate,
+): Coordinate[] {
   const steps = 50;
-  const coordinates: DecodedCoordinate[] = [];
-
-  for (let i = 0; i <= steps; i++) {
+  return Array.from({ length: steps + 1 }, (_, i) => {
     const progress = i / steps;
-    coordinates.push({
+    return {
       latitude: start.latitude + (end.latitude - start.latitude) * progress,
       longitude: start.longitude + (end.longitude - start.longitude) * progress,
-    });
-  }
-
-  return coordinates;
+    };
+  });
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function OnMap() {
   const router = useRouter();
   const { i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const mapRef = useRef<MapView>(null);
+
+  // ─── State ──────────────────────────────────────────────────────────────
   const [acceptedOrders, setAcceptedOrders] = useState<AcceptedOrderItem[]>([]);
-  // ─── State ─────────────────────────────────────────────────────────────
   const [showOrder, setShowOrder] = useState(true);
   const [activeDeliveryId, setActiveDeliveryId] = useState<string | null>(null);
   const [sheetHeight, setSheetHeight] = useState(verticalScale(160));
   const [locating, setLocating] = useState(false);
-  const [loadingRoute, setLoadingRoute] = useState(true);
-  const [activeDestination, setActiveDestination] = useState(DESTINATION);
+  const [loadingRoute, setLoadingRoute] = useState(false); // false until GPS ready
+  const [gpsReady, setGpsReady] = useState(false); // true once first fix arrives
+
+  // Live driver position — null until GPS provides a real fix
+  const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
+
+  // Destination — null until an order is accepted and a target is set
+  const [activeDestination, setActiveDestination] = useState<Coordinate | null>(
+    null,
+  );
   const [activeMarkerImage, setActiveMarkerImage] = useState<string | null>(
     null,
   );
 
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [routeCoordinates, setRouteCoordinates] = useState<DecodedCoordinate[]>(
-    [],
-  );
+  const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
   const [routeInfo, setRouteInfo] = useState<{
     distance: string;
     duration: string;
   } | null>(null);
   const [routeError, setRouteError] = useState(false);
+
   const [selected, setSelected] = useState<LocationInfo>({
     name: "Sulaymaniyah",
     address: "Sulaymaniyah, Iraq",
@@ -224,14 +216,11 @@ export default function OnMap() {
     longitude: DEFAULT_REGION.longitude,
   });
   const [currentRegion, setCurrentRegion] = useState<Region>(DEFAULT_REGION);
-  // ─── Live data hooks ────────────────────────────────────────────────────
+
+  // ─── Live data hooks ─────────────────────────────────────────────────────
   const { driver, updateStatus, updateLocation } = useAuth();
-  const {
-    newOrder,
-    cancelledOrder,
-    clearNewOrder,
-    clearCancelledOrder,
-  } = useSocket();
+  const { newOrder, cancelledOrder, clearNewOrder, clearCancelledOrder } =
+    useSocket();
 
   const langKey: LangKey = (i18n.language as LangKey) || "en";
 
@@ -246,12 +235,12 @@ export default function OnMap() {
     return driver.username ?? "";
   }, [driver]);
 
-  // ─── Map socket newOrder → component-shape currentRequest ───────────────
+  // ─── Map socket newOrder → component-shape currentRequest ────────────────
   const currentRequest = useMemo(() => {
     if (!newOrder) return null;
 
     const storeGeo = newOrder.store?.location;
-    const restaurantCoordinate = {
+    const restaurantCoordinate: Coordinate = {
       latitude: storeGeo?.lat ?? DEFAULT_REGION.latitude,
       longitude: storeGeo?.lng ?? DEFAULT_REGION.longitude,
     };
@@ -277,8 +266,142 @@ export default function OnMap() {
     };
   }, [newOrder, langKey]);
 
+  // ─── Route Loading ────────────────────────────────────────────────────────
+  // Only called when BOTH origin and destination are real coordinates.
+  const loadRoute = useCallback(
+    async (origin: Coordinate, destination: Coordinate) => {
+      setLoadingRoute(true);
+      setRouteError(false);
+
+      try {
+        const result = await fetchDirections(origin, destination);
+
+        if (result) {
+          setRouteCoordinates(result.coordinates);
+          setRouteInfo({
+            distance: result.distance,
+            duration: result.duration,
+          });
+        } else {
+          // Fallback to straight line if Directions API fails
+          setRouteCoordinates(generateStraightLine(origin, destination));
+          setRouteError(true);
+        }
+      } catch {
+        setRouteCoordinates(generateStraightLine(origin, destination));
+        setRouteError(true);
+      }
+
+      setLoadingRoute(false);
+    },
+    [],
+  );
+
+  // Fit map to route whenever routeCoordinates change
+  useEffect(() => {
+    if (routeCoordinates.length > 0) {
+      const timer = setTimeout(() => {
+        mapRef.current?.fitToCoordinates(routeCoordinates, {
+          edgePadding: {
+            top: verticalScale(120),
+            right: spacing.lg,
+            bottom: verticalScale(180),
+            left: spacing.lg,
+          },
+          animated: true,
+        });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [routeCoordinates]);
+
+  // When activeDestination changes (order accepted) AND we have a GPS fix → load route
+  useEffect(() => {
+    if (!userLocation || !activeDestination) return;
+    loadRoute(userLocation, activeDestination);
+  }, [activeDestination]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: intentionally NOT including userLocation here — we only re-route when
+  // the destination changes, not on every GPS tick (that would be too noisy).
+
+  // ─── GPS — acquire first fix on mount, regardless of online status ────────
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted" || cancelled) return;
+
+      // Single high-accuracy fix to populate the map immediately
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      if (cancelled) return;
+
+      const coord: Coordinate = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      };
+      setUserLocation(coord);
+      setGpsReady(true);
+
+      // Animate map to real position
+      mapRef.current?.animateToRegion(
+        {
+          ...coord,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        600,
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ─── GPS heartbeat — continuous tracking while driver is online ───────────
+  useEffect(() => {
+    if (!driver?.isOnline) return;
+
+    let cancelled = false;
+    let watcher: Location.LocationSubscription | null = null;
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted" || cancelled) return;
+
+      watcher = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          timeInterval: 5000,
+          distanceInterval: 10,
+        },
+        (loc) => {
+          if (cancelled) return;
+          const coord: Coordinate = {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          };
+          setUserLocation(coord);
+          setGpsReady(true);
+
+          updateLocation({
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            heading: loc.coords.heading ?? undefined,
+          }).catch(() => undefined);
+        },
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      watcher?.remove();
+    };
+  }, [driver?.isOnline, updateLocation]);
+
+  // ─── Accept order ─────────────────────────────────────────────────────────
   const handleAcceptOrder = async () => {
-    if (!currentRequest || !newOrder) return;
+    if (!currentRequest || !newOrder || !userLocation) return;
 
     const newOrderId = currentRequest.id;
 
@@ -286,7 +409,6 @@ export default function OnMap() {
       await ordersApi.accept(newOrderId);
     } catch (err) {
       console.warn("Accept failed:", (err as ApiError)?.message);
-      // Clear so a new dispatch can come in.
       clearNewOrder();
       return;
     }
@@ -307,7 +429,11 @@ export default function OnMap() {
         setActiveDestination(currentRequest.restaurantCoordinate);
         setActiveMarkerImage(currentRequest.restaurantLogo);
 
-        loadRoute(userLocation ?? STARTING_POINT, currentRequest.restaurantCoordinate);
+        // loadRoute is triggered automatically by the activeDestination effect above,
+        // but we call it explicitly here too so it fires immediately with current GPS.
+        if (userLocation) {
+          loadRoute(userLocation, currentRequest.restaurantCoordinate);
+        }
 
         setAcceptedOrders((orders) =>
           orders.map((order) =>
@@ -317,15 +443,24 @@ export default function OnMap() {
                   actionType: "deliver",
                   onDeliver: async () => {
                     try {
-                      await ordersApi.updateStatus(newOrderId, { status: "delivered" });
+                      await ordersApi.updateStatus(newOrderId, {
+                        status: "delivered",
+                      });
                     } catch (e) {
-                      console.warn("Delivered update failed:", (e as ApiError)?.message);
+                      console.warn(
+                        "Delivered update failed:",
+                        (e as ApiError)?.message,
+                      );
                     }
+                    // Clear active delivery state
                     setAcceptedOrders((items) =>
                       items.filter((item) => item.id !== newOrderId),
                     );
                     setActiveDeliveryId(null);
+                    setActiveDestination(null);
                     setActiveMarkerImage(null);
+                    setRouteCoordinates([]);
+                    setRouteInfo(null);
                   },
                 }
               : order,
@@ -337,6 +472,13 @@ export default function OnMap() {
         setAcceptedOrders((orders) =>
           orders.filter((order) => order.id !== newOrderId),
         );
+        if (activeDeliveryId === newOrderId) {
+          setActiveDeliveryId(null);
+          setActiveDestination(null);
+          setActiveMarkerImage(null);
+          setRouteCoordinates([]);
+          setRouteInfo(null);
+        }
       },
     };
 
@@ -377,7 +519,33 @@ export default function OnMap() {
       setStatusBusy(false);
     }
   }, [statusBusy, driver, updateStatus]);
-  // ─── Zoom Handlers ──────────────────────────────────────────────────────
+
+  // ─── Socket cancellation → drop from accepted list ───────────────────────
+  useEffect(() => {
+    if (!cancelledOrder) return;
+    const orderId = cancelledOrder.orderId;
+    setAcceptedOrders((orders) => orders.filter((o) => o.id !== orderId));
+    if (activeDeliveryId === orderId) {
+      setActiveDeliveryId(null);
+      setActiveDestination(null);
+      setActiveMarkerImage(null);
+      setRouteCoordinates([]);
+      setRouteInfo(null);
+    }
+    clearCancelledOrder();
+  }, [cancelledOrder, clearCancelledOrder, activeDeliveryId]);
+
+  // ─── Wallet summary (today's earnings) ───────────────────────────────────
+  useEffect(() => {
+    if (!driver?.id) return;
+    const today = new Date().toISOString().slice(0, 10);
+    walletApi
+      .summary({ startDate: today, endDate: today })
+      .then((s) => setTodayEarnings(formatNumber(s?.summary?.totalEarnings)))
+      .catch(() => undefined);
+  }, [driver?.id]);
+
+  // ─── Zoom Handlers ────────────────────────────────────────────────────────
   const handleZoomIn = () => {
     const newRegion = {
       ...currentRegion,
@@ -396,118 +564,7 @@ export default function OnMap() {
     mapRef.current?.animateToRegion(newRegion, 300);
   };
 
-  // ─── Route Loading ──────────────────────────────────────────────────────
-  const loadRoute = useCallback(
-    async (
-      origin: { latitude: number; longitude: number },
-      destination = activeDestination,
-    ) => {
-      setLoadingRoute(true);
-      setRouteError(false);
-
-      try {
-        const result = await fetchDirections(origin, destination);
-
-        if (result) {
-          setRouteCoordinates(result.coordinates);
-          setRouteInfo({
-            distance: result.distance,
-            duration: result.duration,
-          });
-        } else {
-          setRouteCoordinates(generateStraightLine(origin, destination));
-          setRouteError(true);
-        }
-      } catch {
-        setRouteCoordinates(generateStraightLine(origin, destination));
-        setRouteError(true);
-      }
-
-      setLoadingRoute(false);
-    },
-    [activeDestination],
-  );
-
-  useEffect(() => {
-    loadRoute(STARTING_POINT);
-  }, [loadRoute]);
-
-  useEffect(() => {
-    if (routeCoordinates.length > 0) {
-      const timer = setTimeout(() => {
-        mapRef.current?.fitToCoordinates(routeCoordinates, {
-          edgePadding: {
-            top: verticalScale(120),
-            right: spacing.lg,
-            bottom: verticalScale(180),
-            left: spacing.lg,
-          },
-          animated: true,
-        });
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [routeCoordinates]);
-
-  // ─── Wallet summary (today's earnings) ──────────────────────────────────
-  useEffect(() => {
-    if (!driver?.id) return;
-    const today = new Date().toISOString().slice(0, 10);
-    walletApi
-      .summary({ startDate: today, endDate: today })
-      .then((s) => {
-        setTodayEarnings(formatNumber(s?.summary?.totalEarnings));
-      })
-      .catch(() => undefined);
-  }, [driver?.id]);
-
-  // ─── GPS heartbeat while online ─────────────────────────────────────────
-  useEffect(() => {
-    if (!driver?.isOnline) return;
-    let cancelled = false;
-    let watcher: Location.LocationSubscription | null = null;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted" || cancelled) return;
-      watcher = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 5000,
-          distanceInterval: 10,
-        },
-        (loc) => {
-          if (cancelled) return;
-          setUserLocation({
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          });
-          updateLocation({
-            lat: loc.coords.latitude,
-            lng: loc.coords.longitude,
-            heading: loc.coords.heading ?? undefined,
-          }).catch(() => undefined);
-        },
-      );
-    })();
-    return () => {
-      cancelled = true;
-      if (watcher) watcher.remove();
-    };
-  }, [driver?.isOnline, updateLocation]);
-
-  // ─── Socket cancellation → drop from accepted list ──────────────────────
-  useEffect(() => {
-    if (!cancelledOrder) return;
-    const orderId = cancelledOrder.orderId;
-    setAcceptedOrders((orders) => orders.filter((o) => o.id !== orderId));
-    if (activeDeliveryId === orderId) {
-      setActiveDeliveryId(null);
-      setActiveMarkerImage(null);
-    }
-    clearCancelledOrder();
-  }, [cancelledOrder, clearCancelledOrder, activeDeliveryId]);
-
-  // ─── Geocoding ──────────────────────────────────────────────────────────
+  // ─── Geocoding ────────────────────────────────────────────────────────────
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
       const result = await Location.reverseGeocodeAsync({
@@ -537,7 +594,7 @@ export default function OnMap() {
     await reverseGeocode(r.latitude, r.longitude);
   };
 
-  // ─── Current Location ───────────────────────────────────────────────────
+  // ─── "Go to my location" button ──────────────────────────────────────────
   const goToCurrentLocation = async () => {
     setLocating(true);
     try {
@@ -546,36 +603,37 @@ export default function OnMap() {
         setLocating(false);
         return;
       }
+
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
 
-      const newLocation = {
+      const coord: Coordinate = {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
       };
 
-      setUserLocation(newLocation);
+      setUserLocation(coord);
+      setGpsReady(true);
 
-      const newRegion: Region = {
-        latitude: newLocation.latitude,
-        longitude: newLocation.longitude,
-        latitudeDelta: 0.008,
-        longitudeDelta: 0.008,
-      };
+      mapRef.current?.animateToRegion(
+        { ...coord, latitudeDelta: 0.008, longitudeDelta: 0.008 },
+        600,
+      );
 
-      mapRef.current?.animateToRegion(newRegion, 600);
-      await reverseGeocode(newLocation.latitude, newLocation.longitude);
-      await loadRoute(newLocation);
+      await reverseGeocode(coord.latitude, coord.longitude);
+
+      // Re-draw route from updated position if there's an active destination
+      if (activeDestination) {
+        await loadRoute(coord, activeDestination);
+      }
     } catch (e) {
       console.warn(e);
     }
     setLocating(false);
   };
 
-  const getOriginForRoute = () => userLocation ?? STARTING_POINT;
-
-  // ─── Render ─────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.root} edges={{}}>
@@ -590,15 +648,30 @@ export default function OnMap() {
           >
             <DriverStatusHeader
               name={driverDisplayName}
-              avatar={driver?.avatar ?? "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4="}
+              avatar={
+                driver?.avatar ??
+                "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4="
+              }
               earnings={todayEarnings}
               isOnline={driver?.isOnline ?? false}
               onToggleStatus={handleStatusToggle}
             />
           </View>
 
-          {/* ── Loading Indicator ── */}
-          {loadingRoute && (
+          {/* ── GPS acquiring indicator (before first fix) ── */}
+          {!gpsReady && (
+            <View style={styles.loadingContainer}>
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="small" color="#7900F3" />
+                <Text style={styles.loadingText}>
+                  {t("onmap.acquiringLocation", "Acquiring location…")}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── Route calculation indicator ── */}
+          {gpsReady && loadingRoute && (
             <View style={styles.loadingContainer}>
               <View style={styles.loadingBox}>
                 <ActivityIndicator size="small" color="#7900F3" />
@@ -618,7 +691,7 @@ export default function OnMap() {
             showsUserLocation={false}
             showsMyLocationButton={false}
           >
-            {/* Route Shadow */}
+            {/* Route Shadow — only when we have a real route */}
             {routeCoordinates.length > 0 && (
               <Polyline
                 coordinates={routeCoordinates}
@@ -640,40 +713,41 @@ export default function OnMap() {
               />
             )}
 
-            {/* Destination Marker */}
-            <Marker
-              coordinate={activeDestination}
-              anchor={{ x: 0.5, y: 1 }}
-              centerOffset={{ x: 0, y: -scale(12) }}
-              zIndex={10}
-            >
-              <View style={styles.destinationMarker}>
-                <View style={styles.destinationMarkerInner}>
-                  <Image
-                    source={{
-                      uri:
-                        activeMarkerImage ||
-                        "https://www.fmt.se/wp-content/uploads/2023/02/logo-placeholder-image.png",
-                    }}
-                    style={styles.markerAvatar}
-                    resizeMode="cover"
-                  />
+            {/* Destination Marker — only when an active destination exists */}
+            {activeDestination && (
+              <Marker
+                coordinate={activeDestination}
+                anchor={{ x: 0.5, y: 1 }}
+                centerOffset={{ x: 0, y: -scale(12) }}
+                zIndex={10}
+              >
+                <View style={styles.destinationMarker}>
+                  <View style={styles.destinationMarkerInner}>
+                    <Image
+                      source={{
+                        uri:
+                          activeMarkerImage ||
+                          "https://www.fmt.se/wp-content/uploads/2023/02/logo-placeholder-image.png",
+                      }}
+                      style={styles.markerAvatar}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <View style={styles.markerPointer} />
                 </View>
-                <View style={styles.markerPointer} />
-              </View>
-            </Marker>
+              </Marker>
+            )}
 
-            {/* Rider Marker */}
-            <Marker
-              coordinate={getOriginForRoute()}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <Image
-                source={RIDER_IMAGE}
-                style={{ width: 80, height: 80 }}
-                resizeMode="contain"
-              />
-            </Marker>
+            {/* Rider Marker — only when GPS has a real fix */}
+            {userLocation && (
+              <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
+                <Image
+                  source={RIDER_IMAGE}
+                  style={{ width: 80, height: 80 }}
+                  resizeMode="contain"
+                />
+              </Marker>
+            )}
           </MapView>
 
           {/* ── Zoom + Location Buttons ── */}
@@ -723,7 +797,7 @@ export default function OnMap() {
           </View>
         </View>
 
-        {/* ── Order Request Card ── */}
+        {/* ── Order Request Card — shown only when there is a pending order ── */}
         {currentRequest && routeInfo && !loadingRoute && (
           <OrderRequestCard
             key={currentRequest.id}
@@ -750,7 +824,7 @@ export default function OnMap() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: {
     flex: 1,

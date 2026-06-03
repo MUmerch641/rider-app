@@ -11,14 +11,14 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
@@ -81,9 +81,14 @@ export default function SupportChatScreen() {
   const rtl = isRTL(i18n.language);
   const listRef = useRef<FlatList>(null);
 
-  const params = useLocalSearchParams<{ threadId?: string; orderId?: string }>();
-  const initialThreadId = typeof params.threadId === "string" ? params.threadId : "";
-  const orderIdParam = typeof params.orderId === "string" ? params.orderId : undefined;
+  const params = useLocalSearchParams<{
+    threadId?: string;
+    orderId?: string;
+  }>();
+  const initialThreadId =
+    typeof params.threadId === "string" ? params.threadId : "";
+  const orderIdParam =
+    typeof params.orderId === "string" ? params.orderId : undefined;
 
   const [threadId, setThreadId] = useState<string>(initialThreadId);
   const [messages, setMessages] = useState<Message[]>([]);

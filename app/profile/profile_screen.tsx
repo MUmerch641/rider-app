@@ -7,11 +7,11 @@ import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
-  fontSize,
-  radius,
-  scale,
-  spacing,
-  verticalScale,
+    fontSize,
+    radius,
+    scale,
+    spacing,
+    verticalScale,
 } from "@/utils/responsive";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,11 +19,11 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";

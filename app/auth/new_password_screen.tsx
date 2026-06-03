@@ -10,13 +10,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function NewPasswordScreen() {
@@ -26,7 +26,8 @@ export default function NewPasswordScreen() {
   const font = useAppFont();
 
   const params = useLocalSearchParams<{ resetToken?: string }>();
-  const resetToken = typeof params.resetToken === "string" ? params.resetToken : "";
+  const resetToken =
+    typeof params.resetToken === "string" ? params.resetToken : "";
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

@@ -23,8 +23,8 @@ import {
 import Svg, {
   Circle,
   Defs,
-  LinearGradient as SvgGradient,
   Stop,
+  LinearGradient as SvgGradient,
 } from "react-native-svg";
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -213,8 +213,8 @@ const styles = StyleSheet.create({
 
   /* ── Rider circle ── */
   circleWrapper: {
-    marginTop:verticalScale(90),
-    marginBottom:verticalScale(30),
+    marginTop: verticalScale(90),
+    marginBottom: verticalScale(30),
     width: CIRCLE_SIZE,
     height: CIRCLE_SIZE,
     alignItems: "center",
@@ -230,11 +230,11 @@ const styles = StyleSheet.create({
     width: CIRCLE_SIZE + scale(24),
     height: CIRCLE_SIZE + scale(24),
     borderRadius: (CIRCLE_SIZE + scale(24)) / 2,
-    borderWidth: 5 ,
+    borderWidth: 5,
     borderColor: "#D3BCFF",
   },
   helmetImage: {
-    marginTop:verticalScale(30),
+    marginTop: verticalScale(30),
     width: CIRCLE_SIZE * 1.2,
     height: CIRCLE_SIZE * 1.2,
     zIndex: 1,

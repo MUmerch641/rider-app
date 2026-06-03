@@ -1,15 +1,14 @@
 import {
-  ordersApi,
-  type ApiError,
-  type DriverNextStatus,
-  type OrderAssignment,
+    ordersApi,
+    type ApiError,
+    type DriverNextStatus,
+    type OrderAssignment,
 } from "@/api";
 import { DeliveryBottomSheet } from "@/components/ui";
 import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
 import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
-import { formatNumber } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,13 +18,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Linking,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
@@ -220,7 +219,12 @@ export default function DeliveryRoute() {
     const s = assignment?.order?.status;
     if (!s) return paramPhase; // assignment still loading — trust the nav intent
     // Post-pickup statuses ⇒ the rider is heading to the customer.
-    if (s === "picked_up" || s === "on_the_way" || s === "arrived" || s === "delivered")
+    if (
+      s === "picked_up" ||
+      s === "on_the_way" ||
+      s === "arrived" ||
+      s === "delivered"
+    )
       return "dropoff";
     // Everything earlier (…driver_assigned / driver_arrived at store) ⇒ pickup.
     return "pickup";
@@ -276,13 +280,13 @@ export default function DeliveryRoute() {
 
   const markerImage =
     phase === "pickup"
-      ? assignment?.order?.store?.avatar ?? FALLBACK_LOGO
-      : assignment?.order?.customer?.avatar ?? FALLBACK_LOGO;
+      ? (assignment?.order?.store?.avatar ?? FALLBACK_LOGO)
+      : (assignment?.order?.customer?.avatar ?? FALLBACK_LOGO);
 
   const callPhone =
     phase === "pickup"
-      ? assignment?.order?.store?.phone ?? ""
-      : assignment?.order?.customer?.phone ?? "";
+      ? (assignment?.order?.store?.phone ?? "")
+      : (assignment?.order?.customer?.phone ?? "");
 
   const [sheetHeight, setSheetHeight] = useState(verticalScale(160));
 
@@ -466,7 +470,8 @@ export default function DeliveryRoute() {
 
   const handleArrived = async () => {
     if (!orderId || arrivedBusy) return;
-    const next: DriverNextStatus = phase === "pickup" ? "arrived_store" : "arrived";
+    const next: DriverNextStatus =
+      phase === "pickup" ? "arrived_store" : "arrived";
     setArrivedBusy(true);
     try {
       await ordersApi.updateStatus(orderId, { status: next });

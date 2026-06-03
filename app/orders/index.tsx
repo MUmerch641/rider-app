@@ -1,8 +1,8 @@
 import {
-  ordersApi,
-  walletApi,
-  type ApiError,
-  type OrderAssignment,
+    ordersApi,
+    walletApi,
+    type ApiError,
+    type OrderAssignment,
 } from "@/api";
 import { OpenStatusToggle } from "@/components/ui";
 import { isRTL } from "@/constants/i18n";
@@ -10,25 +10,25 @@ import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
 import { useAuth, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
-  formatCurrency,
-  formatDurationMinutes,
-  formatNumber,
+    formatCurrency,
+    formatDurationMinutes,
+    formatNumber,
 } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -240,105 +240,111 @@ export default function OrdersScreen() {
         {/* Active Order Card */}
         {activeOrder && (
           <View style={styles.activeCard}>
-          <View style={[styles.activeTop, { flexDirection: dir }]}>
-            <View
-              style={[
-                {
-                  flexDirection: dir,
-                  alignItems: "center",
-                  gap: scale(10),
-                  flex: 1,
-                },
-              ]}
-            >
-              <Image
-                source={{
-                  uri: activeOrder.order?.store?.avatar ?? FALLBACK_LOGO,
-                }}
-                style={styles.restaurantLogo}
-              />
+            <View style={[styles.activeTop, { flexDirection: dir }]}>
               <View
-                style={{
-                  flex: 1,
-                  alignItems: rtl ? "flex-end" : "flex-start",
-                }}
+                style={[
+                  {
+                    flexDirection: dir,
+                    alignItems: "center",
+                    gap: scale(10),
+                    flex: 1,
+                  },
+                ]}
               >
-                <Text
-                  style={[styles.restaurantName, { fontFamily: font.bold }]}
+                <Image
+                  source={{
+                    uri: activeOrder.order?.store?.avatar ?? FALLBACK_LOGO,
+                  }}
+                  style={styles.restaurantLogo}
+                />
+                <View
+                  style={{
+                    flex: 1,
+                    alignItems: rtl ? "flex-end" : "flex-start",
+                  }}
                 >
-                  {localizeName(activeOrder.order?.store?.name, langKey)}
+                  <Text
+                    style={[styles.restaurantName, { fontFamily: font.bold }]}
+                  >
+                    {localizeName(activeOrder.order?.store?.name, langKey)}
+                  </Text>
+                  <Text
+                    style={[styles.customerName, { fontFamily: font.regular }]}
+                  >
+                    {t("orders.customer")}:{" "}
+                    {activeOrder.order?.customer?.name ?? "—"}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ alignItems: rtl ? "flex-start" : "flex-end" }}>
+                <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
+                  {formatCurrency(
+                    activeOrder.order?.total,
+                    activeOrder.order?.currency ?? "IQD",
+                  )}
                 </Text>
                 <Text
-                  style={[styles.customerName, { fontFamily: font.regular }]}
+                  style={[styles.orderDistance, { fontFamily: font.regular }]}
                 >
-                  {t("orders.customer")}:{" "}
-                  {activeOrder.order?.customer?.name ?? "—"}
+                  {Number(activeOrder.distanceKm ?? 0).toFixed(1)}{" "}
+                  {t("orders.kmAway")}
                 </Text>
               </View>
             </View>
-            <View style={{ alignItems: rtl ? "flex-start" : "flex-end" }}>
-              <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
-                {formatCurrency(
-                  activeOrder.order?.total,
-                  activeOrder.order?.currency ?? "IQD",
-                )}
-              </Text>
-              <Text
-                style={[styles.orderDistance, { fontFamily: font.regular }]}
-              >
-                {Number(activeOrder.distanceKm ?? 0).toFixed(1)}{" "}
-                {t("orders.kmAway")}
-              </Text>
-            </View>
-          </View>
 
-          <View style={[styles.activeBottom, { flexDirection: dir }]}>
-            <View
-              style={[
-                { flexDirection: dir, alignItems: "center", gap: scale(4) },
-              ]}
-            >
-              <Ionicons
-                name="location-outline"
-                size={scale(14)}
-                color={Colors.textSecondary}
-              />
-              <Text style={[styles.locationText, { fontFamily: font.regular }]}>
-                {activeOrder.order?.store?.address ?? ""}
-              </Text>
-            </View>
-            <View style={[styles.timerPill, { flexDirection: dir }]}>
-              <Ionicons name="time-outline" size={scale(13)} color="#e05c7a" />
-              <Text style={[styles.timerText, { fontFamily: font.medium }]}>
-                {formatDurationMinutes(activeOrder.estimatedMinutes)}
-              </Text>
-            </View>
-          </View>
-
-          {/* Start Delivery Button */}
-          <LinearGradient
-            colors={["#BA97FF", "#8140FF", "#BC99FF"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.startBtn}
-          >
-            <TouchableOpacity
-              style={styles.startBtnInner}
-              activeOpacity={0.85}
-              onPress={() =>
-                router.push({
-                  pathname: "/orders/active_delivery_screen",
-                  params: { id: activeOrder.orderId },
-                })
-              }
-            >
-              <Text
-                style={[styles.startBtnText, { fontFamily: font.semibold }]}
+            <View style={[styles.activeBottom, { flexDirection: dir }]}>
+              <View
+                style={[
+                  { flexDirection: dir, alignItems: "center", gap: scale(4) },
+                ]}
               >
-                {t("orders.startDelivery")}
-              </Text>
-            </TouchableOpacity>
-          </LinearGradient>
+                <Ionicons
+                  name="location-outline"
+                  size={scale(14)}
+                  color={Colors.textSecondary}
+                />
+                <Text
+                  style={[styles.locationText, { fontFamily: font.regular }]}
+                >
+                  {activeOrder.order?.store?.address ?? ""}
+                </Text>
+              </View>
+              <View style={[styles.timerPill, { flexDirection: dir }]}>
+                <Ionicons
+                  name="time-outline"
+                  size={scale(13)}
+                  color="#e05c7a"
+                />
+                <Text style={[styles.timerText, { fontFamily: font.medium }]}>
+                  {formatDurationMinutes(activeOrder.estimatedMinutes)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Start Delivery Button */}
+            <LinearGradient
+              colors={["#BA97FF", "#8140FF", "#BC99FF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.startBtn}
+            >
+              <TouchableOpacity
+                style={styles.startBtnInner}
+                activeOpacity={0.85}
+                onPress={() =>
+                  router.push({
+                    pathname: "/orders/active_delivery_screen",
+                    params: { id: activeOrder.orderId },
+                  })
+                }
+              >
+                <Text
+                  style={[styles.startBtnText, { fontFamily: font.semibold }]}
+                >
+                  {t("orders.startDelivery")}
+                </Text>
+              </TouchableOpacity>
+            </LinearGradient>
           </View>
         )}
 
@@ -369,141 +375,146 @@ export default function OrdersScreen() {
             const dropoffText = (() => {
               const da = a.order?.deliveryAddress;
               if (!da) return "";
-              const parts = [da.building, da.street].filter(Boolean) as string[];
+              const parts = [da.building, da.street].filter(
+                Boolean,
+              ) as string[];
               return parts.join(", ");
             })();
             const isActing = !!acting[a.orderId];
             return (
-            <View key={a.id} style={styles.nearbyCard}>
-              {/* Top row */}
-              <View style={[styles.nearbyTop, { flexDirection: dir }]}>
-                <View
-                  style={[
-                    {
-                      flexDirection: dir,
-                      alignItems: "center",
-                      gap: scale(10),
-                      flex: 1,
-                    },
-                  ]}
-                >
-                  <Image
-                    source={{ uri: logo }}
-                    style={styles.nearbyLogo}
-                  />
+              <View key={a.id} style={styles.nearbyCard}>
+                {/* Top row */}
+                <View style={[styles.nearbyTop, { flexDirection: dir }]}>
                   <View
-                    style={{
-                      flex: 1,
-                      alignItems: rtl ? "flex-end" : "flex-start",
-                    }}
-                  >
-                    <Text
-                      style={[styles.restaurantName, { fontFamily: font.bold }]}
-                    >
-                      {restaurant}
-                    </Text>
-                    <View
-                      style={[
-                        {
-                          flexDirection: dir,
-                          alignItems: "center",
-                          gap: scale(3),
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name="location-outline"
-                        size={scale(14)}
-                        color={Colors.textPrimary}
-                      />
-                      <Text
-                        style={[
-                          styles.nearbyLocation,
-                          { fontFamily: font.regular },
-                        ]}
-                      >
-                        {location}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-                <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
-                  {price}
-                </Text>
-              </View>
-
-              {/* Pickup / Dropoff with connected line */}
-              <View style={styles.routeContainer}>
-                <View
-                  style={[
-                    {
-                      flexDirection: dir,
-                      alignItems: "center",
-                      gap: scale(10),
-                    },
-                  ]}
-                >
-                  <View style={styles.dotColumn}>
-                    <View style={styles.dotGray} />
-                    <View style={styles.connectorLine} />
-                  </View>
-                  <Text
-                    style={[styles.routeText, { fontFamily: font.regular }]}
-                  >
-                    {t("orders.pickup")}: {pickup}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    {
-                      flexDirection: dir,
-                      alignItems: "center",
-                      gap: scale(10),
-                    },
-                  ]}
-                >
-                  <View style={styles.dotGreenOuter}>
-                    <View style={styles.dotGreenInner} />
-                  </View>
-                  <Text
-                    style={[styles.routeText, { fontFamily: font.regular }]}
-                  >
-                    {t("orders.dropoff")}: {dropoffText}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Action buttons */}
-              <View style={[styles.actionRow, { flexDirection: dir }]}>
-                <TouchableOpacity
-                  style={styles.declineBtn}
-                  activeOpacity={0.75}
-                  disabled={isActing}
-                  onPress={() => handleDeclineNearby(a.orderId)}
-                >
-                  <Text
-                    style={[styles.declineBtnText, { fontFamily: font.medium }]}
-                  >
-                    {t("orders.decline")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.acceptBtn}
-                  activeOpacity={0.85}
-                  disabled={isActing}
-                  onPress={() => handleAcceptNearby(a.orderId)}
-                >
-                  <Text
                     style={[
-                      styles.acceptBtnText,
-                      { fontFamily: font.semibold },
+                      {
+                        flexDirection: dir,
+                        alignItems: "center",
+                        gap: scale(10),
+                        flex: 1,
+                      },
                     ]}
                   >
-                    {t("orders.accept")}
+                    <Image source={{ uri: logo }} style={styles.nearbyLogo} />
+                    <View
+                      style={{
+                        flex: 1,
+                        alignItems: rtl ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.restaurantName,
+                          { fontFamily: font.bold },
+                        ]}
+                      >
+                        {restaurant}
+                      </Text>
+                      <View
+                        style={[
+                          {
+                            flexDirection: dir,
+                            alignItems: "center",
+                            gap: scale(3),
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="location-outline"
+                          size={scale(14)}
+                          color={Colors.textPrimary}
+                        />
+                        <Text
+                          style={[
+                            styles.nearbyLocation,
+                            { fontFamily: font.regular },
+                          ]}
+                        >
+                          {location}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                  <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
+                    {price}
                   </Text>
-                </TouchableOpacity>
+                </View>
+
+                {/* Pickup / Dropoff with connected line */}
+                <View style={styles.routeContainer}>
+                  <View
+                    style={[
+                      {
+                        flexDirection: dir,
+                        alignItems: "center",
+                        gap: scale(10),
+                      },
+                    ]}
+                  >
+                    <View style={styles.dotColumn}>
+                      <View style={styles.dotGray} />
+                      <View style={styles.connectorLine} />
+                    </View>
+                    <Text
+                      style={[styles.routeText, { fontFamily: font.regular }]}
+                    >
+                      {t("orders.pickup")}: {pickup}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      {
+                        flexDirection: dir,
+                        alignItems: "center",
+                        gap: scale(10),
+                      },
+                    ]}
+                  >
+                    <View style={styles.dotGreenOuter}>
+                      <View style={styles.dotGreenInner} />
+                    </View>
+                    <Text
+                      style={[styles.routeText, { fontFamily: font.regular }]}
+                    >
+                      {t("orders.dropoff")}: {dropoffText}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Action buttons */}
+                <View style={[styles.actionRow, { flexDirection: dir }]}>
+                  <TouchableOpacity
+                    style={styles.declineBtn}
+                    activeOpacity={0.75}
+                    disabled={isActing}
+                    onPress={() => handleDeclineNearby(a.orderId)}
+                  >
+                    <Text
+                      style={[
+                        styles.declineBtnText,
+                        { fontFamily: font.medium },
+                      ]}
+                    >
+                      {t("orders.decline")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.acceptBtn}
+                    activeOpacity={0.85}
+                    disabled={isActing}
+                    onPress={() => handleAcceptNearby(a.orderId)}
+                  >
+                    <Text
+                      style={[
+                        styles.acceptBtnText,
+                        { fontFamily: font.semibold },
+                      ]}
+                    >
+                      {t("orders.accept")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
             );
           })}
         </View>

@@ -1,15 +1,14 @@
 import {
-  ordersApi,
-  type ApiError,
-  type DriverNextStatus,
-  type OrderAssignment,
+    ordersApi,
+    type ApiError,
+    type DriverNextStatus,
+    type OrderAssignment,
 } from "@/api";
 import { OrderHeader } from "@/components/ui/OrderHeader";
 import { OrderProgressCard } from "@/components/ui/OrderProgressCard";
 import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
-import { formatNumber } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,13 +17,13 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Image,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
@@ -507,39 +506,91 @@ export default function ActiveDeliveryScreen() {
   const stepStatuses = useMemo(() => {
     const s = assignment?.status;
     if (s === "accepted") {
-      return { shop: "active" as const, pickup: "inactive" as const, deliver: "inactive" as const };
+      return {
+        shop: "active" as const,
+        pickup: "inactive" as const,
+        deliver: "inactive" as const,
+      };
     }
     if (s === "arrived_store") {
-      return { shop: "active" as const, pickup: "inactive" as const, deliver: "inactive" as const };
+      return {
+        shop: "active" as const,
+        pickup: "inactive" as const,
+        deliver: "inactive" as const,
+      };
     }
     if (s === "picked_up") {
-      return { shop: "active" as const, pickup: "active" as const, deliver: "inactive" as const };
+      return {
+        shop: "active" as const,
+        pickup: "active" as const,
+        deliver: "inactive" as const,
+      };
     }
     if (s === "on_the_way") {
-      return { shop: "active" as const, pickup: "active" as const, deliver: "inactive" as const };
+      return {
+        shop: "active" as const,
+        pickup: "active" as const,
+        deliver: "inactive" as const,
+      };
     }
     if (s === "arrived" || s === "delivered") {
-      return { shop: "active" as const, pickup: "active" as const, deliver: "active" as const };
+      return {
+        shop: "active" as const,
+        pickup: "active" as const,
+        deliver: "active" as const,
+      };
     }
-    return { shop: "inactive" as const, pickup: "inactive" as const, deliver: "inactive" as const };
+    return {
+      shop: "inactive" as const,
+      pickup: "inactive" as const,
+      deliver: "inactive" as const,
+    };
   }, [assignment?.status]);
 
   // Map assignment.status → next CTA action
-  const ctaConfig = useMemo<{ key: string; defaultLabel: string; next: DriverNextStatus | null }>(() => {
+  const ctaConfig = useMemo<{
+    key: string;
+    defaultLabel: string;
+    next: DriverNextStatus | null;
+  }>(() => {
     const s = assignment?.status;
     switch (s) {
       case "accepted":
-        return { key: "delivery.arrivedAtRestaurant", defaultLabel: "Arrived at Restaurant", next: "arrived_store" };
+        return {
+          key: "delivery.arrivedAtRestaurant",
+          defaultLabel: "Arrived at Restaurant",
+          next: "arrived_store",
+        };
       case "arrived_store":
-        return { key: "delivery.pickedUp", defaultLabel: "Picked Up", next: "picked_up" };
+        return {
+          key: "delivery.pickedUp",
+          defaultLabel: "Picked Up",
+          next: "picked_up",
+        };
       case "picked_up":
-        return { key: "delivery.onTheWay", defaultLabel: "On the Way", next: "on_the_way" };
+        return {
+          key: "delivery.onTheWay",
+          defaultLabel: "On the Way",
+          next: "on_the_way",
+        };
       case "on_the_way":
-        return { key: "delivery.arrivedAtCustomer", defaultLabel: "Arrived at Customer", next: "arrived" };
+        return {
+          key: "delivery.arrivedAtCustomer",
+          defaultLabel: "Arrived at Customer",
+          next: "arrived",
+        };
       case "arrived":
-        return { key: "delivery.delivered", defaultLabel: "Delivered", next: "delivered" };
+        return {
+          key: "delivery.delivered",
+          defaultLabel: "Delivered",
+          next: "delivered",
+        };
       default:
-        return { key: "delivery.arrivedAtRestaurant", defaultLabel: "Arrived at Restaurant", next: null };
+        return {
+          key: "delivery.arrivedAtRestaurant",
+          defaultLabel: "Arrived at Restaurant",
+          next: null,
+        };
     }
   }, [assignment?.status]);
 
@@ -603,7 +654,8 @@ export default function ActiveDeliveryScreen() {
   };
 
   const handleCallCustomer = () => {
-    if (customerPhone) Linking.openURL(`tel:${customerPhone}`).catch(() => undefined);
+    if (customerPhone)
+      Linking.openURL(`tel:${customerPhone}`).catch(() => undefined);
   };
 
   const handleChatCustomer = () => {

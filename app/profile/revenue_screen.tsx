@@ -13,11 +13,11 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -90,7 +90,9 @@ export default function RevenueScreen() {
         for (const point of summary?.series ?? []) {
           const monthIndex = new Date(point.date).getMonth();
           if (monthIndex >= 0 && monthIndex < 12) {
-            revenueByMonth[monthIndex] = Math.round(Number(point.earnings) || 0);
+            revenueByMonth[monthIndex] = Math.round(
+              Number(point.earnings) || 0,
+            );
             orderByMonth[monthIndex] = Number(point.count) || 0;
           }
         }
@@ -130,7 +132,10 @@ export default function RevenueScreen() {
         setRating(Number.isFinite(rt) ? rt : 0);
         setOnTimeRate(Number.isFinite(onTime) ? onTime : 0);
       } catch (err) {
-        console.warn("Wallet summary fetch failed:", (err as ApiError)?.message);
+        console.warn(
+          "Wallet summary fetch failed:",
+          (err as ApiError)?.message,
+        );
       }
     })();
     return () => {

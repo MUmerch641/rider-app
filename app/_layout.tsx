@@ -1,7 +1,14 @@
 import { LanguageOnboarding } from "@/components/ui/LanguageOnboarding";
 import "@/constants/i18n";
 import i18n, { isRTL, LANGUAGE_STORAGE_KEY } from "@/constants/i18n";
-import { AuthProvider, NotificationProvider, SocketProvider, useAuth, useNotifications, useSocket } from "@/context";
+import {
+  AuthProvider,
+  NotificationProvider,
+  SocketProvider,
+  useAuth,
+  useNotifications,
+  useSocket,
+} from "@/context";
 import {
   Poppins_400Regular,
   Poppins_500Medium,
@@ -18,10 +25,10 @@ import {
   Vazirmatn_700Bold,
 } from "@expo-google-fonts/vazirmatn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
-import * as Location from "expo-location";
 import { I18nManager } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
@@ -66,7 +73,7 @@ function SocketBridges() {
     const storeLabel =
       typeof storeName === "string"
         ? storeName
-        : storeName?.en ?? storeName?.ar ?? storeName?.ku ?? "store";
+        : (storeName?.en ?? storeName?.ar ?? storeName?.ku ?? "store");
 
     addNotification({
       type: "new_order",
