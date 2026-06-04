@@ -12,6 +12,8 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-aud
 import { Vibration } from "react-native";
 import {
   SOCKET_URL,
+  apiClient,
+  ENDPOINTS,
   type SocketNewOrderPayload,
   type SocketNotificationNewPayload,
   type SocketOrderCancelledPayload,
@@ -105,6 +107,28 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   startAlarmRef.current = startAlarm;
   const stopAlarmRef = useRef(stopAlarm);
   stopAlarmRef.current = stopAlarm;
+
+  // Pull the admin-configured new-order alert sound (set in the dashboard) so the
+  // alarm plays the chosen preset. Falls back to the bundled default on failure.
+  useEffect(() => {
+    if (!isAuthenticated || !driver?.id) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const env = (await apiClient.get(ENDPOINTS.auth.profile)) as {
+          data?: { alertSound?: string };
+        };
+        if (!cancelled && env?.data?.alertSound) {
+          alarmSoundKeyRef.current = env.data.alertSound;
+        }
+      } catch {
+        // keep the default sound
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, driver?.id]);
 
   useEffect(() => {
     if (!isAuthenticated || !driver?.id) {
