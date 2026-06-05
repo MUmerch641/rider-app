@@ -10,6 +10,7 @@ import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { avatarSource, storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
@@ -30,8 +31,6 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
-const FALLBACK_LOGO =
-  "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain";
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 const GOOGLE_DIRECTIONS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -278,10 +277,10 @@ export default function DeliveryRoute() {
     return parts.join(", ");
   }, [assignment, phase]);
 
-  const markerImage =
+  const markerSource =
     phase === "pickup"
-      ? (assignment?.order?.store?.avatar ?? FALLBACK_LOGO)
-      : (assignment?.order?.customer?.avatar ?? FALLBACK_LOGO);
+      ? storeSource(assignment?.order?.store?.avatar)
+      : avatarSource(assignment?.order?.customer?.avatar);
 
   const callPhone =
     phase === "pickup"
@@ -568,7 +567,7 @@ export default function DeliveryRoute() {
                 <View style={styles.destinationMarker}>
                   <View style={styles.destinationMarkerInner}>
                     <Image
-                      source={{ uri: markerImage || FALLBACK_LOGO }}
+                      source={markerSource}
                       style={styles.markerAvatar}
                       resizeMode="cover"
                     />

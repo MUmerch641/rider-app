@@ -10,6 +10,7 @@ import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -154,9 +155,6 @@ type CardOrderItem = {
   price: number;
 };
 
-const FALLBACK_LOGO =
-  "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain";
-
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
 function RestaurantCard({
@@ -174,7 +172,7 @@ function RestaurantCard({
   t: any;
   name: string;
   address: string;
-  logoUrl: string;
+  logoUrl?: string;
   onNavigate: () => void;
   navActive?: boolean;
 }) {
@@ -185,7 +183,7 @@ function RestaurantCard({
       <View style={[cardStyles.topRow, { flexDirection: row }]}>
         <View style={cardStyles.logoWrap}>
           <Image
-            source={{ uri: logoUrl || FALLBACK_LOGO }}
+            source={storeSource(logoUrl)}
             style={cardStyles.logo}
             resizeMode="contain"
           />
@@ -603,7 +601,7 @@ export default function ActiveDeliveryScreen() {
 
   const restaurantName = localizeName(assignment?.order?.store?.name, langKey);
   const restaurantAddress = assignment?.order?.store?.address ?? "";
-  const restaurantLogo = assignment?.order?.store?.avatar ?? FALLBACK_LOGO;
+  const restaurantLogo = assignment?.order?.store?.avatar ?? undefined;
 
   const customerName = assignment?.order?.customer?.name ?? "—";
   const customerPhone = assignment?.order?.customer?.phone ?? "";

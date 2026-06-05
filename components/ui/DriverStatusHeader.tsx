@@ -1,5 +1,6 @@
 import { isRTL } from "@/constants/i18n";
 import { useAppFont } from "@/hooks/useAppFont";
+import { avatarSource } from "@/utils/placeholders";
 import { fontSize, scale, verticalScale } from "@/utils/responsive";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +9,7 @@ import { OpenStatusToggle } from "./OpenStatusToggle";
 
 type DriverStatusHeaderProps = {
   name: string;
-  avatar: string;
+  avatar?: string;
   earnings: string;
   isOnline?: boolean;
   onToggleStatus?: () => void;
@@ -44,7 +45,7 @@ export default function DriverStatusHeader({
           ]}
         >
           <View style={styles.avatarWrap}>
-            <Image source={{ uri: avatar }} style={styles.avatar} />
+            <Image source={avatarSource(avatar)} style={styles.avatar} />
             <View style={styles.onlineDot} />
           </View>
 

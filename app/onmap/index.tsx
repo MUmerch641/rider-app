@@ -16,6 +16,7 @@ import {
   formatNumber,
 } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -648,10 +649,7 @@ export default function OnMap() {
           >
             <DriverStatusHeader
               name={driverDisplayName}
-              avatar={
-                driver?.avatar ??
-                "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4="
-              }
+              avatar={driver?.avatar ?? undefined}
               earnings={todayEarnings}
               isOnline={driver?.isOnline ?? false}
               onToggleStatus={handleStatusToggle}
@@ -724,11 +722,7 @@ export default function OnMap() {
                 <View style={styles.destinationMarker}>
                   <View style={styles.destinationMarkerInner}>
                     <Image
-                      source={{
-                        uri:
-                          activeMarkerImage ||
-                          "https://www.fmt.se/wp-content/uploads/2023/02/logo-placeholder-image.png",
-                      }}
+                      source={storeSource(activeMarkerImage)}
                       style={styles.markerAvatar}
                       resizeMode="cover"
                     />

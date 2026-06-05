@@ -203,11 +203,7 @@ export default function ProfileScreen() {
           name={driverDisplayName}
           phone={driver?.phone ?? ""}
           balance={lifetimeBalance}
-          avatar={{
-            uri:
-              driver?.avatar ??
-              "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4=",
-          }}
+          avatar={driver?.avatar ? { uri: driver.avatar } : undefined}
           style={styles.balanceCard}
         />
 

@@ -46,25 +46,30 @@ function smoothPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-const MONTHS = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
-  "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
+const EN_MONTHS = [
+  "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+  "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
 ];
 
-const DATA: Record<ChartTab, number[]> = {
-  revenue: [40, 55, 35, 70, 50, 100, 65, 80, 45, 60, 75, 50],
-  order: [30, 45, 60, 40, 70, 55, 80, 50, 65, 45, 70, 55],
-  profit: [20, 40, 55, 35, 65, 45, 70, 40, 60, 35, 65, 45],
+// Localized short month labels for the X-axis, falling back to English where the
+// runtime's Intl data doesn't cover the locale (Hermes can be limited).
+function shortMonths(lang: string): string[] {
+  try {
+    const fmt = new Intl.DateTimeFormat(lang, { month: "short" });
+    const out = Array.from({ length: 12 }, (_, i) =>
+      fmt.format(new Date(Date.UTC(2021, i, 15))),
+    );
+    return out.some((m) => !m) ? EN_MONTHS : out;
+  } catch {
+    return EN_MONTHS;
+  }
+}
+
+// No live data → render an empty (all-zero) series instead of fake numbers.
+const EMPTY: Record<ChartTab, number[]> = {
+  revenue: Array(12).fill(0),
+  order: Array(12).fill(0),
+  profit: Array(12).fill(0),
 };
 
 export interface SalesChartData {
@@ -96,9 +101,10 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
     { key: "profit", label: t("revenue.profit") },
   ];
 
+  const months = shortMonths(i18n.language);
   const dataMap: Record<ChartTab, number[]> = dataProp
     ? { revenue: dataProp.revenue, order: dataProp.order, profit: dataProp.profit }
-    : DATA;
+    : EMPTY;
   const data = dataMap[activeTab];
   // Guard against an all-zero series (e.g. no deliveries this year for the active tab)
   // — Math.max(...[0,0,...]) = 0 would NaN the SVG path. Floor at 1 to keep a flat baseline.
@@ -277,7 +283,7 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
 
         {/* Month labels */}
         <View style={styles.monthsRow}>
-          {(dataProp?.monthLabels ?? MONTHS).map((m) => (
+          {(dataProp?.monthLabels ?? months).map((m) => (
             <Text
               key={m}
               style={[styles.monthLabel, { fontFamily: font.regular }]}

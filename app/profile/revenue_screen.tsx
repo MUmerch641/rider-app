@@ -236,7 +236,7 @@ export default function RevenueScreen() {
             >
               <ChartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
-                {t("profile.profit")}
+                {t("profile.onTime")}
               </Text>
             </View>
             <View
@@ -246,7 +246,7 @@ export default function RevenueScreen() {
               ]}
             >
               <Text style={[styles.statValue, { fontFamily: font.medium }]}>
-                %58
+                {Math.round(onTimeRate)}%
               </Text>
               <MaterialIcons
                 name="trending-up"

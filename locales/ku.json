@@ -110,7 +110,8 @@
     "orderRadius": "بواری داواکاری",
     "reviews": "هەڵسەنگاندن",
     "changePassword": "گۆڕینی وشەی نهێنی",
-    "signOut": "دەرچوون"
+    "signOut": "دەرچوون",
+    "onTime": "لە کاتی خۆیدا"
   },
   "location": {
     "chooseLocation": "شوێن هەڵبژێرە",
@@ -274,7 +275,6 @@
     "dropoff": "گەیاندن",
     "decline": "ڕەتکردنەوە",
     "accept": "قبووڵکردن",
-
     "acceptedOrders": "داواکاریە وەرگیراوەکان",
     "delivered": "گەیەندراو",
     "goToRestaurant": "بڕۆ بۆ چێشتخانە"
@@ -332,7 +332,6 @@
     "onTime": "لە کاتی خۆیدا",
     "rating": "هەڵسەنگاندن"
   },
-
   "support": {
     "title": "پشتگیری",
     "online": "ئونلاین",
@@ -362,7 +361,6 @@
     "discard": "وازدەهێنم",
     "continue": "بەردەوام دەبم"
   },
-
   "personalInfo": {
     "title": "زانیاری کەسی",
     "firstName": "ناوی یەکەم",

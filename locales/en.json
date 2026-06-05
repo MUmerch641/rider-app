@@ -110,7 +110,8 @@
     "orderRadius": "Order Radius",
     "reviews": "Reviews",
     "changePassword": "Change Password",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "onTime": "On-time"
   },
   "location": {
     "chooseLocation": "Choose location",
@@ -137,7 +138,6 @@
     "wed": "Wednesday",
     "thu": "Thursday",
     "fri": "Friday",
-
     "satP": "Sat",
     "sunP": "Sun",
     "monP": "Mon",
@@ -321,13 +321,11 @@
     "availableBalance": "Available Balance",
     "totalEarning": "Total of Earning"
   },
-
   "driver": {
     "online": "Online",
     "offline": "Offline",
     "earningsToday": "Earnings Today"
   },
-
   "stats": {
     "efficiencyStat": "Efficiency Stat",
     "acceptance": "Acceptance",
@@ -363,7 +361,6 @@
     "discard": "Discard",
     "continue": "Continue"
   },
-
   "personalInfo": {
     "title": "Personal Information",
     "firstName": "First Name",

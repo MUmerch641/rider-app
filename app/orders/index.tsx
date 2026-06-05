@@ -15,6 +15,7 @@ import {
     formatNumber,
 } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { avatarSource, storeSource } from "@/utils/placeholders";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -31,11 +32,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const FALLBACK_LOGO =
-  "https://tse1.mm.bing.net/th/id/OIP.AiK2XKBbcs31B24ebg5mAQHaGL?rs=1&pid=ImgDetMain";
-const FALLBACK_AVATAR =
-  "https://media.istockphoto.com/id/1038692170/photo/smiling-courier-man-holding-a-box-package.jpg?s=612x612&w=0&k=20&c=IhJYTjkchSQwnNIx0hY4ExkCoLQZatyZt-MwCgL7GF4=";
 
 const ACTIVE_STATUSES = new Set([
   "accepted",
@@ -170,7 +166,7 @@ export default function OrdersScreen() {
           >
             <View style={styles.profileWrap}>
               <Image
-                source={{ uri: driver?.avatar ?? FALLBACK_AVATAR }}
+                source={avatarSource(driver?.avatar)}
                 style={styles.profileImg}
               />
               <View
@@ -252,9 +248,7 @@ export default function OrdersScreen() {
                 ]}
               >
                 <Image
-                  source={{
-                    uri: activeOrder.order?.store?.avatar ?? FALLBACK_LOGO,
-                  }}
+                  source={storeSource(activeOrder.order?.store?.avatar)}
                   style={styles.restaurantLogo}
                 />
                 <View
@@ -366,7 +360,7 @@ export default function OrdersScreen() {
           {nearbyOrders.map((a) => {
             const restaurant = localizeName(a.order?.store?.name, langKey);
             const location = a.order?.store?.address ?? "";
-            const logo = a.order?.store?.avatar ?? FALLBACK_LOGO;
+            const logo = a.order?.store?.avatar;
             const price = formatCurrency(
               a.order?.total,
               a.order?.currency ?? "IQD",
@@ -395,7 +389,7 @@ export default function OrdersScreen() {
                       },
                     ]}
                   >
-                    <Image source={{ uri: logo }} style={styles.nearbyLogo} />
+                    <Image source={storeSource(logo)} style={styles.nearbyLogo} />
                     <View
                       style={{
                         flex: 1,
