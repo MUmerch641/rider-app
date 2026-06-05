@@ -35,23 +35,12 @@ const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
 // ─── Configuration ───────────────────────────────────────────────────────────
 const GOOGLE_DIRECTIONS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-const DEFAULT_REGION: Region = {
-  latitude: 35.5642,
-  longitude: 45.4321,
+// Default zoom level. The map always centers on the order's pickup/dropoff
+// (or the rider's real GPS) — never a hardcoded city. A previous version
+// hardcoded Sulaymaniyah here, so every rider's map opened on the wrong city.
+const DEFAULT_DELTA = {
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
-};
-
-// Destination coordinates (The Grill Restaurant)
-const DESTINATION = {
-  latitude: 35.5642,
-  longitude: 45.4321,
-};
-
-// Starting point coordinates (driver/user starting location)
-const STARTING_POINT = {
-  latitude: 35.555,
-  longitude: 45.418,
 };
 
 // ─── Polyline Decoder Utility ────────────────────────────────────────────────
@@ -311,15 +300,16 @@ export default function DeliveryRoute() {
   } | null>(null);
   const [routeError, setRouteError] = useState(false);
   const [selected, setSelected] = useState<LocationInfo>({
-    name: "Sulaymaniyah",
-    address: "Sulaymaniyah, Iraq",
-    latitude: DEFAULT_REGION.latitude,
-    longitude: DEFAULT_REGION.longitude,
+    name: "",
+    address: "",
+    latitude: 0,
+    longitude: 0,
   });
 
-  const [currentRegion, setCurrentRegion] = useState<Region>(DEFAULT_REGION);
+  const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
 
   const handleZoomIn = () => {
+    if (!currentRegion) return;
     const newRegion = {
       ...currentRegion,
       latitudeDelta: currentRegion.latitudeDelta / 2,
@@ -329,6 +319,7 @@ export default function DeliveryRoute() {
   };
 
   const handleZoomOut = () => {
+    if (!currentRegion) return;
     const newRegion = {
       ...currentRegion,
       latitudeDelta: currentRegion.latitudeDelta * 2,
@@ -372,10 +363,12 @@ export default function DeliveryRoute() {
     [destination],
   );
 
-  // Initial route load — waits for destination to be resolved.
+  // Initial route load — waits for BOTH the destination and the rider's real
+  // GPS. Never draw a route from a placeholder origin (that's how the route used
+  // to start in Sulaymaniyah); the auto-locate effect below fills userLocation.
   useEffect(() => {
-    if (!destination) return;
-    loadRoute(userLocation ?? STARTING_POINT, destination);
+    if (!destination || !userLocation) return;
+    loadRoute(userLocation, destination);
   }, [destination, loadRoute, userLocation]);
 
   // Fit map to show entire route
@@ -461,7 +454,23 @@ export default function DeliveryRoute() {
     setLocating(false);
   };
 
-  const getOriginForRoute = () => userLocation ?? STARTING_POINT;
+  // Auto-center on the rider's real GPS as soon as the screen opens, so the map
+  // and route origin use the actual location. Previously userLocation stayed null
+  // until the rider tapped the locate button, so the map opened on a hardcoded
+  // city (Sulaymaniyah) and the route was drawn from there.
+  useEffect(() => {
+    void goToCurrentLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The map's initial center: the order's pickup/dropoff if known, else the
+  // rider's GPS. Never a hardcoded city — the map only renders once one of these
+  // real anchors is available (see render below).
+  const initialMapRegion = useMemo<Region | null>(() => {
+    const anchor = destination ?? userLocation;
+    if (!anchor) return null;
+    return { ...anchor, ...DEFAULT_DELTA };
+  }, [destination, userLocation]);
 
   const handleCall = () => {
     if (callPhone) Linking.openURL(`tel:${callPhone}`).catch(() => undefined);
@@ -531,10 +540,20 @@ export default function DeliveryRoute() {
           )}
 
           {/* ── Map ── */}
+          {!initialMapRegion ? (
+            <View
+              style={[
+                styles.map,
+                { alignItems: "center", justifyContent: "center" },
+              ]}
+            >
+              <ActivityIndicator size="large" color="#7900F3" />
+            </View>
+          ) : (
           <MapView
             ref={mapRef}
             style={styles.map}
-            initialRegion={DEFAULT_REGION}
+            initialRegion={initialMapRegion}
             onRegionChangeComplete={handleRegionChangeComplete}
             showsUserLocation={false}
             showsMyLocationButton={false}
@@ -576,17 +595,20 @@ export default function DeliveryRoute() {
                 </View>
               </Marker>
             )}
-            <Marker
-              coordinate={getOriginForRoute()}
-              anchor={{ x: 0.5, y: 0.5 }}
-            >
-              <Image
-                source={RIDER_IMAGE}
-                style={{ width: 80, height: 80 }}
-                resizeMode="contain"
-              />
-            </Marker>
+            {userLocation && (
+              <Marker
+                coordinate={userLocation}
+                anchor={{ x: 0.5, y: 0.5 }}
+              >
+                <Image
+                  source={RIDER_IMAGE}
+                  style={{ width: 80, height: 80 }}
+                  resizeMode="contain"
+                />
+              </Marker>
+            )}
           </MapView>
+          )}
         </View>
 
         {/* ── Zoom + Location Buttons ── */}

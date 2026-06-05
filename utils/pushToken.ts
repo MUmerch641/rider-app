@@ -48,6 +48,17 @@ export async function registerForPushNotifications(): Promise<string | null> {
                 name: "default",
                 importance: Notifications.AndroidImportance.MAX,
             });
+            // High-importance channel for new-order pushes — must match the
+            // backend FCM channelId 'orders' so Android plays sound + vibrates
+            // when the app is backgrounded/closed. Without this the new-order
+            // push lands on the silent default channel (no sound, no vibrate).
+            await Notifications.setNotificationChannelAsync("orders", {
+                name: "New orders",
+                importance: Notifications.AndroidImportance.MAX,
+                sound: "default",
+                vibrationPattern: [0, 600, 400, 600],
+                enableVibrate: true,
+            });
         }
 
         const token = await Notifications.getDevicePushTokenAsync();

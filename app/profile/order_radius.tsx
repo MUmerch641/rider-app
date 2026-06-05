@@ -137,19 +137,20 @@ export default function OrderRadiusScreen() {
   return (
     <SafeAreaView style={styles.root} edges={{}}>
       <View style={styles.mapBg}>
-        <MapView
-          style={StyleSheet.absoluteFillObject}
-          initialRegion={{
-            latitude: 35.5642,
-            longitude: 45.4321,
-            latitudeDelta: 0.018,
-            longitudeDelta: 0.018,
-          }}
-          scrollEnabled={true}
-          zoomEnabled={false}
-          rotateEnabled={true}
-          pitchEnabled={true}
-        />
+        {currentLocation && (
+          <MapView
+            style={StyleSheet.absoluteFillObject}
+            initialRegion={{
+              ...currentLocation,
+              latitudeDelta: 0.018,
+              longitudeDelta: 0.018,
+            }}
+            scrollEnabled={true}
+            zoomEnabled={false}
+            rotateEnabled={true}
+            pitchEnabled={true}
+          />
+        )}
 
         <View
           style={[
@@ -180,12 +181,12 @@ export default function OrderRadiusScreen() {
             </Text>
           </View>
         )}
+        {currentLocation && (
         <MapView
           ref={mapRef}
           style={StyleSheet.absoluteFillObject}
           initialRegion={{
-            latitude: 35.5642,
-            longitude: 45.4321,
+            ...currentLocation,
             latitudeDelta: 0.018,
             longitudeDelta: 0.018,
           }}
@@ -233,6 +234,7 @@ export default function OrderRadiusScreen() {
             </>
           )}
         </MapView>
+        )}
 
         <View style={styles.bottomSheet}>
           <Text style={[styles.radiusValue, { fontFamily: font.bold }]}>

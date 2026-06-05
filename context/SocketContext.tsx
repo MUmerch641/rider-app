@@ -8,7 +8,12 @@ import React, {
   useState,
 } from "react";
 import { io, type Socket } from "socket.io-client";
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from "expo-audio";
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+  type AudioPlayer,
+} from "expo-audio";
 import { Vibration } from "react-native";
 import {
   SOCKET_URL,
@@ -61,8 +66,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   const stopAlarm = useCallback(() => {
     try {
+      // Just pause — startAlarm recreates the player for the next order, so don't
+      // seekTo() here. The old code's unawaited async seekTo(0) was still pending
+      // when the next order's remove() tore the player down, corrupting the iOS
+      // audio session so the next alarm went silent.
       alarmPlayerRef.current?.pause();
-      alarmPlayerRef.current?.seekTo(0);
     } catch {
       // ignore
     }
@@ -77,7 +85,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     Vibration.cancel();
   }, []);
 
-  const startAlarm = useCallback(() => {
+  const startAlarm = useCallback(async () => {
     // ── Vibration + safety timer FIRST, in their own try ─────────────────────
     // Never let an audio error skip these (that caused "no sound AND no vibrate").
     try {
@@ -93,8 +101,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     // ── Audio, isolated so a failure can't kill the vibration ────────────────
     try {
-      // Ring even on silent — this is a job alert the driver can't miss.
-      void setAudioModeAsync({ playsInSilentMode: true });
+      // The PREVIOUS bug: these two calls were fire-and-forget, so the 2nd+ order
+      // called play() before the iOS audio session was (re)configured/active — a
+      // prior stopAlarm leaves it stale — and playback silently no-op'd. AWAIT them
+      // so the session is ready every time.
+      //   1. category that rings even on silent (job alert the driver can't miss)
+      //   2. re-activate the session (a prior stop can deactivate it)
+      await setAudioModeAsync({ playsInSilentMode: true });
+      await setIsAudioActiveAsync(true);
       try {
         alarmPlayerRef.current?.remove();
       } catch {
@@ -180,7 +194,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     s.on("new-order", (payload: SocketNewOrderPayload) => {
       setNewOrder(payload);
-      startAlarmRef.current();
+      void startAlarmRef.current();
     });
 
     s.on("order:cancelled", (payload: SocketOrderCancelledPayload) => {

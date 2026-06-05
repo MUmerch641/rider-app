@@ -41,11 +41,10 @@ const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
 // ─── Configuration ────────────────────────────────────────────────────────────
 const GOOGLE_DIRECTIONS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-// Default map region (center of Sulaymaniyah) — only used for initial camera,
-// never as a fake origin / destination coordinate.
-const DEFAULT_REGION: Region = {
-  latitude: 35.5642,
-  longitude: 45.4321,
+// Default zoom level. The map centers on the rider's real GPS (see the on-mount
+// GPS effect) — never a hardcoded city. The map is not rendered until the first
+// GPS fix arrives, so there is no placeholder region to leak.
+const DEFAULT_DELTA = {
   latitudeDelta: 0.05,
   longitudeDelta: 0.05,
 };
@@ -211,12 +210,12 @@ export default function OnMap() {
   const [routeError, setRouteError] = useState(false);
 
   const [selected, setSelected] = useState<LocationInfo>({
-    name: "Sulaymaniyah",
-    address: "Sulaymaniyah, Iraq",
-    latitude: DEFAULT_REGION.latitude,
-    longitude: DEFAULT_REGION.longitude,
+    name: "",
+    address: "",
+    latitude: 0,
+    longitude: 0,
   });
-  const [currentRegion, setCurrentRegion] = useState<Region>(DEFAULT_REGION);
+  const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
 
   // ─── Live data hooks ─────────────────────────────────────────────────────
   const { driver, updateStatus, updateLocation } = useAuth();
@@ -241,9 +240,12 @@ export default function OnMap() {
     if (!newOrder) return null;
 
     const storeGeo = newOrder.store?.location;
+    // A dispatched order always carries store coordinates; fall back to 0,0 (not a
+    // hardcoded city) only for malformed data so we never plant a marker in the
+    // wrong city.
     const restaurantCoordinate: Coordinate = {
-      latitude: storeGeo?.lat ?? DEFAULT_REGION.latitude,
-      longitude: storeGeo?.lng ?? DEFAULT_REGION.longitude,
+      latitude: storeGeo?.lat ?? 0,
+      longitude: storeGeo?.lng ?? 0,
     };
 
     return {
@@ -548,6 +550,7 @@ export default function OnMap() {
 
   // ─── Zoom Handlers ────────────────────────────────────────────────────────
   const handleZoomIn = () => {
+    if (!currentRegion) return;
     const newRegion = {
       ...currentRegion,
       latitudeDelta: currentRegion.latitudeDelta / 2,
@@ -557,6 +560,7 @@ export default function OnMap() {
   };
 
   const handleZoomOut = () => {
+    if (!currentRegion) return;
     const newRegion = {
       ...currentRegion,
       latitudeDelta: currentRegion.latitudeDelta * 2,
@@ -680,11 +684,13 @@ export default function OnMap() {
             </View>
           )}
 
-          {/* ── Map ── */}
+          {/* ── Map ── Only render once we have the rider's real GPS fix, so the
+              map opens centered on the rider instead of a hardcoded city. */}
+          {gpsReady && userLocation && (
           <MapView
             ref={mapRef}
             style={styles.map}
-            initialRegion={DEFAULT_REGION}
+            initialRegion={{ ...userLocation, ...DEFAULT_DELTA }}
             onRegionChangeComplete={handleRegionChangeComplete}
             showsUserLocation={false}
             showsMyLocationButton={false}
@@ -743,6 +749,7 @@ export default function OnMap() {
               </Marker>
             )}
           </MapView>
+          )}
 
           {/* ── Zoom + Location Buttons ── */}
           <View
