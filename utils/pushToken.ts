@@ -38,7 +38,18 @@ export async function registerForPushNotifications(): Promise<string | null> {
         const { status: existing } = await Notifications.getPermissionsAsync();
         let finalStatus = existing;
         if (existing !== "granted") {
-            const { status } = await Notifications.requestPermissionsAsync();
+            const { status } = await Notifications.requestPermissionsAsync({
+                ios: {
+                    allowAlert: true,
+                    allowBadge: true,
+                    allowSound: true,
+                    // Also prompt for Critical Alerts (full volume, bypass the
+                    // silent switch + Focus/DND) so backgrounded silenced phones
+                    // still ring for orders. No-op until the app ships the
+                    // Apple-granted critical-alerts entitlement; safe to request.
+                    allowCriticalAlerts: true,
+                },
+            });
             finalStatus = status;
         }
         if (finalStatus !== "granted") return null;
