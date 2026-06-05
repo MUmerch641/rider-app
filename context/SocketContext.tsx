@@ -78,6 +78,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startAlarm = useCallback(() => {
+    // ── Vibration + safety timer FIRST, in their own try ─────────────────────
+    // Never let an audio error skip these (that caused "no sound AND no vibrate").
+    try {
+      Vibration.vibrate(800);
+      if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
+      vibrateTimerRef.current = setInterval(() => Vibration.vibrate(800), 1300);
+      // Safety auto-stop so it never rings forever if the driver ignores it.
+      if (alarmStopRef.current) clearTimeout(alarmStopRef.current);
+      alarmStopRef.current = setTimeout(() => stopAlarm(), ALARM_MAX_MS);
+    } catch {
+      // ignore — audio below is independent
+    }
+
+    // ── Audio, isolated so a failure can't kill the vibration ────────────────
     try {
       // Ring even on silent — this is a job alert the driver can't miss.
       void setAudioModeAsync({ playsInSilentMode: true });
@@ -89,17 +103,19 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       const p = createAudioPlayer(resolveAlertSound(alarmSoundKeyRef.current));
       p.loop = true;
       alarmPlayerRef.current = p;
-      p.play();
-
-      Vibration.vibrate(800);
-      if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
-      vibrateTimerRef.current = setInterval(() => Vibration.vibrate(800), 1300);
-
-      // Safety auto-stop so it never rings forever if the driver ignores it.
-      if (alarmStopRef.current) clearTimeout(alarmStopRef.current);
-      alarmStopRef.current = setTimeout(() => stopAlarm(), ALARM_MAX_MS);
+      // createAudioPlayer loads the bundled asset asynchronously — play now AND
+      // shortly after so an immediate (pre-load) play() that no-ops still rings.
+      const tryPlay = () => {
+        try {
+          p.play();
+        } catch {
+          // ignore
+        }
+      };
+      tryPlay();
+      setTimeout(tryPlay, 250);
     } catch (err) {
-      console.warn("incoming-order alarm failed to start", err);
+      console.warn("incoming-order alarm audio failed to start", err);
     }
   }, [stopAlarm]);
 
