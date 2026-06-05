@@ -14,7 +14,7 @@ import {
   setIsAudioActiveAsync,
   type AudioPlayer,
 } from "expo-audio";
-import { Vibration } from "react-native";
+import * as Haptics from "expo-haptics";
 import {
   SOCKET_URL,
   apiClient,
@@ -54,25 +54,56 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [pushedNotification, setPushedNotification] =
     useState<SocketNotificationNewPayload | null>(null);
 
-  // ── Incoming-order alarm (sound + vibration until acknowledged) ─────────────
-  // The driver's chosen alert sound is admin-configurable; until that setting is
-  // fetched we play the "default" preset. Recreating the player per order avoids
-  // the "only the first order rings" bug, and the vibration is driven on an
-  // interval because iOS ignores Vibration patterns / the repeat flag.
+  // ── Incoming-order alarm (sound + haptics until acknowledged) ───────────────
+  // Works while the app is foreground/active; when fully backgrounded the FCM
+  // push (its own sound, via the high-importance "orders" channel) covers it.
+  //
+  // ONE persistent player, reused across orders — recreating it every order raced
+  // its async asset load, which is why playback was unreliable. We seek to 0 and
+  // re-assert the audio session each time instead. RN's Vibration is a no-op on
+  // modern iOS, so the buzz uses expo-haptics.
   const alarmPlayerRef = useRef<AudioPlayer | null>(null);
+  const builtSoundKeyRef = useRef<string | undefined>(undefined);
+  const playRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const vibrateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alarmSoundKeyRef = useRef<string | undefined>(undefined);
 
-  const stopAlarm = useCallback(() => {
+  // Build the looping player once; rebuild only when the admin changes the preset.
+  const ensureAlarmPlayer = useCallback((): AudioPlayer | null => {
+    const key = alarmSoundKeyRef.current;
+    if (alarmPlayerRef.current && builtSoundKeyRef.current === key) {
+      return alarmPlayerRef.current;
+    }
     try {
-      // Just pause — startAlarm recreates the player for the next order, so don't
-      // seekTo() here. The old code's unawaited async seekTo(0) was still pending
-      // when the next order's remove() tore the player down, corrupting the iOS
-      // audio session so the next alarm went silent.
+      alarmPlayerRef.current?.remove();
+    } catch (e) {
+      console.warn("alarm: failed to remove old player", e);
+    }
+    try {
+      const p = createAudioPlayer(resolveAlertSound(key));
+      p.loop = true;
+      alarmPlayerRef.current = p;
+      builtSoundKeyRef.current = key;
+      return p;
+    } catch (e) {
+      console.warn("alarm: failed to create player", e);
+      alarmPlayerRef.current = null;
+      return null;
+    }
+  }, []);
+
+  const stopAlarm = useCallback(() => {
+    if (playRetryRef.current) {
+      clearTimeout(playRetryRef.current);
+      playRetryRef.current = null;
+    }
+    try {
+      // Pause + rewind so the next order starts the siren cleanly.
       alarmPlayerRef.current?.pause();
-    } catch {
-      // ignore
+      alarmPlayerRef.current?.seekTo(0);
+    } catch (e) {
+      console.warn("alarm: pause failed", e);
     }
     if (vibrateTimerRef.current) {
       clearInterval(vibrateTimerRef.current);
@@ -82,56 +113,65 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(alarmStopRef.current);
       alarmStopRef.current = null;
     }
-    Vibration.cancel();
   }, []);
 
   const startAlarm = useCallback(async () => {
-    // ── Vibration + safety timer FIRST, in their own try ─────────────────────
-    // Never let an audio error skip these (that caused "no sound AND no vibrate").
+    // ── Haptics + safety timer FIRST, isolated so an audio error can't skip them.
     try {
-      Vibration.vibrate(800);
+      const buzz = () =>
+        Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        ).catch(() => {});
+      buzz();
       if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
-      vibrateTimerRef.current = setInterval(() => Vibration.vibrate(800), 1300);
+      vibrateTimerRef.current = setInterval(buzz, 1500);
       // Safety auto-stop so it never rings forever if the driver ignores it.
       if (alarmStopRef.current) clearTimeout(alarmStopRef.current);
       alarmStopRef.current = setTimeout(() => stopAlarm(), ALARM_MAX_MS);
-    } catch {
-      // ignore — audio below is independent
+    } catch (e) {
+      console.warn("alarm: haptics failed to start", e);
     }
 
-    // ── Audio, isolated so a failure can't kill the vibration ────────────────
+    // ── Sound ─────────────────────────────────────────────────────────────────
     try {
-      // The PREVIOUS bug: these two calls were fire-and-forget, so the 2nd+ order
-      // called play() before the iOS audio session was (re)configured/active — a
-      // prior stopAlarm leaves it stale — and playback silently no-op'd. AWAIT them
-      // so the session is ready every time.
-      //   1. category that rings even on silent (job alert the driver can't miss)
-      //   2. re-activate the session (a prior stop can deactivate it)
+      // Make the iOS session playable BEFORE play(), every time: ring even on
+      // silent, and re-activate the session (a prior stop, or a notification
+      // sound, can leave it inactive — which silently no-ops play()).
       await setAudioModeAsync({ playsInSilentMode: true });
       await setIsAudioActiveAsync(true);
+
+      const p = ensureAlarmPlayer();
+      if (!p) return;
+
+      // expo-audio does NOT auto-reset position — seek to start so a previously
+      // played/paused alarm actually restarts instead of sitting at the end.
       try {
-        alarmPlayerRef.current?.remove();
-      } catch {
-        // ignore
+        p.seekTo(0);
+      } catch (e) {
+        console.warn("alarm: seekTo failed", e);
       }
-      const p = createAudioPlayer(resolveAlertSound(alarmSoundKeyRef.current));
-      p.loop = true;
-      alarmPlayerRef.current = p;
-      // createAudioPlayer loads the bundled asset asynchronously — play now AND
-      // shortly after so an immediate (pre-load) play() that no-ops still rings.
-      const tryPlay = () => {
+
+      // The asset loads asynchronously; play() before it's loaded no-ops. Retry
+      // until the player reports it's truly playing (or we give up ~2s in).
+      if (playRetryRef.current) clearTimeout(playRetryRef.current);
+      let attempts = 0;
+      const pump = () => {
+        if (alarmPlayerRef.current !== p) return; // stopped or rebuilt meanwhile
         try {
           p.play();
-        } catch {
-          // ignore
+        } catch (e) {
+          console.warn("alarm: play() threw", e);
+        }
+        attempts += 1;
+        if (!p.playing && attempts < 16) {
+          playRetryRef.current = setTimeout(pump, 120);
         }
       };
-      tryPlay();
-      setTimeout(tryPlay, 250);
+      pump();
     } catch (err) {
-      console.warn("incoming-order alarm audio failed to start", err);
+      console.warn("alarm: audio failed to start", err);
     }
-  }, [stopAlarm]);
+  }, [stopAlarm, ensureAlarmPlayer]);
 
   const startAlarmRef = useRef(startAlarm);
   startAlarmRef.current = startAlarm;
@@ -224,6 +264,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   // Release the audio player + timers on unmount.
   useEffect(
     () => () => {
+      if (playRetryRef.current) clearTimeout(playRetryRef.current);
       try {
         alarmPlayerRef.current?.remove();
       } catch {
@@ -231,7 +272,6 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
       if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
       if (alarmStopRef.current) clearTimeout(alarmStopRef.current);
-      Vibration.cancel();
     },
     [],
   );
