@@ -13,7 +13,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Image,
   Modal,
   StyleSheet,
   Text,
@@ -21,6 +20,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { SafeImage } from "@/components/SafeImage";
 import { CalendarIcon } from "./icons";
 
 const PERIODS = [
@@ -70,7 +70,7 @@ export function RevenueHeader({
         style={[styles.infoRow, { flexDirection: rtl ? "row-reverse" : "row" }]}
       >
         {logoUrl ? (
-          <Image source={{ uri: logoUrl }} style={styles.logo} />
+          <SafeImage uri={logoUrl} variant="store" style={styles.logo} />
         ) : (
           <View style={styles.logoPlaceholder}>
             <Ionicons name="flame" size={iconSize.md} color={Colors.primary} />

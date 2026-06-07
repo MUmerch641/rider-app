@@ -27,7 +27,6 @@ import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,6 +34,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { SafeImage } from "@/components/SafeImage";
 import { SvgXml } from "react-native-svg";
 
 // ── SVG Icons ──────────────────────────────────────────────────────────────────
@@ -204,10 +204,11 @@ function OrderCard({
         {/* Avatar */}
         <View style={styles.avatarRing}>
           {order.restaurantAvatar ? (
-            <Image
-              source={{ uri: order.restaurantAvatar }}
+            <SafeImage
+              uri={order.restaurantAvatar}
+              variant="store"
               style={styles.avatar}
-              resizeMode="cover"
+              contentFit="cover"
             />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]} />
