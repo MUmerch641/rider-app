@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
+    Alert,
     Image,
     Linking,
     StyleSheet,
@@ -27,6 +28,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -482,10 +484,12 @@ export default function DeliveryRoute() {
       phase === "pickup" ? "arrived_store" : "arrived";
     setArrivedBusy(true);
     try {
-      await ordersApi.updateStatus(orderId, { status: next });
+      await updateOrderStatusWithGps(orderId, next);
       router.back();
     } catch (err) {
-      console.warn("Arrived update failed:", (err as ApiError)?.message);
+      const msg = (err as ApiError)?.message ?? "Arrived update failed";
+      console.warn("Arrived update failed:", msg);
+      Alert.alert(t("delivery.arrivedFailed", "Cannot mark arrived"), msg);
     } finally {
       setArrivedBusy(false);
     }

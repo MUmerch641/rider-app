@@ -18,6 +18,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    Alert,
     Image,
     Linking,
     ScrollView,
@@ -26,6 +27,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 
@@ -664,14 +666,16 @@ export default function ActiveDeliveryScreen() {
     if (!orderId || !ctaConfig.next || ctaBusy) return;
     setCtaBusy(true);
     try {
-      await ordersApi.updateStatus(orderId, { status: ctaConfig.next });
+      await updateOrderStatusWithGps(orderId, ctaConfig.next);
       const refreshed = await ordersApi.getById(orderId).catch(() => null);
       if (refreshed) setAssignment(refreshed);
       if (ctaConfig.next === "delivered") {
         router.replace("/(tabs)");
       }
     } catch (err) {
-      console.warn("Status update failed:", (err as ApiError)?.message);
+      const msg = (err as ApiError)?.message ?? "Status update failed";
+      console.warn("Status update failed:", msg);
+      Alert.alert(t("delivery.statusFailed", "Cannot update status"), msg);
     } finally {
       setCtaBusy(false);
     }

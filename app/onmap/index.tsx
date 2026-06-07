@@ -26,12 +26,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -446,14 +448,13 @@ export default function OnMap() {
                   actionType: "deliver",
                   onDeliver: async () => {
                     try {
-                      await ordersApi.updateStatus(newOrderId, {
-                        status: "delivered",
-                      });
+                      await updateOrderStatusWithGps(newOrderId, "delivered");
                     } catch (e) {
-                      console.warn(
-                        "Delivered update failed:",
-                        (e as ApiError)?.message,
-                      );
+                      const msg = (e as ApiError)?.message ?? "Delivered update failed";
+                      console.warn("Delivered update failed:", msg);
+                      Alert.alert(t("delivery.deliverFailed", "Cannot mark delivered"), msg);
+                      // Don't clear state — rider needs to get closer and retry.
+                      return;
                     }
                     // Clear active delivery state
                     setAcceptedOrders((items) =>

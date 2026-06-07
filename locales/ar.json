@@ -310,7 +310,10 @@
     "cancelDelivery": "إلغاء التوصيل",
     "navigate": "الملاحة",
     "orderDetails": "تفاصيل الطلب",
-    "support": "الدعم"
+    "support": "الدعم",
+    "arrivedFailed": "تعذّر تأكيد الوصول",
+    "deliverFailed": "تعذّر تأكيد التسليم",
+    "statusFailed": "تعذّر تحديث الحالة"
   },
   "orderHeader": {
     "order": "طلب",

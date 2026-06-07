@@ -310,7 +310,10 @@
     "cancelDelivery": "Cancel Delivery",
     "navigate": "Navigate",
     "orderDetails": "Order Details",
-    "support": "Support"
+    "support": "Support",
+    "arrivedFailed": "Cannot mark arrived",
+    "deliverFailed": "Cannot mark delivered",
+    "statusFailed": "Cannot update status"
   },
   "orderHeader": {
     "order": "Order",

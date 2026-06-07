@@ -208,7 +208,13 @@ export type OrderAssignment = {
 };
 
 export type RejectOrderRequest = { reason: RejectReason };
-export type UpdateOrderStatusRequest = { status: DriverNextStatus };
+// lat/lng are required by the backend for the range-gated transitions
+// (arrived_store + delivered) — pulled from Location.getCurrentPositionAsync.
+export type UpdateOrderStatusRequest = {
+  status: DriverNextStatus;
+  lat?: number;
+  lng?: number;
+};
 
 // ─── Wallet ──────────────────────────────────────────────────────────
 export type WalletSummary = {

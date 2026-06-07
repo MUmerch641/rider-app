@@ -310,7 +310,10 @@
     "cancelDelivery": "هەڵوەشاندنەوەی گەیاندن",
     "navigate": "ئاڕاستەکردن",
     "orderDetails": "وردەکاری داواکاری",
-    "support": "پاڵپشتی"
+    "support": "پاڵپشتی",
+    "arrivedFailed": "ناتوانیت گەیشتن دیاری بکەیت",
+    "deliverFailed": "ناتوانیت گەیاندن دیاری بکەیت",
+    "statusFailed": "ناتوانیت دۆخ نوێ بکەیتەوە"
   },
   "orderHeader": {
     "order": "داواکاری",
