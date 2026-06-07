@@ -99,10 +99,12 @@ export default function ProfileScreen() {
 
   const { driver, logout } = useAuth();
   const [lifetimeBalance, setLifetimeBalance] = useState<number>(0);
+  const [onTimeRate, setOnTimeRate] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Fetch lifetime earnings from wallet.summary with a wide date range.
-  // (Replaced by GET /wallet/balance in a later task.)
+  // Fetch lifetime earnings + on-time rate from wallet.summary with a wide
+  // date range. The on-time number feeds the "On-Time" tile that used to
+  // show a hardcoded "%58" for everyone.
   useEffect(() => {
     if (!driver?.id) return;
     let cancelled = false;
@@ -116,6 +118,10 @@ export default function ProfileScreen() {
         if (!cancelled) {
           const total = Number(summary?.summary?.totalEarnings ?? 0);
           setLifetimeBalance(Number.isFinite(total) ? total : 0);
+          const rate = summary?.summary?.onTimeRate;
+          setOnTimeRate(
+            typeof rate === "number" && Number.isFinite(rate) ? rate : null,
+          );
         }
       } catch (err) {
         console.warn("Wallet summary failed:", (err as ApiError)?.message);
@@ -257,7 +263,7 @@ export default function ProfileScreen() {
             >
               <ChartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
-                {t("profile.profit")}
+                {t("profile.onTime", "On-Time")}
               </Text>
             </View>
             <View
@@ -267,17 +273,19 @@ export default function ProfileScreen() {
               ]}
             >
               <Text style={[styles.statValue, { fontFamily: font.medium }]}>
-                %58
+                {onTimeRate == null ? "—" : `${Math.round(onTimeRate)}%`}
               </Text>
-              <MaterialIcons
-                name="trending-up"
-                size={scale(16)}
-                color={Colors.textSecondary}
-                style={{
-                  marginLeft: rtl ? 0 : -scale(1),
-                  marginRight: rtl ? -scale(1) : 0,
-                }}
-              />
+              {onTimeRate != null && (
+                <MaterialIcons
+                  name="trending-up"
+                  size={scale(16)}
+                  color={Colors.textSecondary}
+                  style={{
+                    marginLeft: rtl ? 0 : -scale(1),
+                    marginRight: rtl ? -scale(1) : 0,
+                  }}
+                />
+              )}
             </View>
           </TouchableOpacity>
 

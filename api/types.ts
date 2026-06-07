@@ -179,6 +179,9 @@ export type Order = {
   deliveryAddress?: {
     street?: string;
     building?: string;
+    floor?: string;
+    apartment?: string;
+    instructions?: string;
     geoLocation?: GeoPoint;
   };
   store?: Store;
@@ -314,6 +317,9 @@ export type SupportThread = {
   title?: string | null;
   status: "open" | "closed";
   lastMessageAt?: string | null;
+  // Preview text of the most recent message — shown under the title in the
+  // Inbox tab's chat list. Null when the thread has no messages yet.
+  lastMessageBody?: string | null;
   unreadCount?: number;
   orderId?: string | null;
 };

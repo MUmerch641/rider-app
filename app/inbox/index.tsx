@@ -32,10 +32,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { AVATAR_PLACEHOLDER } from "@/utils/placeholders";
 
 type InboxTab = "notification" | "support";
-
-const AVATAR = "https://i.pravatar.cc/150?img=12";
 
 type InboxNotificationItem = {
   id: string;
@@ -148,7 +147,7 @@ function groupChatThreads(threads: SupportThread[]): ChatGroup[] {
     const row: ChatRow = {
       id: t.id,
       title: t.title ?? "Onway Support",
-      body: "",
+      body: t.lastMessageBody ?? "",
       date: formatChatDate(t.lastMessageAt ?? null),
       active: t.status === "open" && (t.unreadCount ?? 0) > 0,
       threadId: t.id,
@@ -354,7 +353,7 @@ export default function InboxScreen() {
                     activeOpacity={0.75}
                     onPress={() => handleNotificationPress(item.id)}
                   >
-                    <Image source={{ uri: AVATAR }} style={styles.avatar} />
+                    <Image source={AVATAR_PLACEHOLDER} style={styles.avatar} />
                     <View
                       style={[
                         styles.cardContent,
@@ -477,7 +476,7 @@ export default function InboxScreen() {
                       }
                     >
                       <View style={styles.avatarWrapper}>
-                        <Image source={{ uri: AVATAR }} style={styles.avatar} />
+                        <Image source={AVATAR_PLACEHOLDER} style={styles.avatar} />
                         {chat.active && (
                           <View
                             style={[

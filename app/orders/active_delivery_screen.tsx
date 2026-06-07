@@ -274,13 +274,18 @@ function CustomerCard({
           </Text>
         </View>
         <View style={[cardStyles.actionBtns, { flexDirection: row }]}>
-          <TouchableOpacity
-            style={cardStyles.actionBtn}
-            activeOpacity={0.8}
-            onPress={onChat}
-          >
-            <SvgXml xml={CHAT_SVG} width={scale(20)} height={scale(20)} />
-          </TouchableOpacity>
+          {/* Chat-customer is intentionally not shown: the rider-↔-customer
+              chat flow isn't wired up yet (would need its own thread API +
+              screen). Phone-call works and covers the same need. */}
+          {onChat ? (
+            <TouchableOpacity
+              style={cardStyles.actionBtn}
+              activeOpacity={0.8}
+              onPress={onChat}
+            >
+              <SvgXml xml={CHAT_SVG} width={scale(20)} height={scale(20)} />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             style={cardStyles.actionBtn}
             activeOpacity={0.8}
@@ -391,81 +396,37 @@ function DeliveryNoteCard({
   rtl,
   font,
   t,
+  instructions,
 }: {
   rtl: boolean;
   font: any;
   t: any;
+  instructions?: string | null;
 }) {
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";
 
+  // Customer didn't leave a note → don't render a card full of fake content.
+  // (Previously this whole card was hardcoded English copy + two static
+  // Call / Ringing tip tiles shown to every driver on every order.)
+  if (!instructions || !instructions.trim()) return null;
+
   return (
     <View style={[cardStyles.card, cardStyles.noteCard]}>
-      {/* Row 1: Note icon + "Delivery Note" label */}
       <View style={[cardStyles.noteLabelRow, { flexDirection: row }]}>
         <SvgXml xml={NOTE_SVG} width={scale(25)} height={scale(25)} />
         <Text style={[cardStyles.noteLabel, { fontFamily: font.semibold }]}>
           {t("delivery.deliveryNote")}
         </Text>
       </View>
-      {/* Row 2: Bold message */}
       <Text
         style={[
           cardStyles.noteMessage,
           { fontFamily: font.bold, textAlign: align },
         ]}
       >
-        {t("delivery.noteContent")}
+        {instructions.trim()}
       </Text>
-
-      {/* Row 3: Two option cards */}
-      <View style={[cardStyles.noteOptions, { flexDirection: row }]}>
-        {/* Call option */}
-        <View style={cardStyles.noteOption}>
-          {/* Title + icon in a row */}
-          <View style={[cardStyles.noteOptionTopRow, { flexDirection: row }]}>
-            <Text
-              style={[cardStyles.noteOptionTitle, { fontFamily: font.bold }]}
-            >
-              {t("delivery.call")}
-            </Text>
-            <View style={cardStyles.noteOptionIconBox}>
-              <SvgXml xml={CALL_SVG} width={scale(18)} height={scale(18)} />
-            </View>
-          </View>
-          {/* Sub text */}
-          <Text
-            style={[
-              cardStyles.noteOptionSub,
-              { fontFamily: font.regular, textAlign: align },
-            ]}
-          >
-            {t("delivery.callDesc")}
-          </Text>
-        </View>
-
-        {/* Ringing option */}
-        <View style={cardStyles.noteOption}>
-          <View style={[cardStyles.noteOptionTopRow, { flexDirection: row }]}>
-            <Text
-              style={[cardStyles.noteOptionTitle, { fontFamily: font.bold }]}
-            >
-              {t("delivery.ringing")}
-            </Text>
-            <View style={cardStyles.noteOptionIconBox}>
-              <SvgXml xml={BELL_SVG} width={scale(16)} height={scale(16)} />
-            </View>
-          </View>
-          <Text
-            style={[
-              cardStyles.noteOptionSub,
-              { fontFamily: font.regular, textAlign: align },
-            ]}
-          >
-            {t("delivery.ringingDesc")}
-          </Text>
-        </View>
-      </View>
     </View>
   );
 }
@@ -658,9 +619,6 @@ export default function ActiveDeliveryScreen() {
       Linking.openURL(`tel:${customerPhone}`).catch(() => undefined);
   };
 
-  const handleChatCustomer = () => {
-    // Support chat is not yet wired — stub no-op for now.
-  };
 
   const handleCtaPress = async () => {
     if (!orderId || !ctaConfig.next || ctaBusy) return;
@@ -745,7 +703,6 @@ export default function ActiveDeliveryScreen() {
             address={customerAddress}
             onNavigate={handleNavigateCustomer}
             onCall={handleCallCustomer}
-            onChat={handleChatCustomer}
             navActive={
               assignment?.status === "picked_up" ||
               assignment?.status === "on_the_way"
@@ -764,7 +721,12 @@ export default function ActiveDeliveryScreen() {
         </View>
 
         <View style={styles.section}>
-          <DeliveryNoteCard rtl={rtl} font={font} t={t} />
+          <DeliveryNoteCard
+            rtl={rtl}
+            font={font}
+            t={t}
+            instructions={assignment?.order?.deliveryAddress?.instructions}
+          />
         </View>
       </ScrollView>
 
