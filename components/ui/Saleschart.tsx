@@ -34,7 +34,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHART_WIDTH = SCREEN_WIDTH - spacing.md * 2 - spacing.md * 2;
 const CHART_HEIGHT = verticalScale(160);
 
-type ChartTab = "revenue" | "order" | "profit";
+type ChartTab = "revenue" | "order";
 
 function smoothPath(points: { x: number; y: number }[]): string {
   if (points.length < 2) return "";
@@ -69,13 +69,11 @@ function shortMonths(lang: string): string[] {
 const EMPTY: Record<ChartTab, number[]> = {
   revenue: Array(12).fill(0),
   order: Array(12).fill(0),
-  profit: Array(12).fill(0),
 };
 
 export interface SalesChartData {
   revenue: number[];
   order: number[];
-  profit: number[];
   /** Optional override for X-axis labels. Defaults to MONTHS (12 months Jan–Dec). */
   monthLabels?: string[];
 }
@@ -98,12 +96,11 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
   const TABS = [
     { key: "revenue", label: t("revenue.revenue") },
     { key: "order", label: t("revenue.order") },
-    { key: "profit", label: t("revenue.profit") },
   ];
 
   const months = shortMonths(i18n.language);
   const dataMap: Record<ChartTab, number[]> = dataProp
-    ? { revenue: dataProp.revenue, order: dataProp.order, profit: dataProp.profit }
+    ? { revenue: dataProp.revenue, order: dataProp.order }
     : EMPTY;
   const data = dataMap[activeTab];
   // Guard against an all-zero series (e.g. no deliveries this year for the active tab)

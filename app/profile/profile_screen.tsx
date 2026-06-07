@@ -98,33 +98,36 @@ export default function ProfileScreen() {
   const align = rtl ? "right" : "left";
 
   const { driver, logout } = useAuth();
-  const [lifetimeBalance, setLifetimeBalance] = useState<number>(0);
+  const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [onTimeRate, setOnTimeRate] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Fetch lifetime earnings + on-time rate from wallet.summary with a wide
-  // date range. The on-time number feeds the "On-Time" tile that used to
-  // show a hardcoded "%58" for everyone.
+  // Available balance comes from /wallet/balance (delivered-but-not-paid-out
+  // earnings — what the rider can actually withdraw). On-time rate comes
+  // from /wallet/summary's lifetime aggregate. The label used to show
+  // *lifetime* earnings from /wallet/summary which the BALANCE card label
+  // ("Available Balance") explicitly contradicts.
   useEffect(() => {
     if (!driver?.id) return;
     let cancelled = false;
     (async () => {
       try {
         const today = new Date().toISOString().slice(0, 10);
-        const summary = await walletApi.summary({
-          startDate: "2020-01-01",
-          endDate: today,
-        });
-        if (!cancelled) {
-          const total = Number(summary?.summary?.totalEarnings ?? 0);
-          setLifetimeBalance(Number.isFinite(total) ? total : 0);
-          const rate = summary?.summary?.onTimeRate;
-          setOnTimeRate(
-            typeof rate === "number" && Number.isFinite(rate) ? rate : null,
-          );
+        const [balance, summary] = await Promise.all([
+          walletApi.balance().catch(() => null),
+          walletApi.summary({ startDate: "2020-01-01", endDate: today }).catch(() => null),
+        ]);
+        if (cancelled) return;
+        if (balance) {
+          const avail = Number(balance.available ?? 0);
+          setAvailableBalance(Number.isFinite(avail) ? avail : 0);
         }
+        const rate = summary?.summary?.onTimeRate;
+        setOnTimeRate(
+          typeof rate === "number" && Number.isFinite(rate) ? rate : null,
+        );
       } catch (err) {
-        console.warn("Wallet summary failed:", (err as ApiError)?.message);
+        console.warn("Wallet fetch failed:", (err as ApiError)?.message);
       }
     })();
     return () => {
@@ -208,7 +211,7 @@ export default function ProfileScreen() {
         <DriverBalanceCard
           name={driverDisplayName}
           phone={driver?.phone ?? ""}
-          balance={lifetimeBalance}
+          balance={availableBalance}
           avatar={driver?.avatar ? { uri: driver.avatar } : undefined}
           style={styles.balanceCard}
         />

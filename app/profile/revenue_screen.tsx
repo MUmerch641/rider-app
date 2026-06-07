@@ -39,11 +39,9 @@ export default function RevenueScreen() {
   const [chartData, setChartData] = useState<{
     revenue: number[];
     order: number[];
-    profit: number[];
   }>({
     revenue: Array(12).fill(0),
     order: Array(12).fill(0),
-    profit: Array(12).fill(0),
   });
 
   // Map active period tab → ISO date range (YYYY-MM-DD).
@@ -96,11 +94,9 @@ export default function RevenueScreen() {
             orderByMonth[monthIndex] = Number(point.count) || 0;
           }
         }
-        // No backend profit calc yet — mirror revenue so the third tab still draws.
         setChartData({
           revenue: revenueByMonth,
           order: orderByMonth,
-          profit: revenueByMonth.slice(),
         });
       } catch (err) {
         console.warn("Yearly chart fetch failed:", (err as ApiError)?.message);
