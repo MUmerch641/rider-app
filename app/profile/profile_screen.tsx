@@ -65,13 +65,16 @@ const MENU_ITEMS = [
     svg: SUPPORT_SVG,
     onPress: (router: any) => router.push("/inbox/support_chat"),
   },
-  {
-    key: "orderRadius",
-    labelKey: "profile.orderRadius",
-    labelFallback: "Order Radius",
-    svg: ORDER_RADIUS_SVG,
-    onPress: (router: any) => router.push("/profile/order_radius"),
-  },
+  // "Order Radius" menu item temporarily hidden — the screen still ships
+  // (app/profile/order_radius.tsx) so we can flip it back on with a single
+  // line later. Don't delete the route or its translations.
+  // {
+  //   key: "orderRadius",
+  //   labelKey: "profile.orderRadius",
+  //   labelFallback: "Order Radius",
+  //   svg: ORDER_RADIUS_SVG,
+  //   onPress: (router: any) => router.push("/profile/order_radius"),
+  // },
   {
     key: "reviews",
     labelKey: "profile.reviews",
