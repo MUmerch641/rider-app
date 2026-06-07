@@ -4,8 +4,11 @@ import type { DriverNextStatus } from "@/api/types";
 
 // Backend range-gates these transitions — the request must include the rider's
 // current GPS so the server can verify proximity to the store / customer.
+// `arrived` (arrived at customer) reuses the deliveredDistanceThreshold on the
+// backend since both events happen at the customer's address.
 const GPS_GATED: ReadonlySet<DriverNextStatus> = new Set<DriverNextStatus>([
   "arrived_store",
+  "arrived",
   "delivered",
 ]);
 
