@@ -19,6 +19,7 @@ export { MenuIcon } from "./MenuIcon";
 export { MoneyIcon } from "./MoneyIcon";
 export { MotorDriverIcon } from "./MotorDriverIcon";
 export { PackageIcon } from "./PackageIcon";
+export { ProfileTabIcon } from "./ProfileTabIcon";
 export { RevenueIcon } from "./RevenueIcon";
 export { RideIcon } from "./RideIcon";
 export { SearchIcon } from "./SearchIcon";

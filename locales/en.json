@@ -45,7 +45,8 @@
   "tabs": {
     "onmap": "On Map",
     "orders": "Orders",
-    "inbox": "Inbox"
+    "inbox": "Inbox",
+    "profile": "Profile"
   },
   "otp": {
     "title": "Enter OTP Code",

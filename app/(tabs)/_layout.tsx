@@ -1,4 +1,4 @@
-import { BellTabIcon, MapIcon, RideIcon } from "@/components/ui/icons";
+import { BellTabIcon, MapIcon, ProfileTabIcon, RideIcon } from "@/components/ui/icons";
 import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useNotifications } from "@/context";
@@ -23,6 +23,11 @@ const TAB_SCREENS = [
     name: "inbox",
     labelKey: "tabs.inbox",
     Icon: BellTabIcon,
+  },
+  {
+    name: "profile",
+    labelKey: "tabs.profile",
+    Icon: ProfileTabIcon,
   },
 ];
 
