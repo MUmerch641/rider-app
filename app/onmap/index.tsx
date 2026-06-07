@@ -20,7 +20,7 @@ import { storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { t } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -179,7 +179,7 @@ function generateStraightLine(
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function OnMap() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const mapRef = useRef<MapView>(null);

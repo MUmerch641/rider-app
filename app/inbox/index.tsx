@@ -17,7 +17,7 @@ import {
     verticalScale,
 } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -172,7 +172,7 @@ function groupChatThreads(threads: SupportThread[]): ChatGroup[] {
 }
 
 export default function InboxScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);

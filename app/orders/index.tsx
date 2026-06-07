@@ -20,7 +20,7 @@ import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -44,7 +44,7 @@ const ACTIVE_STATUSES = new Set([
 export default function OrdersScreen() {
   const font = useAppFont();
   const { t, i18n } = useTranslation();
-  const router = useRouter();
+  const router = useNavGuard();
   const rtl = isRTL(i18n.language);
   const dir = rtl ? "row-reverse" : "row";
   const langKey: LangKey = (i18n.language as LangKey) || "en";

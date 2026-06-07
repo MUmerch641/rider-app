@@ -13,7 +13,8 @@ import { localizeName, type LangKey } from "@/utils/localize";
 import { storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -434,7 +435,7 @@ function DeliveryNoteCard({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ActiveDeliveryScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const font = useAppFont();

@@ -1,5 +1,7 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LanguageOnboarding } from "@/components/ui/LanguageOnboarding";
 import "@/constants/i18n";
+import { installGlobalErrorHandler } from "@/utils/globalErrorHandler";
 import i18n, { isRTL, LANGUAGE_STORAGE_KEY } from "@/constants/i18n";
 import {
   AuthProvider,
@@ -32,6 +34,10 @@ import { useEffect, useRef } from "react";
 import { I18nManager } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
+// Catches errors the React ErrorBoundary can't see (setTimeout callbacks,
+// unhandled promise rejections, native module rejections). Installed at
+// module load so it's active before any provider runs an effect.
+installGlobalErrorHandler();
 
 function RouteGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -169,20 +175,22 @@ export default function RootLayout() {
   if (!loaded || !notoLoaded) return null;
 
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <SocketProvider>
-          <SocketBridges />
-          <DriverLocationBroadcaster />
-          <RouteGuard>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="auth" />
-            </Stack>
-          </RouteGuard>
-          <LanguageOnboarding />
-        </SocketProvider>
-      </NotificationProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <NotificationProvider>
+          <SocketProvider>
+            <SocketBridges />
+            <DriverLocationBroadcaster />
+            <RouteGuard>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="auth" />
+              </Stack>
+            </RouteGuard>
+            <LanguageOnboarding />
+          </SocketProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
