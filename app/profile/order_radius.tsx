@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -40,7 +40,7 @@ const INFO_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xm
 `;
 
 export default function OrderRadiusScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);

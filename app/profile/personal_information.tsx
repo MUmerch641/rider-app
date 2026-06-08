@@ -4,7 +4,7 @@ import { isRTL } from "@/constants/i18n";
 import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,7 +22,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PersonalInformationScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const font = useAppFont();

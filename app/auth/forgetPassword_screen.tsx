@@ -5,7 +5,7 @@ import { Colors, FontSize } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,7 +24,7 @@ function validateEmail(email: string) {
 }
 
 export default function ForgotPasswordScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();

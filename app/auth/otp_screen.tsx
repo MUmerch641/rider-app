@@ -5,7 +5,8 @@ import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,7 +23,7 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
 export default function OtpScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();

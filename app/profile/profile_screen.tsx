@@ -15,7 +15,7 @@ import {
 } from "@/utils/responsive";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -95,7 +95,7 @@ const MENU_ITEMS = [
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
-  const router = useRouter();
+  const router = useNavGuard();
   const rtl = isRTL(i18n.language);
   const row = rtl ? "row-reverse" : "row";
   const align = rtl ? "right" : "left";

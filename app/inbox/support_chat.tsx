@@ -7,7 +7,8 @@ import { useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -75,7 +76,7 @@ function toUiMessage(m: SupportMessage): Message {
 }
 
 export default function SupportChatScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);

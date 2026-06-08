@@ -4,14 +4,14 @@ import { isRTL } from "@/constants/i18n";
 import { Colors, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ReviewsScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);

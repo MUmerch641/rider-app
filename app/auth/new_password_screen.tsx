@@ -6,7 +6,8 @@ import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,7 +21,7 @@ import {
 } from "react-native";
 
 export default function NewPasswordScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const font = useAppFont();

@@ -9,7 +9,7 @@ import { useAppFont } from "@/hooks/useAppFont";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useNavGuard } from "@/hooks/useNavGuard";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -22,7 +22,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RevenueScreen() {
-  const router = useRouter();
+  const router = useNavGuard();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
