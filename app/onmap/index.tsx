@@ -21,12 +21,12 @@ import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useNavGuard } from "@/hooks/useNavGuard";
+import { useDialog } from "@/components/ui/AppDialog";
 import { t } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   StyleSheet,
   Text,
@@ -180,6 +180,7 @@ function generateStraightLine(
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function OnMap() {
   const router = useNavGuard();
+  const dialog = useDialog();
   const { i18n } = useTranslation();
   const rtl = isRTL(i18n.language);
   const mapRef = useRef<MapView>(null);
@@ -452,7 +453,11 @@ export default function OnMap() {
                     } catch (e) {
                       const msg = (e as ApiError)?.message ?? "Delivered update failed";
                       console.warn("Delivered update failed:", msg);
-                      Alert.alert(t("delivery.deliverFailed", "Cannot mark delivered"), msg);
+                      dialog.show({
+                        title: t("delivery.deliverFailed", "Cannot mark delivered"),
+                        message: msg,
+                        tone: "error",
+                      });
                       // Don't clear state — rider needs to get closer and retry.
                       return;
                     }

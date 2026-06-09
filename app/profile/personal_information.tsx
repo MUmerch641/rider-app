@@ -5,11 +5,11 @@ import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavGuard } from "@/hooks/useNavGuard";
+import { useDialog } from "@/components/ui/AppDialog";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function PersonalInformationScreen() {
   const router = useNavGuard();
+  const dialog = useDialog();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
@@ -49,10 +50,11 @@ export default function PersonalInformationScreen() {
       router.replace("/auth/auth_screen");
     } catch (err) {
       const apiErr = err as ApiError;
-      Alert.alert(
-        t("personalInfo.deleteFailed", { defaultValue: "Delete failed" }),
-        apiErr?.message ?? "",
-      );
+      dialog.show({
+        title: t("personalInfo.deleteFailed", { defaultValue: "Delete failed" }),
+        message: apiErr?.message ?? "",
+        tone: "error",
+      });
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
@@ -78,12 +80,13 @@ export default function PersonalInformationScreen() {
     // Validate dateOfBirth shape if provided.
     const dobTrim = dateOfBirth.trim();
     if (dobTrim && !/^\d{4}-\d{2}-\d{2}$/.test(dobTrim)) {
-      Alert.alert(
-        t("personalInfo.invalidDate", { defaultValue: "Invalid date" }),
-        t("personalInfo.invalidDateHint", {
+      dialog.show({
+        title: t("personalInfo.invalidDate", { defaultValue: "Invalid date" }),
+        message: t("personalInfo.invalidDateHint", {
           defaultValue: "Please use YYYY-MM-DD format.",
         }),
-      );
+        tone: "warning",
+      });
       return;
     }
 
@@ -95,18 +98,20 @@ export default function PersonalInformationScreen() {
         nickname: norm(nickname) ?? undefined,
         dateOfBirth: dobTrim ? dobTrim : undefined,
       });
-      Alert.alert(
-        t("personalInfo.savedTitle", { defaultValue: "Saved" }),
-        t("personalInfo.savedMessage", {
+      dialog.show({
+        title: t("personalInfo.savedTitle", { defaultValue: "Saved" }),
+        message: t("personalInfo.savedMessage", {
           defaultValue: "Your profile has been updated.",
         }),
-      );
+        tone: "success",
+      });
     } catch (err) {
       const apiErr = err as ApiError;
-      Alert.alert(
-        t("personalInfo.saveFailed", { defaultValue: "Save failed" }),
-        apiErr?.message ?? "",
-      );
+      dialog.show({
+        title: t("personalInfo.saveFailed", { defaultValue: "Save failed" }),
+        message: apiErr?.message ?? "",
+        tone: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -342,10 +347,11 @@ export default function PersonalInformationScreen() {
             <TouchableOpacity
               style={styles.editBtn}
               onPress={() =>
-                Alert.alert(
-                  t("personalInfo.editEmail"),
-                  t("personalInfo.editEmailSoon"),
-                )
+                dialog.show({
+                  title: t("personalInfo.editEmail"),
+                  message: t("personalInfo.editEmailSoon"),
+                  tone: "info",
+                })
               }
             >
               <Text style={[styles.editBtnText, { fontFamily: font.medium }]}>
@@ -383,10 +389,11 @@ export default function PersonalInformationScreen() {
             <TouchableOpacity
               style={styles.editBtn}
               onPress={() =>
-                Alert.alert(
-                  t("personalInfo.editPhone"),
-                  t("personalInfo.editPhoneSoon"),
-                )
+                dialog.show({
+                  title: t("personalInfo.editPhone"),
+                  message: t("personalInfo.editPhoneSoon"),
+                  tone: "info",
+                })
               }
             >
               <Text style={[styles.editBtnText, { fontFamily: font.medium }]}>

@@ -17,11 +17,11 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
 import { useLocalSearchParams } from "expo-router";
 import { useNavGuard } from "@/hooks/useNavGuard";
+import { useDialog } from "@/components/ui/AppDialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
-    Alert,
     Image,
     Linking,
     StyleSheet,
@@ -183,6 +183,7 @@ function generateStraightLine(
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function DeliveryRoute() {
   const router = useNavGuard();
+  const dialog = useDialog();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
@@ -490,7 +491,11 @@ export default function DeliveryRoute() {
     } catch (err) {
       const msg = (err as ApiError)?.message ?? "Arrived update failed";
       console.warn("Arrived update failed:", msg);
-      Alert.alert(t("delivery.arrivedFailed", "Cannot mark arrived"), msg);
+      dialog.show({
+        title: t("delivery.arrivedFailed", "Cannot mark arrived"),
+        message: msg,
+        tone: "error",
+      });
     } finally {
       setArrivedBusy(false);
     }

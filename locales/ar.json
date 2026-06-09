@@ -78,7 +78,8 @@
     "open": "مفتوح",
     "close": "مغلق",
     "cancel": "إلغاء",
-    "iqd": "د.ع"
+    "iqd": "د.ع",
+    "ok": "حسناً"
   },
   "orderRadius": {
     "title": "دائرة الطلب",
@@ -145,15 +146,14 @@
     "title": "الملف الشخصي",
     "orders": "الطلبات",
     "profit": "الأرباح",
-    "onTime": "في الوقت",
+    "onTime": "في الوقت المحدد",
     "rating": "التقييم",
     "personalInfo": "المعلومات الشخصية",
     "liveSupport": "الدعم المباشر",
     "orderRadius": "نطاق الطلبات",
     "reviews": "التقييمات",
     "changePassword": "تغيير كلمة المرور",
-    "signOut": "تسجيل الخروج",
-    "onTime": "في الوقت المحدد"
+    "signOut": "تسجيل الخروج"
   },
   "reviews": {
     "title": "التقييمات",

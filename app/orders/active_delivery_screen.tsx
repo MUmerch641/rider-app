@@ -15,11 +15,11 @@ import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
 import { useNavGuard } from "@/hooks/useNavGuard";
+import { useDialog } from "@/components/ui/AppDialog";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
     Image,
     Linking,
     ScrollView,
@@ -436,6 +436,7 @@ function DeliveryNoteCard({
 
 export default function ActiveDeliveryScreen() {
   const router = useNavGuard();
+  const dialog = useDialog();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
@@ -634,7 +635,11 @@ export default function ActiveDeliveryScreen() {
     } catch (err) {
       const msg = (err as ApiError)?.message ?? "Status update failed";
       console.warn("Status update failed:", msg);
-      Alert.alert(t("delivery.statusFailed", "Cannot update status"), msg);
+      dialog.show({
+        title: t("delivery.statusFailed", "Cannot update status"),
+        message: msg,
+        tone: "error",
+      });
     } finally {
       setCtaBusy(false);
     }

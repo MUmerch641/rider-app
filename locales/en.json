@@ -78,7 +78,8 @@
     "open": "Open",
     "close": "Close",
     "cancel": "Cancel",
-    "iqd": "IQD"
+    "iqd": "IQD",
+    "ok": "OK"
   },
   "dashboard": {
     "newOrders": "new orders",
@@ -105,15 +106,14 @@
     "title": "Profile",
     "orders": "Orders",
     "profit": "Profit",
-    "onTime": "On-Time",
+    "onTime": "On-time",
     "rating": "Rating",
     "personalInfo": "Personal Information",
     "liveSupport": "Live Support",
     "orderRadius": "Order Radius",
     "reviews": "Reviews",
     "changePassword": "Change Password",
-    "signOut": "Sign out",
-    "onTime": "On-time"
+    "signOut": "Sign out"
   },
   "location": {
     "chooseLocation": "Choose location",

@@ -78,7 +78,8 @@
     "open": "کراوەیە",
     "close": "داخراوە",
     "cancel": "ڕەتکردنەوە",
-    "iqd": "د.ع"
+    "iqd": "د.ع",
+    "ok": "باشە"
   },
   "dashboard": {
     "newOrders": "ئۆردەری نوێ",
@@ -112,8 +113,7 @@
     "orderRadius": "بواری داواکاری",
     "reviews": "هەڵسەنگاندن",
     "changePassword": "گۆڕینی وشەی نهێنی",
-    "signOut": "دەرچوون",
-    "onTime": "لە کاتی خۆیدا"
+    "signOut": "دەرچوون"
   },
   "location": {
     "chooseLocation": "شوێن هەڵبژێرە",

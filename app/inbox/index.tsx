@@ -18,10 +18,10 @@ import {
 } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavGuard } from "@/hooks/useNavGuard";
+import { useDialog } from "@/components/ui/AppDialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    Alert,
     Image,
     RefreshControl,
     ScrollView,
@@ -173,6 +173,7 @@ function groupChatThreads(threads: SupportThread[]): ChatGroup[] {
 
 export default function InboxScreen() {
   const router = useNavGuard();
+  const dialog = useDialog();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
@@ -242,26 +243,31 @@ export default function InboxScreen() {
 
   const handleClearAll = () => {
     if (notificationList.length === 0) return;
-    Alert.alert(t("inbox.clearAllTitle"), t("inbox.clearAllBody"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("inbox.clearAll"),
-        style: "destructive",
-        onPress: async () => {
-          const prev = notificationList;
-          setNotificationList([]);
-          // Clear the context so the tab-bar dot turns off immediately.
-          clearAllNotifications();
-          try {
-            await notificationsApi.clearAll();
-          } catch (err) {
-            console.warn("Clear-all failed:", (err as ApiError)?.message);
-            setNotificationList(prev); // restore on failure
-            refresh(); // refresh() re-syncs the context from the server
-          }
+    dialog.show({
+      title: t("inbox.clearAllTitle"),
+      message: t("inbox.clearAllBody"),
+      tone: "warning",
+      buttons: [
+        { label: t("common.cancel"), variant: "secondary" },
+        {
+          label: t("inbox.clearAll"),
+          variant: "destructive",
+          onPress: async () => {
+            const prev = notificationList;
+            setNotificationList([]);
+            // Clear the context so the tab-bar dot turns off immediately.
+            clearAllNotifications();
+            try {
+              await notificationsApi.clearAll();
+            } catch (err) {
+              console.warn("Clear-all failed:", (err as ApiError)?.message);
+              setNotificationList(prev); // restore on failure
+              refresh(); // refresh() re-syncs the context from the server
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   return (

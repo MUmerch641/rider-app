@@ -15,11 +15,11 @@ import Slider from "@react-native-community/slider";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { useNavGuard } from "@/hooks/useNavGuard";
+import { useDialog } from "@/components/ui/AppDialog";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -41,6 +41,7 @@ const INFO_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xm
 
 export default function OrderRadiusScreen() {
   const router = useNavGuard();
+  const dialog = useDialog();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const rtl = isRTL(i18n.language);
@@ -67,10 +68,11 @@ export default function OrderRadiusScreen() {
       router.back();
     } catch (err) {
       const apiErr = err as ApiError;
-      Alert.alert(
-        t("orderRadius.saveFailed", { defaultValue: "Save failed" }),
-        apiErr?.message ?? "",
-      );
+      dialog.show({
+        title: t("orderRadius.saveFailed", { defaultValue: "Save failed" }),
+        message: apiErr?.message ?? "",
+        tone: "error",
+      });
     } finally {
       setSaving(false);
     }

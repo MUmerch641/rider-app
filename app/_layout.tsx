@@ -1,4 +1,5 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { DialogProvider } from "@/components/ui/AppDialog";
 import { LanguageOnboarding } from "@/components/ui/LanguageOnboarding";
 import "@/constants/i18n";
 import { installGlobalErrorHandler } from "@/utils/globalErrorHandler";
@@ -176,21 +177,23 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <NotificationProvider>
-          <SocketProvider>
-            <SocketBridges />
-            <DriverLocationBroadcaster />
-            <RouteGuard>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="auth" />
-              </Stack>
-            </RouteGuard>
-            <LanguageOnboarding />
-          </SocketProvider>
-        </NotificationProvider>
-      </AuthProvider>
+      <DialogProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <SocketProvider>
+              <SocketBridges />
+              <DriverLocationBroadcaster />
+              <RouteGuard>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="auth" />
+                </Stack>
+              </RouteGuard>
+              <LanguageOnboarding />
+            </SocketProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </DialogProvider>
     </ErrorBoundary>
   );
 }
