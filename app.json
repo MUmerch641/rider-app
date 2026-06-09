@@ -2,7 +2,7 @@
   "expo": {
     "name": "OnWay Driver",
     "slug": "driver_app",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "driverapp",
@@ -84,7 +84,14 @@
         "expo-notifications",
         {
           "color": "#3F1A96",
-          "defaultChannel": "default"
+          "defaultChannel": "default",
+          "sounds": [
+            "./assets/sounds/new-order.wav",
+            "./assets/sounds/alert-chime.wav",
+            "./assets/sounds/alert-bell.wav",
+            "./assets/sounds/alert-siren.wav",
+            "./assets/sounds/alert-beep.wav"
+          ]
         }
       ],
       "expo-font",
