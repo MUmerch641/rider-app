@@ -157,14 +157,14 @@ export function DeliveryBottomSheet({
         </TouchableOpacity>
       </LinearGradient>
 
-      {/* ── Cancel delivery ── */}
+      {/* ── Request cancellation (driver can't self-cancel; admin reassigns) ── */}
       <TouchableOpacity
         style={styles.cancelRow}
         onPress={onCancelDelivery}
         activeOpacity={0.7}
       >
         <Text style={[styles.cancelText, { fontFamily: font.regular }]}>
-          {t("delivery.cancelDelivery")}
+          {t("delivery.requestCancellation", "Request Cancellation")}
         </Text>
       </TouchableOpacity>
 

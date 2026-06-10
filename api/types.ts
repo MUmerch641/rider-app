@@ -219,6 +219,16 @@ export type UpdateOrderStatusRequest = {
   lng?: number;
 };
 
+// Driver asks an admin to cancel/reassign an accepted delivery. Preset reason
+// keys must match the backend's DRIVER_CANCEL_REQUEST_REASONS.
+export type CancelRequestReason =
+  | "too_far"
+  | "vehicle_issue"
+  | "customer_unreachable"
+  | "store_closed"
+  | "other";
+export type CancelRequestBody = { reason: CancelRequestReason; note?: string };
+
 // ─── Wallet ──────────────────────────────────────────────────────────
 export type WalletSummary = {
   period: { start: string; end: string };

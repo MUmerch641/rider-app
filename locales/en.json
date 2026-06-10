@@ -315,7 +315,8 @@
     "support": "Support",
     "arrivedFailed": "Cannot mark arrived",
     "deliverFailed": "Cannot mark delivered",
-    "statusFailed": "Cannot update status"
+    "statusFailed": "Cannot update status",
+    "requestCancellation": "Request Cancellation"
   },
   "orderHeader": {
     "order": "Order",
@@ -401,5 +402,21 @@
     "orderItems": "ORDER ITEMS",
     "acceptOrder": "Accept Order",
     "declineRequest": "Decline Request"
+  },
+  "cancelRequest": {
+    "title": "Request Cancellation",
+    "subtitle": "Support will be notified and reassign this order. Pick a reason:",
+    "tooFar": "Too far",
+    "vehicleIssue": "Vehicle issue",
+    "customerUnreachable": "Customer unreachable",
+    "storeClosed": "Restaurant closed",
+    "other": "Other",
+    "noteLabel": "DETAILS (OPTIONAL)",
+    "notePlaceholder": "Add any details…",
+    "send": "Send Request",
+    "sending": "Sending…",
+    "sentTitle": "Request sent",
+    "sentMessage": "Support has been notified and will reassign this order. You can keep delivering until then.",
+    "failedTitle": "Couldn't send request"
   }
 }

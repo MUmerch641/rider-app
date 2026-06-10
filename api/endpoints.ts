@@ -21,6 +21,7 @@ export const ENDPOINTS = {
     accept: (id: string) => `/orders/${id}/accept`,
     reject: (id: string) => `/orders/${id}/reject`,
     status: (id: string) => `/orders/${id}/status`,
+    cancelRequest: (id: string) => `/orders/${id}/cancel-request`,
   },
   wallet: {
     summary: "/wallet/summary",

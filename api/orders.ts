@@ -1,6 +1,7 @@
 import { apiClient } from "./client";
 import { ENDPOINTS } from "./endpoints";
 import type {
+  CancelRequestBody,
   Envelope,
   OrderAssignment,
   RejectOrderRequest,
@@ -36,5 +37,15 @@ export const ordersApi = {
   async updateStatus(id: string, body: UpdateOrderStatusRequest): Promise<void> {
     const env = (await apiClient.patch(ENDPOINTS.orders.status(id), body)) as Envelope<unknown>;
     if (env && env.success === false) throw new Error(env.message ?? "Status update failed");
+  },
+
+  // Ask an admin to cancel/reassign this delivery (drivers can't self-cancel).
+  async requestCancellation(id: string, body: CancelRequestBody): Promise<void> {
+    const env = (await apiClient.post(
+      ENDPOINTS.orders.cancelRequest(id),
+      body,
+    )) as Envelope<unknown>;
+    if (env && env.success === false)
+      throw new Error(env.message ?? "Cancellation request failed");
   },
 };

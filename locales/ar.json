@@ -315,7 +315,8 @@
     "support": "الدعم",
     "arrivedFailed": "تعذّر تأكيد الوصول",
     "deliverFailed": "تعذّر تأكيد التسليم",
-    "statusFailed": "تعذّر تحديث الحالة"
+    "statusFailed": "تعذّر تحديث الحالة",
+    "requestCancellation": "طلب إلغاء"
   },
   "orderHeader": {
     "order": "طلب",
@@ -401,5 +402,21 @@
     "orderItems": "عناصر الطلب",
     "acceptOrder": "قبول الطلب",
     "declineRequest": "رفض الطلب"
+  },
+  "cancelRequest": {
+    "title": "طلب إلغاء",
+    "subtitle": "سيتم إبلاغ الدعم وإعادة تعيين هذا الطلب. اختر سبباً:",
+    "tooFar": "بعيد جداً",
+    "vehicleIssue": "مشكلة في المركبة",
+    "customerUnreachable": "تعذر الوصول للعميل",
+    "storeClosed": "المطعم مغلق",
+    "other": "أخرى",
+    "noteLabel": "تفاصيل (اختياري)",
+    "notePlaceholder": "أضف أي تفاصيل…",
+    "send": "إرسال الطلب",
+    "sending": "جارٍ الإرسال…",
+    "sentTitle": "تم إرسال الطلب",
+    "sentMessage": "تم إبلاغ الدعم وسيعيد تعيين هذا الطلب. يمكنك متابعة التوصيل حتى ذلك الحين.",
+    "failedTitle": "تعذر إرسال الطلب"
   }
 }

@@ -18,6 +18,8 @@ import * as Location from "expo-location";
 import { useLocalSearchParams } from "expo-router";
 import { useNavGuard } from "@/hooks/useNavGuard";
 import { useDialog } from "@/components/ui/AppDialog";
+import { CancelRequestModal } from "@/components/ui/CancelRequestModal";
+import type { CancelRequestReason } from "@/api/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -202,6 +204,43 @@ export default function DeliveryRoute() {
   // ─── Assignment ─────────────────────────────────────────────────────────
   const [assignment, setAssignment] = useState<OrderAssignment | null>(null);
   const [arrivedBusy, setArrivedBusy] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  // Drivers can't self-cancel a live delivery — they REQUEST an admin to
+  // cancel/reassign it. This posts the reason; the dashboard surfaces it and
+  // an admin reassigns. The order stays with this driver until then.
+  const handleRequestCancellation = async (
+    reason: CancelRequestReason,
+    note: string,
+  ) => {
+    if (!orderId || cancelSubmitting) return;
+    setCancelSubmitting(true);
+    try {
+      await ordersApi.requestCancellation(orderId, {
+        reason,
+        note: note || undefined,
+      });
+      setCancelModalOpen(false);
+      dialog.show({
+        title: t("cancelRequest.sentTitle", "Request sent"),
+        message: t(
+          "cancelRequest.sentMessage",
+          "Support has been notified and will reassign this order. You can keep delivering until then.",
+        ),
+        tone: "success",
+      });
+    } catch (err) {
+      const msg = (err as ApiError)?.message ?? "Request failed";
+      dialog.show({
+        title: t("cancelRequest.failedTitle", "Couldn't send request"),
+        message: msg,
+        tone: "error",
+      });
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
 
   // Derive the phase from the order's ACTUAL status, not just the nav param.
   // Once the rider has picked up, this screen must show the dropoff action
@@ -687,7 +726,7 @@ export default function DeliveryRoute() {
               activeTab="navigate"
               onCall={handleCall}
               onArrived={handleArrived}
-              onCancelDelivery={() => router.back()}
+              onCancelDelivery={() => setCancelModalOpen(true)}
               onNavigate={() => {}}
               onOrderDetails={handleOrderDetails}
               onSupport={() => {
@@ -696,6 +735,13 @@ export default function DeliveryRoute() {
             />
           </BottomSheetView>
         </BottomSheet>
+
+        <CancelRequestModal
+          visible={cancelModalOpen}
+          submitting={cancelSubmitting}
+          onSubmit={handleRequestCancellation}
+          onClose={() => setCancelModalOpen(false)}
+        />
       </SafeAreaView>
     </GestureHandlerRootView>
   );
