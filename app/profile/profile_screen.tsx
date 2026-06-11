@@ -2,10 +2,11 @@ import { walletApi, type ApiError } from "@/api";
 import { DriverBalanceCard } from "@/components/ui/DriverBalanceCard";
 import { CartIcon, ChartIcon, StarIcon } from "@/components/ui/icons";
 import LanguageSelector from "@/components/ui/LanguageButton";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAuth } from "@/context";
+import { useDialog } from "@/components/ui/AppDialog";
 import { useAppFont } from "@/hooks/useAppFont";
+import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 import {
     fontSize,
     radius,
@@ -19,6 +20,7 @@ import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    I18nManager,
     ScrollView,
     StyleSheet,
     Text,
@@ -87,7 +89,9 @@ const MENU_ITEMS = [
     labelKey: "profile.changePassword",
     labelFallback: "Change Password",
     svg: CHANGE_PASSWORD_SVG,
-    onPress: (router: any) => router.push("/auth/forgetPassword_screen"),
+    // NOT /auth/forgetPassword_screen — RouteGuard bounces authenticated
+    // drivers straight out of the auth group, so that push went nowhere.
+    onPress: (router: any) => router.push("/profile/change_password"),
   },
 ];
 
@@ -96,11 +100,12 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const router = useNavGuard();
-  const rtl = isRTL(i18n.language);
-  const row = rtl ? "row-reverse" : "row";
-  const align = rtl ? "right" : "left";
+  // Layout mirrors natively; only glyph/gradient mirrors need a condition.
+  const rtl = I18nManager.isRTL;
 
   const { driver, logout } = useAuth();
+  const dialog = useDialog();
+  const { pickAndUploadAvatar, uploading: avatarUploading } = useAvatarUpload();
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [onTimeRate, setOnTimeRate] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
@@ -155,7 +160,7 @@ export default function ProfileScreen() {
 
   const ordersDisplay = String(driver?.totalDeliveries ?? 0);
 
-  const handleSignOut = async () => {
+  const performSignOut = async () => {
     if (signingOut) return;
     setSigningOut(true);
     try {
@@ -164,9 +169,30 @@ export default function ProfileScreen() {
       // Local logout still happens inside auth.logout().
     } finally {
       setSigningOut(false);
-      // RouteGuard will redirect on isAuthenticated flip; this is belt-and-suspenders.
-      router.replace("/auth/auth_screen");
+      // RouteGuard redirects on the isAuthenticated flip — navigating here too
+      // remounted the login screen a second time (visible double-render).
     }
+  };
+
+  // Destructive-confirm gate: only the dialog's confirm button logs out.
+  const handleSignOut = () => {
+    if (signingOut) return;
+    dialog.show({
+      title: t("profile.signOutConfirmTitle", "Log out?"),
+      message: t(
+        "profile.signOutConfirmMessage",
+        "You will stop receiving new orders until you log in again.",
+      ),
+      tone: "warning",
+      buttons: [
+        { label: t("common.cancel", "Cancel"), variant: "secondary" },
+        {
+          label: t("profile.signOut", "Sign out"),
+          variant: "destructive",
+          onPress: () => void performSignOut(),
+        },
+      ],
+    });
   };
 
   const handleLanguageToggle = () => {
@@ -179,7 +205,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Header ── */}
-      <View style={[styles.header, { flexDirection: row }]}>
+      <View style={styles.header}>
         {/* Back button */}
         <TouchableOpacity
           style={styles.headerBtn}
@@ -216,18 +242,17 @@ export default function ProfileScreen() {
           phone={driver?.phone ?? ""}
           balance={availableBalance}
           avatar={driver?.avatar ? { uri: driver.avatar } : undefined}
+          onAvatarPress={() => void pickAndUploadAvatar()}
+          avatarUploading={avatarUploading}
           style={styles.balanceCard}
         />
 
         {/* ── Stats row ── */}
         <LinearGradient
           colors={["#fadecd", "#fadecd56", "#e6dcfa5e", "#e6dcfa"]}
-          start={{ x: rtl ? 1.2 : 0, y: rtl ? 0 : 0 }}
-          end={{ x: rtl ? 0 : 1, y: rtl ? 1 : 1 }}
-          style={[
-            styles.statsRow,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
+          start={{ x: rtl ? 1.2 : 0, y: 0 }}
+          end={{ x: rtl ? 0 : 1, y: 1 }}
+          style={styles.statsRow}
         >
           {/* Orders */}
           <TouchableOpacity
@@ -235,23 +260,13 @@ export default function ProfileScreen() {
             onPress={() => router.push("./revenue_screen")}
             activeOpacity={0.75}
           >
-            <View
-              style={[
-                styles.statIconWrapper,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.statIconWrapper}>
               <CartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.orders")}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.statValue,
-                { fontFamily: font.medium, textAlign: align },
-              ]}
-            >
+            <Text style={[styles.statValue, { fontFamily: font.medium }]}>
               {ordersDisplay}
             </Text>
           </TouchableOpacity>
@@ -261,23 +276,13 @@ export default function ProfileScreen() {
             onPress={() => router.push("./revenue_screen")}
             activeOpacity={0.75}
           >
-            <View
-              style={[
-                styles.statIconWrapper,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.statIconWrapper}>
               <ChartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.onTime", "On-Time")}
               </Text>
             </View>
-            <View
-              style={[
-                styles.profitRow,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.profitRow}>
               <Text style={[styles.statValue, { fontFamily: font.medium }]}>
                 {onTimeRate == null ? "—" : `${Math.round(onTimeRate)}%`}
               </Text>
@@ -286,10 +291,7 @@ export default function ProfileScreen() {
                   name="trending-up"
                   size={scale(16)}
                   color={Colors.textSecondary}
-                  style={{
-                    marginLeft: rtl ? 0 : -scale(1),
-                    marginRight: rtl ? -scale(1) : 0,
-                  }}
+                  style={{ marginLeft: -scale(1) }}
                 />
               )}
             </View>
@@ -301,23 +303,13 @@ export default function ProfileScreen() {
             onPress={() => router.push("./reviews_screen")}
             activeOpacity={0.75}
           >
-            <View
-              style={[
-                styles.statIconWrapper,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.statIconWrapper}>
               <StarIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.rating")}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.statValue,
-                { fontFamily: font.medium, textAlign: align },
-              ]}
-            >
+            <Text style={[styles.statValue, { fontFamily: font.medium }]}>
               {ratingDisplay}
             </Text>
           </TouchableOpacity>
@@ -327,7 +319,7 @@ export default function ProfileScreen() {
           {MENU_ITEMS.map((item, index) => (
             <TouchableOpacity
               key={item.key}
-              style={[styles.menuItem, { flexDirection: row }]}
+              style={styles.menuItem}
               onPress={() => item.onPress(router)}
               activeOpacity={0.7}
             >
@@ -337,15 +329,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* Label */}
-              <Text
-                style={[
-                  styles.menuLabel,
-                  {
-                    fontFamily: font.regular,
-                    textAlign: rtl ? "right" : "left",
-                  },
-                ]}
-              >
+              <Text style={[styles.menuLabel, { fontFamily: font.regular }]}>
                 {t(item.labelKey, item.labelFallback)}
               </Text>
             </TouchableOpacity>
@@ -354,7 +338,7 @@ export default function ProfileScreen() {
 
         {/* ── Sign out ── */}
         <TouchableOpacity
-          style={[styles.signOutCard, { flexDirection: row }]}
+          style={styles.signOutCard}
           onPress={handleSignOut}
           activeOpacity={0.8}
         >
@@ -382,6 +366,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingTop: spacing.sm,
@@ -410,6 +395,7 @@ const styles = StyleSheet.create({
 
   // Stats card
   statsRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: spacing.sm,
     gap: spacing.sm,
@@ -427,6 +413,7 @@ const styles = StyleSheet.create({
     borderWidth: scale(0.5),
   },
   statIconWrapper: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(6),
     marginBottom: spacing.sm,
@@ -440,6 +427,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   profitRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(4),
   },
@@ -451,6 +439,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   menuItem: {
+    flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.lg,
     gap: spacing.md,
@@ -467,6 +456,7 @@ const styles = StyleSheet.create({
 
   // Sign out
   signOutCard: {
+    flexDirection: "row",
     borderRadius: radius.xxl,
     paddingHorizontal: spacing.lg,
     paddingVertical: verticalScale(18),

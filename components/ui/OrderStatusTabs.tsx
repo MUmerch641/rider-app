@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -9,9 +8,9 @@ import {
   spacing,
 } from "@/utils/responsive";
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   Animated,
+  I18nManager,
   LayoutChangeEvent,
   StyleSheet,
   Text,
@@ -37,19 +36,19 @@ export function OrderStatusTabs({
   onChange,
 }: OrderStatusTabsProps) {
   const font = useAppFont();
-  const { i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
 
   const [tabWidth, setTabWidth] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const activeIndex = tabs.findIndex((t) => t.key === activeKey);
 
+  // Native RTL mirrors the tab row and the pill's `left: 0` anchor, but
+  // translateX is physical — flip its sign to move the pill the right way.
+  const direction = I18nManager.isRTL ? -1 : 1;
+
   // ── Slide pill when active tab or tabWidth changes ────────────────────────
   useEffect(() => {
     if (tabWidth === 0) return;
-    const toValue = rtl
-      ? (tabs.length - 1 - activeIndex) * tabWidth
-      : activeIndex * tabWidth;
+    const toValue = direction * activeIndex * tabWidth;
 
     Animated.spring(slideAnim, {
       toValue,
@@ -58,7 +57,7 @@ export function OrderStatusTabs({
       stiffness: 180,
       mass: 0.8,
     }).start();
-  }, [activeIndex, rtl, tabWidth]);
+  }, [activeIndex, tabWidth]);
 
   // ── Measure container to get one tab's width ──────────────────────────────
   const onContainerLayout = (e: LayoutChangeEvent) => {
@@ -67,19 +66,13 @@ export function OrderStatusTabs({
     if (newTabWidth !== tabWidth) {
       setTabWidth(newTabWidth);
       // Snap immediately on first measure — no animation flash
-      const toValue = rtl
-        ? (tabs.length - 1 - activeIndex) * newTabWidth
-        : activeIndex * newTabWidth;
-      slideAnim.setValue(toValue);
+      slideAnim.setValue(direction * activeIndex * newTabWidth);
     }
   };
 
   return (
     <View style={styles.container}>
-      <View
-        style={[styles.scroll, { flexDirection: rtl ? "row-reverse" : "row" }]}
-        onLayout={onContainerLayout}
-      >
+      <View style={styles.scroll} onLayout={onContainerLayout}>
         {/* Sliding white pill — exactly one tab wide */}
         {tabWidth > 0 && (
           <Animated.View
@@ -101,7 +94,6 @@ export function OrderStatusTabs({
               key={tab.key}
               tab={tab}
               active={active}
-              rtl={rtl}
               font={font}
               onPress={() => onChange(tab.key)}
             />
@@ -116,13 +108,11 @@ export function OrderStatusTabs({
 function TabItem({
   tab,
   active,
-  rtl,
   font,
   onPress,
 }: {
   tab: OrderStatusTab;
   active: boolean;
-  rtl: boolean;
   font: ReturnType<typeof useAppFont>;
   onPress: () => void;
 }) {
@@ -174,13 +164,7 @@ function TabItem({
       activeOpacity={1}
     >
       <Animated.View
-        style={[
-          styles.tabInner,
-          {
-            transform: [{ scale: scaleAnim }],
-            flexDirection: rtl ? "row-reverse" : "row",
-          },
-        ]}
+        style={[styles.tabInner, { transform: [{ scale: scaleAnim }] }]}
       >
         <Text
           style={[
@@ -229,11 +213,12 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
   },
   scroll: {
+    flexDirection: "row",
     alignItems: "center",
     // no justifyContent here — pill width drives layout
   },
 
-  // Sliding pill — positioned at left:0, translateX moves it right
+  // Sliding pill — anchored at the start edge; translateX moves it along
   slidingPill: {
     position: "absolute",
     top: 0,
@@ -253,6 +238,7 @@ const styles = StyleSheet.create({
     zIndex: 1, // sit above the sliding pill
   },
   tabInner: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: scale(4),

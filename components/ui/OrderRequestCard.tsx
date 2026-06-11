@@ -78,7 +78,6 @@ export interface OrderRequestCardProps {
   };
 
   currency?: string;
-  isRTL?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -95,11 +94,13 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
   onDecline,
   onTimerEnd,
   currency = "IQD",
-  isRTL = I18nManager.isRTL,
   bottomOffset = verticalScale(180),
 }) => {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
+  // Direction is owned by native RTL (session-constant); only used to drop
+  // letterSpacing for Arabic-script fonts, matching orders/index.tsx.
+  const rtl = I18nManager.isRTL;
 
   const [timeLeft, setTimeLeft] = useState(timerSeconds);
   const progressAnim = useRef(new Animated.Value(1)).current;
@@ -173,32 +174,10 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
   });
 
   const renderItem = ({ item }: { item: OrderItem }) => (
-    <View
-      style={[
-        styles.orderItem,
-        { flexDirection: isRTL ? "row-reverse" : "row" },
-      ]}
-    >
-      <Text
-        style={[styles.itemQuantity, { textAlign: isRTL ? "right" : "left" }]}
-      >
-        {item.quantity}x
-      </Text>
-      <Text
-        style={[
-          styles.itemName,
-          {
-            textAlign: isRTL ? "right" : "left",
-            marginLeft: isRTL ? 0 : 8,
-            marginRight: isRTL ? 8 : 0,
-          },
-        ]}
-      >
-        {item.name}
-      </Text>
-      <Text style={[styles.itemPrice, { textAlign: isRTL ? "left" : "right" }]}>
-        {formatPrice(item.price)}
-      </Text>
+    <View style={styles.orderItem}>
+      <Text style={styles.itemQuantity}>{item.quantity}x</Text>
+      <Text style={styles.itemName}>{item.name}</Text>
+      <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
     </View>
   );
 
@@ -224,22 +203,14 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
           <Animated.View
             style={[
               styles.progressBar,
-              {
-                width: progressWidth,
-                alignSelf: isRTL ? "flex-end" : "flex-start",
-              },
+              { width: progressWidth, alignSelf: "flex-start" },
             ]}
           />
         </View>
 
         <View style={styles.cardInner}>
           {/* ── Restaurant Row ── */}
-          <View
-            style={[
-              styles.restaurantRow,
-              { flexDirection: isRTL ? "row-reverse" : "row" },
-            ]}
-          >
+          <View style={styles.restaurantRow}>
             {/* Logo */}
             <View style={styles.logoContainer}>
               {restaurantLogo ? (
@@ -260,34 +231,13 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
             </View>
 
             {/* Name + Location */}
-            <View
-              style={[
-                styles.restaurantInfo,
-                {
-                  alignItems: isRTL ? "flex-end" : "flex-start",
-                },
-              ]}
-            >
+            <View style={styles.restaurantInfo}>
               <Text style={[styles.restaurantName]} numberOfLines={1}>
                 {restaurantName}
               </Text>
-              <View
-                style={[
-                  styles.locationRow,
-                  { flexDirection: isRTL ? "row-reverse" : "row" },
-                ]}
-              >
+              <View style={styles.locationRow}>
                 <SvgXml xml={LOCATION_SVG} width={16} height={16} />
-                <Text
-                  style={[
-                    styles.locationText,
-                    {
-                      textAlign: isRTL ? "right" : "left",
-                    },
-                  ]}
-                >
-                  {restaurantLocation}
-                </Text>
+                <Text style={styles.locationText}>{restaurantLocation}</Text>
               </View>
             </View>
 
@@ -301,52 +251,17 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
 
           {/* ── Stats Row ── */}
           {(totalDistance || totalDuration) && (
-            <View
-              style={[
-                styles.statsRow,
-                { flexDirection: isRTL ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.statsRow}>
               {totalDistance && (
-                <View
-                  style={[
-                    styles.statItem,
-                    { flexDirection: isRTL ? "row-reverse" : "row" },
-                  ]}
-                >
+                <View style={styles.statItem}>
                   <SvgXml xml={ROUTE_SVG} width={13} height={13} />
-                  <Text
-                    style={[
-                      styles.statText,
-                      {
-                        marginLeft: isRTL ? 0 : 6,
-                        marginRight: isRTL ? 6 : 0,
-                      },
-                    ]}
-                  >
-                    {totalDistance}
-                  </Text>
+                  <Text style={styles.statText}>{totalDistance}</Text>
                 </View>
               )}
               {totalDuration && (
-                <View
-                  style={[
-                    styles.statItem,
-                    { flexDirection: isRTL ? "row-reverse" : "row" },
-                  ]}
-                >
+                <View style={styles.statItem}>
                   <SvgXml xml={DURATION_SVG} width={18} height={18} />
-                  <Text
-                    style={[
-                      styles.statText,
-                      {
-                        marginLeft: isRTL ? 0 : 6,
-                        marginRight: isRTL ? 6 : 0,
-                      },
-                    ]}
-                  >
-                    {totalDuration}
-                  </Text>
+                  <Text style={styles.statText}>{totalDuration}</Text>
                 </View>
               )}
             </View>
@@ -357,11 +272,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
             <Text
               style={[
                 styles.sectionLabel,
-                {
-                  textAlign: isRTL ? "right" : "left",
-                  fontFamily: font.medium,
-                  letterSpacing: isRTL ? 0 : 1.2,
-                },
+                { fontFamily: font.medium, letterSpacing: rtl ? 0 : 1.2 },
               ]}
             >
               {t("orderRequestCard.orderItems")}
@@ -393,7 +304,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
               <Text
                 style={[
                   styles.acceptText,
-                  { fontFamily: font.medium, letterSpacing: isRTL ? 0 : 0.3 },
+                  { fontFamily: font.medium, letterSpacing: rtl ? 0 : 0.3 },
                 ]}
               >
                 {t("orderRequestCard.acceptOrder")}
@@ -460,6 +371,7 @@ const styles = StyleSheet.create({
 
   // Restaurant Row
   restaurantRow: {
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 14,
   },
@@ -490,6 +402,7 @@ const styles = StyleSheet.create({
   restaurantInfo: {
     maxWidth: "100%",
     marginHorizontal: scale(4),
+    alignItems: "flex-start",
   },
   restaurantName: {
     fontSize: fontSize.lg,
@@ -498,6 +411,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   locationRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   locationText: {
@@ -525,11 +439,13 @@ const styles = StyleSheet.create({
 
   // Stats
   statsRow: {
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 14,
     gap: 8,
   },
   statItem: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
@@ -538,6 +454,7 @@ const styles = StyleSheet.create({
     color: "#5A4F6E",
     fontWeight: "500",
     left: -scale(4),
+    marginLeft: 6,
   },
   statDivider: {
     width: 1,
@@ -562,6 +479,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   orderItem: {
+    flexDirection: "row",
     alignItems: "center",
     marginBottom: 10,
   },
@@ -576,6 +494,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#1A1A2E",
+    marginLeft: 8,
   },
   itemPrice: {
     fontSize: 14,

@@ -1,7 +1,6 @@
 import { supportApi, type ApiError, type SupportMessage } from "@/api";
 import { Button } from "@/components/ui";
 import { SendIcon, SupportIcon } from "@/components/ui/icons";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -13,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     FlatList,
+    I18nManager,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -77,9 +77,8 @@ function toUiMessage(m: SupportMessage): Message {
 
 export default function SupportChatScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
   const listRef = useRef<FlatList>(null);
 
   const params = useLocalSearchParams<{
@@ -150,16 +149,11 @@ export default function SupportChatScreen() {
     };
   }, [socket, threadId]);
 
-  const getBubbleRadius = (fromSupport: boolean) => {
-    if (fromSupport) {
-      return rtl
-        ? { borderTopLeftRadius: scale(4), borderTopRightRadius: Radius.lg }
-        : { borderTopRightRadius: scale(4), borderTopLeftRadius: Radius.lg };
-    }
-    return rtl
+  // Native RTL swaps left/right border radii automatically.
+  const getBubbleRadius = (fromSupport: boolean) =>
+    fromSupport
       ? { borderTopRightRadius: scale(4), borderTopLeftRadius: Radius.lg }
       : { borderTopLeftRadius: scale(4), borderTopRightRadius: Radius.lg };
-  };
 
   const sendMessage = async () => {
     const trimmed = input.trim();
@@ -199,44 +193,27 @@ export default function SupportChatScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Header ── */}
-      <View
-        style={[styles.header, { flexDirection: rtl ? "row-reverse" : "row" }]}
-      >
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
           <Ionicons
-            name={rtl ? "arrow-forward" : "arrow-back"}
+            name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
             size={scale(22)}
             color={Colors.textPrimary}
           />
         </TouchableOpacity>
-        <View
-          style={[
-            styles.headerCenter,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
+        <View style={styles.headerCenter}>
           <View style={styles.supportAvatar}>
             <SupportIcon size={scale(28)} color={Colors.dark} />
           </View>
-          <View
-            style={[
-              styles.headerInfo,
-              { alignItems: rtl ? "flex-end" : "flex-start" },
-            ]}
-          >
+          <View style={styles.headerInfo}>
             <Text style={[styles.headerName, { fontFamily: font.semibold }]}>
               {t("support.title")}
             </Text>
-            <View
-              style={[
-                styles.onlineRow,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.onlineRow}>
               <View style={styles.onlineDot} />
               <Text style={[styles.onlineText, { fontFamily: font.regular }]}>
                 {t("support.online")}
@@ -272,15 +249,7 @@ export default function SupportChatScreen() {
             <View
               style={[
                 styles.messageBubbleWrapper,
-                {
-                  alignItems: item.fromSupport
-                    ? rtl
-                      ? "flex-start"
-                      : "flex-end"
-                    : rtl
-                      ? "flex-end"
-                      : "flex-start",
-                },
+                { alignItems: item.fromSupport ? "flex-end" : "flex-start" },
               ]}
             >
               <View
@@ -293,10 +262,7 @@ export default function SupportChatScreen() {
                 <Text
                   style={[
                     styles.bubbleText,
-                    {
-                      fontFamily: font.regular,
-                      textAlign: rtl ? "right" : "left",
-                    },
+                    { fontFamily: font.regular },
                     item.fromSupport
                       ? styles.bubbleTextSupport
                       : styles.bubbleTextUser,
@@ -310,15 +276,7 @@ export default function SupportChatScreen() {
               <View
                 style={[
                   styles.metaRow,
-                  {
-                    flexDirection: item.fromSupport
-                      ? rtl
-                        ? "row"
-                        : "row-reverse"
-                      : rtl
-                        ? "row-reverse"
-                        : "row",
-                  },
+                  { flexDirection: item.fromSupport ? "row-reverse" : "row" },
                 ]}
               >
                 <SeenIcon seen={item.seen} />
@@ -335,21 +293,13 @@ export default function SupportChatScreen() {
 
         {/* ── Input Bar ── */}
         <View style={styles.inputBarWrapper}>
-          <View
-            style={[
-              styles.inputBar,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          <View style={styles.inputBar}>
             <TextInput
               value={input}
               onChangeText={setInput}
               placeholder={t("support.saySomething", "Say Something")}
               placeholderTextColor={Colors.textMuted}
-              style={[
-                styles.input,
-                { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-              ]}
+              style={[styles.input, { fontFamily: font.regular }]}
               returnKeyType="send"
               onSubmitEditing={sendMessage}
               multiline={false}
@@ -364,7 +314,8 @@ export default function SupportChatScreen() {
               iconRight={<SendIcon size={scale(20)} color="#fff" />}
               style={[
                 styles.sendBtn,
-                { transform: rtl ? [{ scaleX: -1 }] : [] },
+                // Icon glyphs never auto-flip — mirror manually in RTL.
+                { transform: I18nManager.isRTL ? [{ scaleX: -1 }] : [] },
               ]}
             />
           </View>
@@ -379,6 +330,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
+    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -395,6 +347,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerCenter: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
@@ -411,9 +364,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  headerInfo: { gap: verticalScale(2) },
+  headerInfo: { gap: verticalScale(2), alignItems: "flex-start" },
   headerName: { fontSize: FontSize.md, color: Colors.textPrimary },
-  onlineRow: { alignItems: "center", gap: scale(4) },
+  onlineRow: { flexDirection: "row", alignItems: "center", gap: scale(4) },
   onlineDot: {
     width: scale(8),
     height: scale(8),
@@ -524,6 +477,7 @@ const styles = StyleSheet.create({
     borderBottomStartRadius: spacing.lg,
   },
   inputBar: {
+    flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.card,
     borderRadius: Radius.full,

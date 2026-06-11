@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 
-import { isRTL } from "@/constants/i18n";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, verticalScale } from "@/utils/responsive";
 
@@ -23,9 +22,8 @@ export default function StatCircleCard({
   value,
   progress,
 }: StatCircleCardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
 
   const safeProgress = Math.max(0, Math.min(100, progress));
   const dashOffset = CIRCUMFERENCE - (CIRCUMFERENCE * safeProgress) / 100;
@@ -56,29 +54,14 @@ export default function StatCircleCard({
         </Svg>
 
         <View style={styles.centerTextWrap} pointerEvents="none">
-          <Text
-            style={[
-              styles.valueText,
-              {
-                fontFamily: font.semibold,
-                writingDirection: rtl ? "rtl" : "ltr",
-              },
-            ]}
-          >
+          <Text style={[styles.valueText, { fontFamily: font.semibold }]}>
             %{value}
           </Text>
         </View>
       </View>
 
       <Text
-        style={[
-          styles.label,
-          {
-            fontFamily: font.regular,
-            textAlign: "center",
-            writingDirection: rtl ? "rtl" : "ltr",
-          },
-        ]}
+        style={[styles.label, { fontFamily: font.regular, textAlign: "center" }]}
         numberOfLines={1}
       >
         {t(label)}

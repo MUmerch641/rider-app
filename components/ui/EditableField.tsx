@@ -16,7 +16,6 @@ interface EditableFieldProps {
   value: string;
   onPress: () => void;
   style?: ViewStyle;
-  rtl?: boolean;
 }
 
 export function EditableField({
@@ -24,29 +23,19 @@ export function EditableField({
   value,
   onPress,
   style,
-  rtl = false,
 }: EditableFieldProps) {
   const font = useAppFont();
-  const align = rtl ? "right" : "left";
 
   return (
+    // Native RTL mirrors the row and text alignment automatically.
     <View style={[styles.wrapper, style]}>
-      <Text
-        style={[styles.label, { fontFamily: font.regular, textAlign: align }]}
-      >
-        {label}
-      </Text>
+      <Text style={[styles.label, { fontFamily: font.regular }]}>{label}</Text>
       <TouchableOpacity
-        style={[styles.field, { flexDirection: rtl ? "row-reverse" : "row" }]}
+        style={styles.field}
         onPress={onPress}
         activeOpacity={0.8}
       >
-        <Text
-          style={[
-            styles.value,
-            { fontFamily: font.semibold, textAlign: align, flex: 1 },
-          ]}
-        >
+        <Text style={[styles.value, { fontFamily: font.semibold, flex: 1 }]}>
           {value}
         </Text>
         <Ionicons
@@ -66,6 +55,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   field: {
+    flexDirection: "row",
     backgroundColor: Colors.inputBg,
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,

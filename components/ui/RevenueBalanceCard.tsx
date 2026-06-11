@@ -1,9 +1,8 @@
-import { isRTL } from "@/constants/i18n";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, View, ViewStyle } from "react-native";
+import { I18nManager, StyleSheet, Text, View, ViewStyle } from "react-native";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface RevenueBalanceCardProps {
@@ -18,39 +17,24 @@ export function RevenueBalanceCard({
   balance,
   style,
 }: RevenueBalanceCardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
 
   return (
     <LinearGradient
       colors={["#ffffffce", "#e6dcfa", "#faf6f6", "#fadecd"]}
-      start={{ x: rtl ? 1.2 : 0, y: rtl ? 0 : 0 }}
-      end={{ x: rtl ? 0 : 1, y: rtl ? 1 : 1 }}
+      // Gradient coords don't auto-mirror under native RTL — flip manually.
+      start={{ x: I18nManager.isRTL ? 1.2 : 0, y: 0 }}
+      end={{ x: I18nManager.isRTL ? 0 : 1, y: 1 }}
       style={[styles.card, style]}
     >
-      {/* ── Balance section ── */}
-      <View
-        style={[
-          styles.balanceSection,
-          { alignItems: rtl ? "flex-end" : "flex-start" },
-        ]}
-      >
-        <Text
-          style={[
-            styles.balanceLabel,
-            { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-          ]}
-        >
+      {/* ── Balance section — native RTL mirrors the layout automatically ── */}
+      <View style={styles.balanceSection}>
+        <Text style={[styles.balanceLabel, { fontFamily: font.regular }]}>
           {t("driverCard.totalEarning", "Total of Earning")}
         </Text>
 
-        <View
-          style={[
-            styles.amountRow,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
+        <View style={styles.amountRow}>
           <Text style={[styles.balanceAmount, { fontFamily: font.bold }]}>
             {balance.toLocaleString()}
           </Text>
@@ -77,6 +61,7 @@ const styles = StyleSheet.create({
   // ── Balance ───────────────────────────────────────────────────────────────
   balanceSection: {
     gap: verticalScale(8),
+    alignItems: "flex-start",
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderLeftWidth: 0.2,
@@ -96,6 +81,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   amountRow: {
+    flexDirection: "row",
     alignItems: "flex-end",
     gap: scale(8),
   },

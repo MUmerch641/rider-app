@@ -1,32 +1,34 @@
 /**
  * AcceptedOrdersSheet
  * ────────────────────────────────────────────────────────────────────
- * Reusable component that shows accepted delivery orders with collapse
- * toggle, RTL support, and full i18n translations.
+ * Bottom sheet pinned to the map screen listing the rider's in-progress
+ * deliveries, rendered straight from server-truth `OrderAssignment`s
+ * (GET /driver/orders) — no local closure state.
  *
- * Translation keys to add in your locales:
+ * Each card offers exactly two interactions:
+ *  - tapping the CARD opens the live navigation screen
+ *    (/orders/delivery_route) which derives pickup/dropoff routing from
+ *    the order's live status;
+ *  - the ADVANCE button moves the order one step along the lifecycle
+ *    chain (utils/orderLifecycle.ts) with a per-order busy spinner.
  *
- * en.json  → orders.acceptedOrders / pickup / dropoff / cancel / delivered / goToRestaurant
- * ar.json  → orders.acceptedOrders:"الطلبات المقبولة" / pickup:"الاستلام" /
- *              dropoff:"التوصيل" / cancel:"إلغاء" / delivered:"تم التسليم" /
- *              goToRestaurant:"اذهب إلى المطعم"
- * ku.json  → orders.acceptedOrders:"داواکارییەکانی قبووڵکراو" / pickup:"وەرگرتن" /
- *              dropoff:"گەیاندن" / cancel:"هەڵوەشاندنەوە" / delivered:"گەیاندرا" /
- *              goToRestaurant:"بڕۆ بۆ ڕستۆرانت"
- *
- * Usage:
- *   <AcceptedOrdersSheet orders={myOrders} />
- *   <AcceptedOrdersSheet orders={myOrders} style={{ borderRadius: 0 }} />
+ * There is intentionally NO local cancel (cancellation goes through the
+ * cancel-request flow on the route screen) and NO cross-card disabling —
+ * a rider can hold two orders and both cards stay fully functional.
  * ────────────────────────────────────────────────────────────────────
  */
 
-import { isRTL } from "@/constants/i18n";
+import type { OrderAssignment } from "@/api";
 import { Colors, FontSize } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
+import { formatCurrency } from "@/utils/format";
+import { localizeName, type LangKey } from "@/utils/localize";
+import { nextStep } from "@/utils/orderLifecycle";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,38 +59,20 @@ const CHEVRON_UP_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="no
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type OrderActionType = "deliver" | "go_to_restaurant";
-
-export interface AcceptedOrderItem {
-  /** Unique id for this order */
-  id: string;
-  /** Restaurant display name */
-  restaurantName: string;
-  /** Remote URL for the restaurant circular avatar */
-  restaurantAvatar?: string;
-  /** Formatted price string, e.g. "4,000IQD" */
-  price: string;
-  /** Short pickup location label */
-  pickupLocation: string;
-  /** Short drop-off location label. Omit to hide the drop-off point entirely */
-  dropoffLocation?: string;
-  /** Controls which primary action button is shown */
-  actionType: OrderActionType;
-  /** Called when user taps "Delivered" (actionType === "deliver") */
-  onDeliver?: () => void;
-  /** Called when user taps "Go To Restaurant" (actionType === "go_to_restaurant") */
-  onGoToRestaurant?: () => void;
-  /** Called when user taps "Cancel" */
-  onCancel?: () => void;
-}
-
 interface AcceptedOrdersSheetProps {
-  orders: AcceptedOrderItem[];
+  /** In-progress assignments (already filtered to ACTIVE_STATUSES). */
+  orders: OrderAssignment[];
+  /** orderIds with a status-advance request in flight → per-card spinner. */
+  advancingIds?: Record<string, boolean>;
+  /** Tap anywhere on a card → open live navigation for that order. */
+  onOrderPress?: (assignment: OrderAssignment) => void;
+  /** Tap the advance CTA → move the order one lifecycle step forward. */
+  onAdvance?: (assignment: OrderAssignment) => void;
   /** Override container styles (background, border-radius, padding…) */
   style?: ViewStyle;
   /** Max scrollable height of the order list. Default: 460 */
   maxHeight?: number;
-  /** Start collapsed? Default: false */
+  /** Start collapsed? Default: true */
   defaultCollapsed?: boolean;
 }
 
@@ -96,47 +80,33 @@ interface AcceptedOrdersSheetProps {
 
 export function AcceptedOrdersSheet({
   orders,
+  advancingIds,
+  onOrderPress,
+  onAdvance,
   style,
   maxHeight = verticalScale(460),
   defaultCollapsed = true,
 }: AcceptedOrdersSheetProps) {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
+  const langKey: LangKey = (i18n.language as LangKey) || "en";
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  const dir = rtl ? "row-reverse" : "row";
 
-  const hasActiveDelivery = orders.some(
-    (order) => order.actionType === "deliver",
-  );
-  const sortedOrders = [...orders].sort((a, b) => {
-    if (a.actionType === "deliver" && b.actionType !== "deliver") return -1;
-    if (a.actionType !== "deliver" && b.actionType === "deliver") return 1;
-    return 0;
-  });
   return (
     <View style={[styles.container, style]}>
       {/* ── Header ── */}
-      <View style={[styles.header, { flexDirection: dir }]}>
-        {/* Left: icon + title */}
-        <View style={[styles.headerLeft, { flexDirection: dir }]}>
+      <View style={styles.header}>
+        {/* Leading: icon + title */}
+        <View style={styles.headerLeft}>
           <SvgXml xml={PACKAGE_ICON_SVG} width={scale(22)} height={scale(22)} />
-          <Text
-            style={[
-              styles.headerTitle,
-              {
-                fontFamily: font.bold,
-                textAlign: rtl ? "right" : "left",
-              },
-            ]}
-          >
+          <Text style={[styles.headerTitle, { fontFamily: font.bold }]}>
             {t("orders.acceptedOrders")}
           </Text>
         </View>
 
-        {/* Right: collapse pill with chevron + count */}
+        {/* Trailing: collapse pill with chevron + count */}
         <TouchableOpacity
-          style={[styles.collapsePill, { flexDirection: dir }]}
+          style={styles.collapsePill}
           onPress={() => setCollapsed((v) => !v)}
           activeOpacity={0.72}
           hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
@@ -160,15 +130,17 @@ export function AcceptedOrdersSheet({
           contentContainerStyle={styles.listContent}
           nestedScrollEnabled
         >
-          {sortedOrders.map((order, idx) => (
+          {orders.map((assignment, idx) => (
             <OrderCard
-              key={order.id}
-              order={order}
-              rtl={rtl}
+              key={assignment.orderId}
+              assignment={assignment}
+              langKey={langKey}
               font={font}
               t={t}
               isLast={idx === orders.length - 1}
-              hasActiveDelivery={hasActiveDelivery}
+              advancing={!!advancingIds?.[assignment.orderId]}
+              onPress={onOrderPress}
+              onAdvance={onAdvance}
             />
           ))}
         </ScrollView>
@@ -180,32 +152,54 @@ export function AcceptedOrdersSheet({
 // ── Order Card ─────────────────────────────────────────────────────────────────
 
 function OrderCard({
-  order,
-  rtl,
+  assignment,
+  langKey,
   font,
   t,
   isLast,
-  hasActiveDelivery,
+  advancing,
+  onPress,
+  onAdvance,
 }: {
-  order: AcceptedOrderItem;
-  rtl: boolean;
+  assignment: OrderAssignment;
+  langKey: LangKey;
   font: ReturnType<typeof useAppFont>;
   t: ReturnType<typeof useTranslation>["t"];
   isLast: boolean;
-  hasActiveDelivery: boolean;
+  advancing: boolean;
+  onPress?: (assignment: OrderAssignment) => void;
+  onAdvance?: (assignment: OrderAssignment) => void;
 }) {
-  const dir = rtl ? "row-reverse" : "row";
-  const textAlign = rtl ? "right" : "left";
+  const order = assignment.order;
+  const storeName = localizeName(order?.store?.name, langKey);
+  const storeAvatar = order?.store?.avatar ?? undefined;
+  const price = formatCurrency(order?.total, order?.currency ?? "IQD");
+  const pickup = order?.store?.address ?? "";
+  const dropoff = (() => {
+    const da = order?.deliveryAddress;
+    if (!da) return "";
+    return ([da.building, da.street].filter(Boolean) as string[]).join(", ");
+  })();
+
+  // Single source of truth for the advance CTA (accepted → picked_up → …).
+  const step = nextStep(assignment.status);
+  const statusLabel = t(`orders.status.${assignment.status}`, {
+    defaultValue: assignment.status,
+  });
 
   return (
-    <View style={[styles.card, !isLast && styles.cardGap]}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => onPress?.(assignment)}
+      style={[styles.card, !isLast && styles.cardGap]}
+    >
       {/* ── Row 1: Avatar + Restaurant Name + Price ── */}
-      <View style={[styles.cardTopRow, { flexDirection: dir }]}>
+      <View style={styles.cardTopRow}>
         {/* Avatar */}
         <View style={styles.avatarRing}>
-          {order.restaurantAvatar ? (
+          {storeAvatar ? (
             <SafeImage
-              uri={order.restaurantAvatar}
+              uri={storeAvatar}
               variant="store"
               style={styles.avatar}
               contentFit="cover"
@@ -215,145 +209,100 @@ function OrderCard({
           )}
         </View>
 
-        {/* Name – flex to fill remaining horizontal space */}
-        <Text
-          style={[
-            styles.restaurantName,
-            {
-              fontFamily: font.bold,
-              textAlign,
-              marginLeft: rtl ? 0 : scale(10),
-              marginRight: rtl ? scale(10) : 0,
-            },
-          ]}
-          numberOfLines={1}
+        {/* Name + order number – flex to fill remaining horizontal space */}
+        <View
+          style={{
+            flex: 1,
+            marginLeft: scale(10),
+            alignItems: "flex-start",
+          }}
         >
-          {order.restaurantName}
-        </Text>
+          <Text
+            style={[styles.restaurantName, { fontFamily: font.bold }]}
+            numberOfLines={1}
+          >
+            {storeName}
+          </Text>
+          {order?.orderNumber ? (
+            <Text
+              style={[styles.orderNumber, { fontFamily: font.regular }]}
+              numberOfLines={1}
+            >
+              #{order.orderNumber}
+            </Text>
+          ) : null}
+        </View>
 
         {/* Price */}
-        <Text style={[styles.price, { fontFamily: font.bold }]}>
-          {order.price}
-        </Text>
+        <Text style={[styles.price, { fontFamily: font.bold }]}>{price}</Text>
       </View>
 
       {/* ── Row 2: Route (pickup → [connector] → dropoff) ── */}
-      <View
-        style={[
-          styles.routeRow,
-          {
-            flexDirection: dir,
-            marginTop: verticalScale(10),
-            justifyContent: rtl ? "flex-end" : "flex-start",
-          },
-        ]}
-      >
+      <View style={[styles.routeRow, { marginTop: verticalScale(10) }]}>
         {/* Pickup point */}
-        <View style={[styles.routePoint, { flexDirection: dir }]}>
+        <View style={styles.routePoint}>
           <View style={styles.pickupDot} />
           <Text
-            style={[
-              styles.routeText,
-              {
-                fontFamily: font.regular,
-                marginLeft: rtl ? 0 : scale(5),
-                marginRight: rtl ? scale(5) : 0,
-              },
-            ]}
+            style={[styles.routeText, { fontFamily: font.regular }]}
             numberOfLines={1}
           >
-            {t("orders.pickup")}: {order.pickupLocation}
+            {t("orders.pickup")}: {pickup}
           </Text>
         </View>
 
-        {/* Connector + Dropoff – only when dropoffLocation is provided */}
-        {order.actionType === "deliver" && order.dropoffLocation ? (
+        {/* Connector + Dropoff */}
+        {dropoff ? (
           <>
             {/* Connector */}
-            <View
-              style={[
-                styles.routeConnector,
-                {
-                  marginLeft: rtl ? 0 : scale(6),
-                  marginRight: rtl ? scale(6) : 0,
-                },
-              ]}
-            />
+            <View style={styles.routeConnector} />
 
             {/* Dropoff */}
-            <View style={[styles.routePoint, { flexDirection: dir }]}>
+            <View style={styles.routePoint}>
               <View style={styles.dropoffDotOuter}>
                 <View style={styles.dropoffDotInner} />
               </View>
               <Text
-                style={[
-                  styles.routeText,
-                  {
-                    fontFamily: font.regular,
-                    marginLeft: rtl ? 0 : scale(5),
-                    marginRight: rtl ? scale(5) : 0,
-                  },
-                ]}
+                style={[styles.routeText, { fontFamily: font.regular }]}
                 numberOfLines={1}
               >
-                {t("orders.dropoff")}: {order.dropoffLocation}
+                {t("orders.dropoff")}: {dropoff}
               </Text>
             </View>
           </>
         ) : null}
       </View>
 
-      {/* ── Row 3: Cancel + Primary Action ── */}
-      <View
-        style={[
-          styles.actionRow,
-          {
-            flexDirection: dir,
-            marginTop: verticalScale(16),
-          },
-        ]}
-      >
-        {/* Cancel – plain text, smaller weight */}
-        <TouchableOpacity
-          onPress={order.onCancel}
-          activeOpacity={0.65}
-          style={styles.cancelBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
-        >
-          <Text style={[styles.cancelText, { fontFamily: font.medium }]}>
-            {t("common.cancel")}
+      {/* ── Row 3: Status chip + Advance CTA ── */}
+      <View style={[styles.actionRow, { marginTop: verticalScale(16) }]}>
+        {/* Status chip — translated live status */}
+        <View style={styles.statusChip}>
+          <Text style={[styles.statusChipText, { fontFamily: font.medium }]}>
+            {statusLabel}
           </Text>
-        </TouchableOpacity>
+        </View>
 
-        {/* Primary Action Button */}
-        {order.actionType === "deliver" ? (
+        {/* Advance button — single tap moves the order one step forward.
+            Hidden only when the chain has no next step for this status. */}
+        {step ? (
           <TouchableOpacity
-            onPress={order.onDeliver}
+            onPress={() => onAdvance?.(assignment)}
+            disabled={advancing}
             activeOpacity={0.85}
-            style={[styles.actionBtn, styles.deliverBtn]}
+            style={[styles.actionBtn, advancing && styles.actionBtnBusy]}
           >
-            <Text style={[styles.actionBtnText, { fontFamily: font.semibold }]}>
-              {t("orders.delivered")}
-            </Text>
+            {advancing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text
+                style={[styles.actionBtnText, { fontFamily: font.semibold }]}
+              >
+                {t(step.labelKey, { defaultValue: step.defaultLabel })}
+              </Text>
+            )}
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={hasActiveDelivery ? undefined : order.onGoToRestaurant}
-            disabled={hasActiveDelivery}
-            activeOpacity={hasActiveDelivery ? 1 : 0.85}
-            style={[
-              styles.actionBtn,
-              styles.goToRestaurantBtn,
-              hasActiveDelivery && styles.disabledBtn,
-            ]}
-          >
-            <Text style={[styles.actionBtnText, { fontFamily: font.semibold }]}>
-              {t("orders.goToRestaurant")}
-            </Text>
-          </TouchableOpacity>
-        )}
+        ) : null}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -381,12 +330,14 @@ const styles = StyleSheet.create({
 
   // ── Header ─────────────────────────────────────────────────────────────────
   header: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: verticalScale(16),
     paddingHorizontal: scale(2),
   },
   headerLeft: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(10),
   },
@@ -397,6 +348,7 @@ const styles = StyleSheet.create({
 
   // ── Collapse Pill ───────────────────────────────────────────────────────────
   collapsePill: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(5),
     backgroundColor: "#E8E7EF",
@@ -421,7 +373,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scale(18),
     paddingTop: verticalScale(16),
     marginVertical: verticalScale(10),
-    marginHorizontal: verticalScale(10),
+    marginHorizontal: scale(10),
     paddingBottom: verticalScale(18),
     shadowColor: "#1A1A2E",
     shadowOffset: { width: 0, height: 2 },
@@ -435,6 +387,7 @@ const styles = StyleSheet.create({
 
   // ── Card Top Row ───────────────────────────────────────────────────────────
   cardTopRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
@@ -455,11 +408,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#E8E7EF",
   },
 
-  // Restaurant name – flex so it fills space between avatar and price
+  // Restaurant name + order number
   restaurantName: {
-    flex: 1,
     fontSize: FontSize.md ?? 16,
     color: "#1A1A2E",
+  },
+  orderNumber: {
+    fontSize: scale(12),
+    color: "#9A9AAF",
+    marginTop: scale(2),
   },
 
   // Price
@@ -471,9 +428,11 @@ const styles = StyleSheet.create({
 
   // ── Route Row ──────────────────────────────────────────────────────────────
   routeRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   routePoint: {
+    flexDirection: "row",
     alignItems: "center",
     flexShrink: 1,
     marginHorizontal: 3,
@@ -510,10 +469,12 @@ const styles = StyleSheet.create({
     fontSize: scale(13),
     color: "#1A1A2E",
     flexShrink: 1,
+    marginLeft: scale(5),
   },
 
   // Horizontal connector bar between pickup and dropoff
   routeConnector: {
+    marginLeft: scale(6),
     height: scale(3),
     width: scale(38),
     backgroundColor: "#D1D0DC",
@@ -523,21 +484,22 @@ const styles = StyleSheet.create({
 
   // ── Action Row ─────────────────────────────────────────────────────────────
   actionRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(8),
   },
 
-  // Cancel – subtle text-only button
-  cancelBtn: {
-    paddingVertical: verticalScale(12),
-    paddingHorizontal: scale(12),
-    alignItems: "center",
-    justifyContent: "center",
+  // Status chip — live order status
+  statusChip: {
+    backgroundColor: "#F3EFFC",
+    borderRadius: scale(20),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: scale(14),
     flexShrink: 0,
   },
-  cancelText: {
-    fontSize: FontSize.md ?? 16,
-    color: "#9A9AAF",
+  statusChipText: {
+    fontSize: scale(13),
+    color: "#6B21E8",
   },
 
   // Primary action – flex to fill remaining space
@@ -547,16 +509,6 @@ const styles = StyleSheet.create({
     paddingVertical: verticalScale(15),
     alignItems: "center",
     justifyContent: "center",
-  },
-  deliverBtn: {
-    backgroundColor: "#22C55E",
-    shadowColor: "#22C55E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  goToRestaurantBtn: {
     backgroundColor: "#1A1A2E",
     shadowColor: "#1A1A2E",
     shadowOffset: { width: 0, height: 4 },
@@ -564,11 +516,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  actionBtnBusy: {
+    opacity: 0.7,
+  },
   actionBtnText: {
     fontSize: FontSize.md ?? 16,
     color: "#FFFFFF",
-  },
-  disabledBtn: {
-    opacity: 0.4,
   },
 });

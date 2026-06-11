@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -73,8 +72,7 @@ function AppDialogView({
   onRequestClose: () => void;
 }) {
   const font = useAppFont();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
@@ -155,18 +153,11 @@ function AppDialogView({
             </Text>
           )}
 
-          {/* Buttons */}
+          {/* Buttons — native RTL mirrors the row automatically */}
           <View
             style={[
               styles.btnRow,
-              {
-                flexDirection:
-                  buttons.length > 2
-                    ? "column"
-                    : rtl
-                      ? "row-reverse"
-                      : "row",
-              },
+              { flexDirection: buttons.length > 2 ? "column" : "row" },
             ]}
           >
             {buttons.map((b, i) => {

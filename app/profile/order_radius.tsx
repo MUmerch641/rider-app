@@ -1,5 +1,4 @@
 import type { ApiError } from "@/api";
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -20,6 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  I18nManager,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -42,9 +42,8 @@ const INFO_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xm
 export default function OrderRadiusScreen() {
   const router = useNavGuard();
   const dialog = useDialog();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
   const { driver, updateProfile } = useAuth();
   const [radiusKm, setRadiusKm] = useState<number>(driver?.orderRadiusKm ?? 5);
   const [saving, setSaving] = useState(false);
@@ -154,18 +153,14 @@ export default function OrderRadiusScreen() {
           />
         )}
 
-        <View
-          style={[
-            styles.header,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => router.back()}
           >
             <Ionicons
-              name={rtl ? "arrow-forward" : "arrow-back"}
+              // Icon glyphs never auto-flip — mirror the back arrow manually.
+              name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
               size={scale(22)}
               color="#111"
             />
@@ -195,22 +190,9 @@ export default function OrderRadiusScreen() {
           showsUserLocation={false}
           showsMyLocationButton={false}
         >
-          <View
-            style={[
-              styles.infoBox,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          <View style={styles.infoBox}>
             <SvgXml xml={INFO_SVG} width={scale(24)} height={scale(24)} />
-            <Text
-              style={[
-                styles.infoText,
-                {
-                  fontFamily: font.regular,
-                  textAlign: rtl ? "right" : "left",
-                },
-              ]}
-            >
+            <Text style={[styles.infoText, { fontFamily: font.regular }]}>
               {t("orderRadius.description")}
             </Text>
           </View>
@@ -244,12 +226,7 @@ export default function OrderRadiusScreen() {
             {t("orderRadius.km")}
           </Text>
 
-          <View
-            style={[
-              styles.rangeLabels,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          <View style={styles.rangeLabels}>
             <Text style={[styles.rangeText, { fontFamily: font.regular }]}>
               2{t("orderRadius.km")}
             </Text>
@@ -260,7 +237,11 @@ export default function OrderRadiusScreen() {
           </View>
 
           <Slider
-            style={[styles.slider, { transform: rtl ? [{ scaleX: -1 }] : [] }]}
+            // Slider tracks don't auto-mirror under native RTL — flip manually.
+            style={[
+              styles.slider,
+              { transform: I18nManager.isRTL ? [{ scaleX: -1 }] : [] },
+            ]}
             minimumValue={2}
             maximumValue={10}
             step={1}
@@ -340,6 +321,7 @@ const styles = StyleSheet.create({
     color: "#241933",
   },
   infoBox: {
+    flexDirection: "row",
     marginTop: verticalScale(150),
     marginHorizontal: spacing.xl,
     backgroundColor: "rgba(255,255,255,0.75)",
@@ -411,6 +393,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(2),
   },
   rangeLabels: {
+    flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: verticalScale(-8),
   },

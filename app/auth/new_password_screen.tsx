@@ -1,6 +1,5 @@
 import { authApi, type ApiError } from "@/api";
 import { Button, Input, ScreenHeader } from "@/components/ui";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
@@ -11,6 +10,7 @@ import { useNavGuard } from "@/hooks/useNavGuard";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    I18nManager,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -22,8 +22,7 @@ import {
 
 export default function NewPasswordScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const font = useAppFont();
 
   const params = useLocalSearchParams<{ resetToken?: string }>();
@@ -90,8 +89,9 @@ export default function NewPasswordScreen() {
       <LinearGradient
         colors={["#DFCFFF", "#F5EEFF", "#FFFFFF", "#FFF8F0"]}
         locations={[0, 0.1, 0.6, 1]}
-        start={{ x: rtl ? 0.9 : 0, y: 0 }}
-        end={{ x: rtl ? 0 : 0.9, y: 1 }}
+        // Gradient coords don't auto-mirror under native RTL — flip manually.
+        start={{ x: I18nManager.isRTL ? 0.9 : 0, y: 0 }}
+        end={{ x: I18nManager.isRTL ? 0 : 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView
@@ -124,7 +124,6 @@ export default function NewPasswordScreen() {
               if (newPasswordError) setNewPasswordError("");
             }}
             error={newPasswordError}
-            rtl={rtl}
           />
           <Input
             label={t("newPassword.confirmPassword")}
@@ -136,7 +135,6 @@ export default function NewPasswordScreen() {
               if (confirmPasswordError) setConfirmPasswordError("");
             }}
             error={confirmPasswordError}
-            rtl={rtl}
           />
         </View>
 
@@ -182,7 +180,8 @@ export default function NewPasswordScreen() {
                   {t("newPassword.continue")}
                 </Text>
                 <Ionicons
-                  name={rtl ? "chevron-back" : "chevron-forward"}
+                  // Icon glyphs never auto-flip — mirror the chevron manually.
+                  name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
                   size={scale(18)}
                   color="#fff"
                 />

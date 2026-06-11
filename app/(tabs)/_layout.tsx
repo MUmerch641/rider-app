@@ -1,5 +1,4 @@
 import { BellTabIcon, MapIcon, ProfileTabIcon, RideIcon } from "@/components/ui/icons";
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useNotifications } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -32,13 +31,12 @@ const TAB_SCREENS = [
 ];
 
 export default function TabLayout() {
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const font = useAppFont();
   const { unreadCount } = useNotifications();
 
-  // Reverse tab order for RTL
-  const screens = rtl ? [...TAB_SCREENS].reverse() : TAB_SCREENS;
+  // Native RTL mirrors the tab bar row automatically — no manual reversal.
+  const screens = TAB_SCREENS;
 
   return (
     <Tabs

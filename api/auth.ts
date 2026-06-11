@@ -1,6 +1,7 @@
 import { apiClient } from "./client";
 import { ENDPOINTS } from "./endpoints";
 import type {
+  ChangePasswordRequest,
   Driver,
   Envelope,
   ForgotPasswordRequest,
@@ -72,6 +73,11 @@ export const authApi = {
   async resetPassword(body: ResetPasswordRequest): Promise<void> {
     const env = (await apiClient.post(ENDPOINTS.auth.resetPassword, body)) as Envelope<unknown>;
     if (env && env.success === false) throw new Error(env.message ?? "Reset failed");
+  },
+
+  async changePassword(body: ChangePasswordRequest): Promise<void> {
+    const env = (await apiClient.patch(ENDPOINTS.auth.changePassword, body)) as Envelope<unknown>;
+    if (env && env.success === false) throw new Error(env.message ?? "Password change failed");
   },
 
   async updateStatus(body: StatusUpdateRequest): Promise<void> {

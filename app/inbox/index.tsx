@@ -5,7 +5,6 @@ import {
     type DriverNotification,
     type SupportThread,
 } from "@/api";
-import { isRTL } from "@/constants/i18n";
 import { Colors, Radius, Shadow } from "@/constants/theme";
 import { useNotifications, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -174,9 +173,8 @@ function groupChatThreads(threads: SupportThread[]): ChatGroup[] {
 export default function InboxScreen() {
   const router = useNavGuard();
   const dialog = useDialog();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
   const [activeTab, setActiveTab] = useState<InboxTab>("notification");
 
   const { pushedNotification } = useSocket();
@@ -273,9 +271,7 @@ export default function InboxScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Tab Switcher ── */}
-      <View
-        style={[styles.tabRow, { flexDirection: rtl ? "row-reverse" : "row" }]}
-      >
+      <View style={styles.tabRow}>
         <TabBtn
           label={t("inbox.notification")}
           active={activeTab === "notification"}
@@ -309,9 +305,9 @@ export default function InboxScreen() {
               activeOpacity={0.75}
               accessibilityLabel={t("inbox.clearAll")}
               style={{
-                flexDirection: rtl ? "row-reverse" : "row",
+                flexDirection: "row",
                 alignItems: "center",
-                alignSelf: rtl ? "flex-start" : "flex-end",
+                alignSelf: "flex-end",
                 gap: scale(6),
                 paddingVertical: verticalScale(6),
               }}
@@ -333,10 +329,7 @@ export default function InboxScreen() {
               <Text
                 style={[
                   styles.groupLabel,
-                  {
-                    fontFamily: font.medium,
-                    textAlign: rtl ? "right" : "left",
-                  },
+                  { fontFamily: font.medium },
                 ]}
               >
                 {t(group.group, {
@@ -352,33 +345,21 @@ export default function InboxScreen() {
                 {group.items.map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={[
-                      styles.card,
-                      { flexDirection: rtl ? "row-reverse" : "row" },
-                    ]}
+                    style={styles.card}
                     activeOpacity={0.75}
                     onPress={() => handleNotificationPress(item.id)}
                   >
                     <Image source={AVATAR_PLACEHOLDER} style={styles.avatar} />
-                    <View
-                      style={[
-                        styles.cardContent,
-                        { alignItems: rtl ? "flex-end" : "flex-start" },
-                      ]}
-                    >
+                    <View style={styles.cardContent}>
                       <View
                         style={[
                           styles.cardTopRow,
-                          { flexDirection: rtl ? "row-reverse" : "row" },
                         ]}
                       >
                         <Text
                           style={[
                             styles.cardTitle,
-                            {
-                              fontFamily: font.semibold,
-                              textAlign: rtl ? "right" : "left",
-                            },
+                            { fontFamily: font.semibold },
                           ]}
                           numberOfLines={1}
                         >
@@ -387,11 +368,7 @@ export default function InboxScreen() {
                         <Text
                           style={[
                             styles.cardTime,
-                            {
-                              fontFamily: font.regular,
-                              marginLeft: rtl ? 0 : spacing.sm,
-                              marginRight: rtl ? spacing.sm : 0,
-                            },
+                            { fontFamily: font.regular },
                           ]}
                         >
                           {item.time}
@@ -400,32 +377,19 @@ export default function InboxScreen() {
                       <View
                         style={[
                           styles.cardBottomRow,
-                          { flexDirection: rtl ? "row-reverse" : "row" },
                         ]}
                       >
                         <Text
                           style={[
                             styles.cardBody,
-
-                            {
-                              fontFamily: font.regular,
-                              textAlign: rtl ? "right" : "left",
-                            },
+                            { fontFamily: font.regular },
                           ]}
                           numberOfLines={2}
                         >
                           {item.body}
                         </Text>
                         {item.unread && (
-                          <View
-                            style={[
-                              styles.unreadDot,
-                              {
-                                marginLeft: rtl ? 0 : spacing.sm,
-                                marginRight: rtl ? spacing.sm : 0,
-                              },
-                            ]}
-                          />
+                          <View style={styles.unreadDot} />
                         )}
                       </View>
                     </View>
@@ -449,10 +413,7 @@ export default function InboxScreen() {
                 <Text
                   style={[
                     styles.groupLabel,
-                    {
-                      fontFamily: font.medium,
-                      textAlign: rtl ? "right" : "left",
-                    },
+                    { fontFamily: font.medium },
                   ]}
                 >
                   {t(group.group, {
@@ -468,11 +429,7 @@ export default function InboxScreen() {
                   {group.items.map((chat) => (
                     <TouchableOpacity
                       key={chat.id}
-                      style={[
-                        styles.card,
-                        chat.active && styles.cardActive,
-                        { flexDirection: rtl ? "row-reverse" : "row" },
-                      ]}
+                      style={[styles.card, chat.active && styles.cardActive]}
                       activeOpacity={0.75}
                       onPress={() =>
                         router.push({
@@ -484,34 +441,19 @@ export default function InboxScreen() {
                       <View style={styles.avatarWrapper}>
                         <Image source={AVATAR_PLACEHOLDER} style={styles.avatar} />
                         {chat.active && (
-                          <View
-                            style={[
-                              styles.onlineDot,
-                              rtl ? styles.onlineDotRTL : styles.onlineDotLTR,
-                            ]}
-                          />
+                          <View style={styles.onlineDot} />
                         )}
                       </View>
-                      <View
-                        style={[
-                          styles.cardContent,
-                          { alignItems: rtl ? "flex-end" : "flex-start" },
-                        ]}
-                      >
+                      <View style={styles.cardContent}>
                         <View
                           style={[
                             styles.cardTopRow,
-                            { flexDirection: rtl ? "row-reverse" : "row" },
                           ]}
                         >
                           <Text
                             style={[
                               styles.cardTitle,
-
-                              {
-                                fontFamily: font.semibold,
-                                textAlign: rtl ? "right" : "left",
-                              },
+                              { fontFamily: font.semibold },
                             ]}
                             numberOfLines={1}
                           >
@@ -520,11 +462,7 @@ export default function InboxScreen() {
                           <Text
                             style={[
                               styles.cardTime,
-                              {
-                                fontFamily: font.regular,
-                                marginLeft: rtl ? 0 : spacing.sm,
-                                marginRight: rtl ? spacing.sm : 0,
-                              },
+                              { fontFamily: font.regular },
                             ]}
                           >
                             {chat.date}
@@ -533,10 +471,7 @@ export default function InboxScreen() {
                         <Text
                           style={[
                             styles.cardBody,
-                            {
-                              fontFamily: font.regular,
-                              textAlign: rtl ? "right" : "left",
-                            },
+                            { fontFamily: font.regular },
                           ]}
                           numberOfLines={2}
                         >
@@ -607,6 +542,7 @@ const styles = StyleSheet.create({
 
   // Tabs
   tabRow: {
+    flexDirection: "row",
     marginTop: verticalScale(30),
 
     gap: spacing.sm,
@@ -648,6 +584,7 @@ const styles = StyleSheet.create({
 
   // Shared card
   card: {
+    flexDirection: "row",
     backgroundColor: Colors.card,
     borderRadius: Radius.lg,
     padding: spacing.md,
@@ -660,8 +597,9 @@ const styles = StyleSheet.create({
   cardActive: {
     backgroundColor: "#F2E9FF",
   },
-  cardContent: { flex: 1, gap: scale(4) },
+  cardContent: { flex: 1, gap: scale(4), alignItems: "flex-start" },
   cardTopRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     width: "100%",
@@ -670,8 +608,10 @@ const styles = StyleSheet.create({
   cardTime: {
     fontSize: fontSize.xs,
     color: Colors.textMuted,
+    marginLeft: spacing.sm,
   },
   cardBottomRow: {
+    flexDirection: "row",
     alignItems: "center",
     width: "100%",
     justifyContent: "space-between",
@@ -694,6 +634,7 @@ const styles = StyleSheet.create({
   onlineDot: {
     position: "absolute",
     bottom: scale(1),
+    right: scale(1),
     width: scale(12),
     height: scale(12),
     borderRadius: scale(6),
@@ -701,12 +642,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.card,
   },
-  onlineDotLTR: { right: scale(1) },
-  onlineDotRTL: { left: scale(1) },
-
   unreadDot: {
     width: scale(10),
     height: scale(10),
+    marginLeft: spacing.sm,
     borderRadius: scale(5),
     backgroundColor: "#2563EB",
     flexShrink: 0,

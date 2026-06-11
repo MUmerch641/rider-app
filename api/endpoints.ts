@@ -10,11 +10,14 @@ export const ENDPOINTS = {
     verifyOtp: "/auth/verify-otp",
     resendOtp: "/auth/resend-otp",
     resetPassword: "/auth/reset-password",
+    changePassword: "/auth/password/change",
   },
   driver: {
     status: "/status",
     location: "/location",
+    notificationSound: "/settings/notification-sound",
   },
+  upload: "/upload",
   orders: {
     list: "/orders",
     byId: (id: string) => `/orders/${id}`,

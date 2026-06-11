@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -122,8 +121,7 @@ export function CloseRestaurantModal({
   onCancel,
 }: CloseRestaurantModalProps) {
   const font = useAppFont();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
 
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [detailedReason, setDetailedReason] = useState("");
@@ -178,13 +176,8 @@ export function CloseRestaurantModal({
             {t("openStatus.closeSubtitle")}
           </Text>
 
-          {/* Reason chips */}
-          <View
-            style={[
-              styles.chipsWrap,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          {/* Reason chips — native RTL mirrors the row automatically */}
+          <View style={styles.chipsWrap}>
             {CLOSE_REASONS.map((key) => {
               const active = selectedReason === key;
               const isOther = key === "openStatus.reasonOther";
@@ -218,15 +211,7 @@ export function CloseRestaurantModal({
           </View>
 
           {/* Detailed reason label */}
-          <Text
-            style={[
-              styles.detailLabel,
-              {
-                fontFamily: font.semibold,
-                textAlign: rtl ? "right" : "left",
-              },
-            ]}
-          >
+          <Text style={[styles.detailLabel, { fontFamily: font.semibold }]}>
             {t("openStatus.detailedReason")}
           </Text>
 
@@ -237,13 +222,7 @@ export function CloseRestaurantModal({
             placeholder={t("openStatus.detailedPlaceholder")}
             placeholderTextColor={Colors.textMuted}
             multiline
-            style={[
-              styles.textarea,
-              {
-                fontFamily: font.regular,
-                textAlign: rtl ? "right" : "left",
-              },
-            ]}
+            style={[styles.textarea, { fontFamily: font.regular }]}
           />
 
           {/* Confirm button */}
@@ -325,6 +304,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   chipsWrap: {
+    flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
     width: "100%",

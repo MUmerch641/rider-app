@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -133,8 +132,7 @@ export function CancelRequestModal({
   onClose,
 }: CancelRequestModalProps) {
   const font = useAppFont();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
 
   const [selected, setSelected] = useState<CancelRequestReason | null>(null);
   const [note, setNote] = useState("");
@@ -179,13 +177,8 @@ export function CancelRequestModal({
             )}
           </Text>
 
-          {/* Reason chips */}
-          <View
-            style={[
-              styles.chipsWrap,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          {/* Reason chips — native RTL mirrors the row automatically */}
+          <View style={styles.chipsWrap}>
             {REASONS.map(({ key, i18nKey, fallback }) => {
               const active = selected === key;
               return (
@@ -209,12 +202,7 @@ export function CancelRequestModal({
           </View>
 
           {/* Optional note */}
-          <Text
-            style={[
-              styles.noteLabel,
-              { fontFamily: font.semibold, textAlign: rtl ? "right" : "left" },
-            ]}
-          >
+          <Text style={[styles.noteLabel, { fontFamily: font.semibold }]}>
             {t("cancelRequest.noteLabel", "DETAILS (OPTIONAL)")}
           </Text>
           <TextInput
@@ -224,10 +212,7 @@ export function CancelRequestModal({
             placeholderTextColor={Colors.textMuted}
             multiline
             maxLength={500}
-            style={[
-              styles.textarea,
-              { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-            ]}
+            style={[styles.textarea, { fontFamily: font.regular }]}
           />
 
           {/* Submit */}
@@ -308,6 +293,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   chipsWrap: {
+    flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
     width: "100%",

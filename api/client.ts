@@ -33,7 +33,12 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response.data,
   async (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
-    if (error.response?.status === 401 && onUnauthorized) {
+    // A 401 from /auth/* (login, OTP, password reset, refresh) means wrong
+    // credentials — NOT an expired session. Firing the global handler there
+    // resets navigation mid-login and eats the "invalid credentials" message.
+    const reqUrl = error.config?.url ?? "";
+    const isAuthEndpoint = reqUrl.includes("/auth/");
+    if (error.response?.status === 401 && onUnauthorized && !isAuthEndpoint) {
       try {
         await onUnauthorized();
       } catch {

@@ -1,3 +1,4 @@
+import i18n from "@/constants/i18n";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -64,7 +65,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
             // when the app is backgrounded/closed. Without this the new-order
             // push lands on the silent default channel (no sound, no vibrate).
             await Notifications.setNotificationChannelAsync("orders", {
-                name: "New orders",
+                name: i18n.t("notifications.newOrdersChannel"),
                 importance: Notifications.AndroidImportance.MAX,
                 sound: "default",
                 vibrationPattern: [0, 600, 400, 600],

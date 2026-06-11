@@ -4,6 +4,7 @@ export { ENDPOINTS } from "./endpoints";
 export { API_BASE_URL, SOCKET_URL, REQUEST_TIMEOUT_MS } from "./config";
 
 export { authApi } from "./auth";
+export { uploadApi } from "./upload";
 export { ordersApi } from "./orders";
 export { walletApi, type WalletSummaryQuery, type WalletHistoryQuery } from "./wallet";
 export { notificationsApi, type NotificationsQuery } from "./notifications";
@@ -28,8 +29,12 @@ export type {
   VerifyOtpRequest,
   VerifyOtpResponse,
   ResetPasswordRequest,
+  ChangePasswordRequest,
+  UploadResponse,
+  NotificationSoundResponse,
   StatusUpdateRequest,
   LocationUpdateRequest,
+  QueuedLocationPoint,
   // orders
   Order,
   OrderItem,

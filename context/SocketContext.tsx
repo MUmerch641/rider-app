@@ -25,6 +25,10 @@ import {
 } from "@/api";
 import { useAuth } from "./AuthContext";
 import { resolveAlertSound } from "@/utils/alertSounds";
+import {
+  getCachedNotificationSoundUri,
+  syncNotificationSound,
+} from "@/utils/notificationSound";
 
 type SocketContextValue = {
   socket: Socket | null;
@@ -68,11 +72,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const vibrateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alarmSoundKeyRef = useRef<string | undefined>(undefined);
+  // Local file URI of the dashboard-managed alarm sound (downloaded + cached by
+  // utils/notificationSound). null → use the bundled preset for alarmSoundKey.
+  const remoteSoundUriRef = useRef<string | null>(null);
 
-  // Build the looping player once; rebuild only when the admin changes the preset.
+  // Build the looping player once; rebuild only when the admin changes the sound.
   const ensureAlarmPlayer = useCallback((): AudioPlayer | null => {
+    const remoteUri = remoteSoundUriRef.current;
     const key = alarmSoundKeyRef.current;
-    if (alarmPlayerRef.current && builtSoundKeyRef.current === key) {
+    const buildKey = remoteUri
+      ? `remote:${remoteUri}`
+      : `preset:${key ?? "default"}`;
+    if (alarmPlayerRef.current && builtSoundKeyRef.current === buildKey) {
       return alarmPlayerRef.current;
     }
     try {
@@ -81,13 +92,28 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       console.warn("alarm: failed to remove old player", e);
     }
     try {
-      const p = createAudioPlayer(resolveAlertSound(key));
+      const p = createAudioPlayer(
+        remoteUri ? { uri: remoteUri } : resolveAlertSound(key),
+      );
       p.loop = true;
       alarmPlayerRef.current = p;
-      builtSoundKeyRef.current = key;
+      builtSoundKeyRef.current = buildKey;
       return p;
     } catch (e) {
       console.warn("alarm: failed to create player", e);
+      if (remoteUri) {
+        // Custom sound unplayable — fall back to the bundled preset.
+        remoteSoundUriRef.current = null;
+        try {
+          const p = createAudioPlayer(resolveAlertSound(key));
+          p.loop = true;
+          alarmPlayerRef.current = p;
+          builtSoundKeyRef.current = `preset:${key ?? "default"}`;
+          return p;
+        } catch (e2) {
+          console.warn("alarm: fallback player failed", e2);
+        }
+      }
       alarmPlayerRef.current = null;
       return null;
     }
@@ -165,6 +191,22 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         attempts += 1;
         if (!p.playing && attempts < 16) {
           playRetryRef.current = setTimeout(pump, 120);
+        } else if (
+          !p.playing &&
+          builtSoundKeyRef.current?.startsWith("remote:")
+        ) {
+          // The downloaded custom sound never started (corrupt / unsupported
+          // file) — rebuild with the bundled preset and ring with that.
+          remoteSoundUriRef.current = null;
+          const fallback = ensureAlarmPlayer();
+          if (fallback && fallback !== p) {
+            try {
+              fallback.seekTo(0);
+              fallback.play();
+            } catch (e2) {
+              console.warn("alarm: fallback play failed", e2);
+            }
+          }
         }
       };
       pump();
@@ -194,6 +236,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // keep the default sound
       }
+    })();
+    // Dashboard-managed custom alarm file: use the cached copy immediately (so
+    // the very first alarm already plays it), then refresh from the backend —
+    // downloads when the admin changed it, null/404/error → bundled preset.
+    void (async () => {
+      const cachedUri = await getCachedNotificationSoundUri();
+      if (!cancelled && cachedUri) remoteSoundUriRef.current = cachedUri;
+      const freshUri = await syncNotificationSound();
+      if (!cancelled) remoteSoundUriRef.current = freshUri;
     })();
     return () => {
       cancelled = true;

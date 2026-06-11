@@ -4,7 +4,7 @@ const glob = require("glob"); // or use fs.readdirSync recursively
 
 // ─── 1. CONFIG ───────────────────────────────────────────
 const LOCALES_DIR = "./locales"; // adjust to your path
-const SRC_DIRS = ["./app", "./components", "./context"];
+const SRC_DIRS = ["./app", "./components", "./context", "./utils", "./hooks"];
 const LOCALE_FILES = ["en", "ar", "ku"];
 
 // ─── 2. LOAD & FLATTEN LOCALE JSONs ──────────────────────

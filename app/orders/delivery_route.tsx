@@ -6,12 +6,21 @@ import {
 } from "@/api";
 import { DeliveryBottomSheet } from "@/components/ui";
 import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
-import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { avatarSource, storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
+import {
+  fetchDirections,
+  generateStraightLine,
+  nearestPointOnPolyline,
+  remainingRoute,
+  REROUTE_CONSECUTIVE_TICKS,
+  REROUTE_DEVIATION_METERS,
+  REROUTE_MIN_INTERVAL_MS,
+  type Coordinate,
+} from "@/utils/routing";
 import { Ionicons } from "@expo/vector-icons";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import * as Location from "expo-location";
@@ -24,6 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
+    I18nManager,
     Image,
     Linking,
     StyleSheet,
@@ -31,14 +41,16 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import { translateOrderStatusError } from "@/utils/orderStatusErrors";
 import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
 
-// ─── Configuration ───────────────────────────────────────────────────────────
-const GOOGLE_DIRECTIONS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+// Routing utilities (Directions fetch, polyline decode, straight-line fallback,
+// trim + deviation helpers) are shared with the On-Map screen — see
+// utils/routing.ts.
 
 // Default zoom level. The map always centers on the order's pickup/dropoff
 // (or the rider's real GPS) — never a hardcoded city. A previous version
@@ -48,147 +60,12 @@ const DEFAULT_DELTA = {
   longitudeDelta: 0.01,
 };
 
-// ─── Polyline Decoder Utility ────────────────────────────────────────────────
-// Decodes Google’s encoded polyline format into coordinate array
-// Reference: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
-
-interface DecodedCoordinate {
-  latitude: number;
-  longitude: number;
-}
-
-function decodePolyline(encoded: string): DecodedCoordinate[] {
-  const coordinates: DecodedCoordinate[] = [];
-  let index = 0;
-  let latitude = 0;
-  let longitude = 0;
-  let factor = Math.pow(10, 5);
-
-  while (index < encoded.length) {
-    let b: number;
-    let shift = 0;
-    let result = 0;
-
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-
-    let latitudeDelta = result & 1 ? ~(result >> 1) : result >> 1;
-    latitude += latitudeDelta;
-
-    shift = 0;
-    result = 0;
-
-    do {
-      b = encoded.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-
-    let longitudeDelta = result & 1 ? ~(result >> 1) : result >> 1;
-    longitude += longitudeDelta;
-
-    coordinates.push({
-      latitude: latitude / factor,
-      longitude: longitude / factor,
-    });
-  }
-
-  return coordinates;
-}
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface LocationInfo {
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-}
-
-interface RouteInfo {
-  coordinates: DecodedCoordinate[];
-  distance: string;
-  duration: string;
-}
-
-// ─── Directions API Service ──────────────────────────────────────────────────
-async function fetchDirections(
-  origin: { latitude: number; longitude: number },
-  destination: { latitude: number; longitude: number },
-): Promise<RouteInfo | null> {
-  if (!GOOGLE_DIRECTIONS_API_KEY) {
-    console.warn(
-      "Google Directions API key not found. Add EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to your .env file",
-    );
-    return null;
-  }
-
-  const originStr = `${origin.latitude},${origin.longitude}`;
-  const destinationStr = `${destination.latitude},${destination.longitude}`;
-  const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${originStr}&destination=${destinationStr}&mode=driving&key=${GOOGLE_DIRECTIONS_API_KEY}`;
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (data.status !== "OK") {
-      console.warn("Directions API error:", data.status, data.error_message);
-      return null;
-    }
-
-    if (!data.routes || data.routes.length === 0) {
-      console.warn("No routes found");
-      return null;
-    }
-
-    const route = data.routes[0];
-    const leg = route.legs[0];
-    const encodedPolyline = route.overview_polyline.points;
-
-    return {
-      coordinates: decodePolyline(encodedPolyline),
-      distance: leg.distance.text,
-      duration: leg.duration.text,
-    };
-  } catch (error) {
-    console.error("Failed to fetch directions:", error);
-    return null;
-  }
-}
-
-// Fallback straight line when API is unavailable
-function generateStraightLine(
-  start: { latitude: number; longitude: number },
-  end: { latitude: number; longitude: number },
-): DecodedCoordinate[] {
-  const steps = 50;
-  const coordinates: DecodedCoordinate[] = [];
-
-  for (let i = 0; i <= steps; i++) {
-    const progress = i / steps;
-    coordinates.push({
-      latitude: start.latitude + (end.latitude - start.latitude) * progress,
-      longitude: start.longitude + (end.longitude - start.longitude) * progress,
-    });
-  }
-
-  return coordinates;
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function DeliveryRoute() {
   const router = useNavGuard();
   const dialog = useDialog();
   const { t, i18n } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
   const langKey: LangKey = (i18n.language as LangKey) || "en";
   const mapRef = useRef<MapView>(null);
 
@@ -245,7 +122,7 @@ export default function DeliveryRoute() {
   // Derive the phase from the order's ACTUAL status, not just the nav param.
   // Once the rider has picked up, this screen must show the dropoff action
   // (Arrived at customer) — never the pickup action — otherwise tapping it
-  // would push the status backward to arrived_store and loop the rider.
+  // would push the status backward to picked_up and loop the rider.
   const phase: "pickup" | "dropoff" = useMemo(() => {
     const s = assignment?.order?.status;
     if (!s) return paramPhase; // assignment still loading — trust the nav intent
@@ -330,24 +207,35 @@ export default function DeliveryRoute() {
   };
   const [locating, setLocating] = useState(false);
   const [loadingRoute, setLoadingRoute] = useState(true);
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [routeCoordinates, setRouteCoordinates] = useState<DecodedCoordinate[]>(
-    [],
-  );
+  const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
+  // Full route as fetched. `trimmedRoute` is the live remainder of it (the line
+  // shrinks behind the rider); rendering uses trimmedRoute ?? routeCoordinates.
+  const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
+  const [trimmedRoute, setTrimmedRoute] = useState<Coordinate[] | null>(null);
   const [routeInfo, setRouteInfo] = useState<{
     distance: string;
     duration: string;
   } | null>(null);
   const [routeError, setRouteError] = useState(false);
-  const [selected, setSelected] = useState<LocationInfo>({
-    name: "",
-    address: "",
-    latitude: 0,
-    longitude: 0,
-  });
+  // Chase-cam: follow the rider on every GPS tick until the user pans away.
+  const [isFollowing, setIsFollowing] = useState(true);
+
+  // Refs mirrored from state — GPS ticks read/write these so a tick can never
+  // re-trigger the fetch effects (which are keyed to the destination only).
+  const userLocationRef = useRef<Coordinate | null>(null);
+  const destinationRef = useRef<Coordinate | null>(null);
+  const routeRef = useRef<Coordinate[]>([]);
+  const loadingRouteRef = useRef(false);
+  const lastRouteFetchAtRef = useRef(0);
+  const offRouteTicksRef = useRef(0);
+  const isFollowingRef = useRef(true);
+
+  useEffect(() => {
+    destinationRef.current = destination;
+  }, [destination]);
+  useEffect(() => {
+    isFollowingRef.current = isFollowing;
+  }, [isFollowing]);
 
   const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
 
@@ -370,95 +258,165 @@ export default function DeliveryRoute() {
     };
     mapRef.current?.animateToRegion(newRegion, 300);
   };
-  // Fetch directions from API. Destination defaults to current state value.
-  const loadRoute = useCallback(
-    async (
-      origin: { latitude: number; longitude: number },
-      dest: { latitude: number; longitude: number } | null = destination,
-    ) => {
-      if (!dest) {
-        setLoadingRoute(false);
-        return;
-      }
-      setLoadingRoute(true);
-      setRouteError(false);
+  // Fetch directions. Deps are EMPTY on purpose: route fetching is driven by
+  // destination changes and the deviation logic in handleLocationTick — never
+  // by GPS ticks re-creating this callback.
+  const loadRoute = useCallback(async (origin: Coordinate, dest: Coordinate) => {
+    loadingRouteRef.current = true;
+    setLoadingRoute(true);
+    setRouteError(false);
+    offRouteTicksRef.current = 0;
 
-      try {
-        const result = await fetchDirections(origin, dest);
+    try {
+      const result = await fetchDirections(origin, dest);
 
-        if (result) {
-          setRouteCoordinates(result.coordinates);
-          setRouteInfo({
-            distance: result.distance,
-            duration: result.duration,
-          });
-        } else {
-          setRouteCoordinates(generateStraightLine(origin, dest));
-          setRouteError(true);
-        }
-      } catch {
-        setRouteCoordinates(generateStraightLine(origin, dest));
+      if (result) {
+        routeRef.current = result.coordinates;
+        setRouteCoordinates(result.coordinates);
+        setRouteInfo({
+          distance: result.distance,
+          duration: result.duration,
+        });
+      } else {
+        routeRef.current = generateStraightLine(origin, dest);
+        setRouteCoordinates(routeRef.current);
+        setRouteInfo(null);
         setRouteError(true);
       }
+    } catch {
+      routeRef.current = generateStraightLine(origin, dest);
+      setRouteCoordinates(routeRef.current);
+      setRouteInfo(null);
+      setRouteError(true);
+    }
 
-      setLoadingRoute(false);
+    setTrimmedRoute(null);
+    lastRouteFetchAtRef.current = Date.now();
+    loadingRouteRef.current = false;
+    setLoadingRoute(false);
+  }, []);
+
+  // Route load — keyed to the DESTINATION only. userLocation changes never
+  // refetch by themselves. If GPS isn't ready yet when the destination resolves,
+  // the first watcher tick below fires the initial fetch instead. Never draw a
+  // route from a placeholder origin (that's how the route used to start in
+  // Sulaymaniyah).
+  useEffect(() => {
+    if (!destination) return;
+    const origin = userLocationRef.current;
+    if (!origin) return;
+    void loadRoute(origin, destination);
+  }, [destination, loadRoute]);
+
+  // One GPS tick: update the marker + chase-cam, then maintain the route
+  // WITHOUT refetching — trim the line behind the rider, and only re-route
+  // after a sustained deviation (shared REROUTE_* thresholds in utils/routing).
+  const handleLocationTick = useCallback(
+    (coord: Coordinate) => {
+      userLocationRef.current = coord;
+      setUserLocation(coord);
+
+      if (isFollowingRef.current) {
+        // Keep the rider centered at the user's current zoom level.
+        mapRef.current?.animateCamera({ center: coord }, { duration: 750 });
+      }
+
+      const dest = destinationRef.current;
+      if (!dest || loadingRouteRef.current) return;
+
+      const route = routeRef.current;
+      if (route.length === 0) {
+        // Destination resolved before the first GPS fix — fetch now.
+        void loadRoute(coord, dest);
+        return;
+      }
+
+      const { distanceMeters } = nearestPointOnPolyline(coord, route);
+      if (distanceMeters > REROUTE_DEVIATION_METERS) {
+        offRouteTicksRef.current += 1;
+        if (
+          offRouteTicksRef.current >= REROUTE_CONSECUTIVE_TICKS &&
+          Date.now() - lastRouteFetchAtRef.current > REROUTE_MIN_INTERVAL_MS
+        ) {
+          void loadRoute(coord, dest);
+          return;
+        }
+      } else {
+        offRouteTicksRef.current = 0;
+      }
+
+      // Shrink the rendered line behind the rider.
+      setTrimmedRoute(remainingRoute(coord, route));
     },
-    [destination],
+    [loadRoute],
   );
 
-  // Initial route load — waits for BOTH the destination and the rider's real
-  // GPS. Never draw a route from a placeholder origin (that's how the route used
-  // to start in Sulaymaniyah); the auto-locate effect below fills userLocation.
+  // Display-only GPS watcher while the screen is mounted. It NEVER calls the
+  // location API — the app-wide tracker (utils/locationTracking) owns the
+  // single transmission path.
   useEffect(() => {
-    if (!destination || !userLocation) return;
-    loadRoute(userLocation, destination);
-  }, [destination, loadRoute, userLocation]);
+    let cancelled = false;
+    let watcher: Location.LocationSubscription | null = null;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted" || cancelled) return;
+      watcher = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 3000,
+          distanceInterval: 5,
+        },
+        (loc) => {
+          if (cancelled) return;
+          handleLocationTick({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        },
+      );
+    })();
+    return () => {
+      cancelled = true;
+      watcher?.remove();
+    };
+  }, [handleLocationTick]);
 
-  // Fit map to show entire route
+  // Fit map to show the entire route — but only when the user has panned away
+  // from chase-cam; in follow mode the camera stays glued to the rider.
   useEffect(() => {
-    if (routeCoordinates.length > 0) {
-      const timer = setTimeout(() => {
-        mapRef.current?.fitToCoordinates(routeCoordinates, {
-          edgePadding: {
-            top: verticalScale(120),
-            right: spacing.lg,
-            bottom: verticalScale(180),
-            left: spacing.lg,
-          },
-          animated: true,
-        });
-      }, 300);
-      return () => clearTimeout(timer);
-    }
+    if (routeCoordinates.length === 0 || isFollowingRef.current) return;
+    const timer = setTimeout(() => {
+      mapRef.current?.fitToCoordinates(routeCoordinates, {
+        edgePadding: {
+          top: verticalScale(120),
+          right: spacing.lg,
+          bottom: verticalScale(180),
+          left: spacing.lg,
+        },
+        animated: true,
+      });
+    }, 300);
+    return () => clearTimeout(timer);
   }, [routeCoordinates]);
 
-  const reverseGeocode = async (lat: number, lng: number) => {
-    try {
-      const result = await Location.reverseGeocodeAsync({
-        latitude: lat,
-        longitude: lng,
-      });
-      if (result.length > 0) {
-        const r = result[0];
-        const name = r.city ?? r.district ?? r.subregion ?? "Unknown";
-        const address = [r.street, r.name, r.district]
-          .filter(Boolean)
-          .join(", ");
-        setSelected({
-          name,
-          address: address || r.formattedAddress || "",
-          latitude: lat,
-          longitude: lng,
-        });
-      }
-    } catch {
-      setSelected((prev) => ({ ...prev, latitude: lat, longitude: lng }));
-    }
+  // A gesture-driven region change means the rider panned the map — drop out
+  // of chase-cam until they tap the locate button again.
+  const stopFollowing = () => {
+    if (!isFollowingRef.current) return;
+    isFollowingRef.current = false;
+    setIsFollowing(false);
   };
 
-  const handleRegionChangeComplete = async (r: Region) => {
-    setCurrentRegion(r); // ← add this line
-    await reverseGeocode(r.latitude, r.longitude);
+  // NOTE: no reverse geocoding here. The chase-cam animates the camera on every
+  // GPS tick, and each programmatic animation fires this callback — a geocoder
+  // call per tick would hammer CLGeocoder/Android's geocoder for data nothing
+  // on this screen renders. currentRegion only feeds the zoom buttons.
+  const handleRegionChangeComplete = (
+    r: Region,
+    details?: { isGesture?: boolean },
+  ) => {
+    if (details?.isGesture) stopFollowing();
+    setCurrentRegion(r);
   };
 
   const goToCurrentLocation = async () => {
@@ -473,12 +431,16 @@ export default function DeliveryRoute() {
         accuracy: Location.Accuracy.High,
       });
 
-      const newLocation = {
+      const newLocation: Coordinate = {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
       };
 
+      userLocationRef.current = newLocation;
       setUserLocation(newLocation);
+      // Re-engage chase-cam.
+      isFollowingRef.current = true;
+      setIsFollowing(true);
 
       const newRegion: Region = {
         latitude: newLocation.latitude,
@@ -488,9 +450,9 @@ export default function DeliveryRoute() {
       };
 
       mapRef.current?.animateToRegion(newRegion, 600);
-      await reverseGeocode(newLocation.latitude, newLocation.longitude);
-
-      if (destination) await loadRoute(newLocation, destination);
+      // NOTE: no loadRoute here — fetches are driven by destination changes and
+      // the deviation logic in handleLocationTick. The old locate-tap refetch
+      // doubled up with the destination effect.
     } catch (e) {
       console.warn(e);
     }
@@ -515,6 +477,10 @@ export default function DeliveryRoute() {
     return { ...anchor, ...DEFAULT_DELTA };
   }, [destination, userLocation]);
 
+  // The polyline actually rendered: the live remainder once we have GPS ticks,
+  // else the full fetched route.
+  const displayedRoute = trimmedRoute ?? routeCoordinates;
+
   const handleCall = () => {
     if (callPhone) Linking.openURL(`tel:${callPhone}`).catch(() => undefined);
   };
@@ -522,16 +488,23 @@ export default function DeliveryRoute() {
   const handleArrived = async () => {
     if (!orderId || arrivedBusy) return;
     const next: DriverNextStatus =
-      phase === "pickup" ? "arrived_store" : "arrived";
+      phase === "pickup" ? "picked_up" : "arrived";
     setArrivedBusy(true);
     try {
       await updateOrderStatusWithGps(orderId, next);
       router.back();
     } catch (err) {
-      const msg = (err as ApiError)?.message ?? "Arrived update failed";
+      // GPS_REQUIRED / OUT_OF_RANGE come back as backend codes — translate
+      // them; unknown errors fall back to the raw message.
+      const msg = translateOrderStatusError(err);
       console.warn("Arrived update failed:", msg);
       dialog.show({
-        title: t("delivery.arrivedFailed", "Cannot mark arrived"),
+        // Pickup-phase button now reads "Picked Up", so "Cannot mark arrived"
+        // would mismatch the action the rider tapped.
+        title:
+          phase === "pickup"
+            ? t("delivery.statusFailed", "Cannot update status")
+            : t("delivery.arrivedFailed", "Cannot mark arrived"),
         message: msg,
         tone: "error",
       });
@@ -540,15 +513,10 @@ export default function DeliveryRoute() {
     }
   };
 
+  // The standalone active-delivery screen was removed (navigation lives on
+  // this screen); "order details" now lands on the Orders tab summary.
   const handleOrderDetails = () => {
-    if (!orderId) {
-      router.push("/orders");
-      return;
-    }
-    router.push({
-      pathname: "/orders/active_delivery_screen",
-      params: { id: orderId },
-    });
+    router.push("/orders");
   };
 
   return (
@@ -556,20 +524,16 @@ export default function DeliveryRoute() {
       <SafeAreaView style={styles.root} edges={{}}>
         {/* ── Map Container ── */}
         <View style={styles.mapContainer}>
-          {/* ── Header ── */}
-          <View
-            style={[
-              styles.header,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          {/* ── Header — native RTL mirrors the row automatically ── */}
+          <View style={styles.header}>
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
               <Ionicons
-                name={rtl ? "arrow-forward" : "arrow-back"}
+                // Icon glyphs never auto-flip — mirror the back arrow manually.
+                name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
                 size={scale(22)}
                 color={Colors.textPrimary}
               />
@@ -585,6 +549,74 @@ export default function DeliveryRoute() {
                   {t("onmap.calculateRoute")}
                 </Text>
               </View>
+            </View>
+          )}
+
+          {/* ── Route ETA banner — distance + duration, with a warning badge
+              when we're showing the straight-line fallback ── */}
+          {!loadingRoute && (routeInfo || routeError) && (
+            <View style={styles.routeInfoBanner}>
+              {routeInfo && (
+                <>
+                  <View style={styles.routeInfoItem}>
+                    <Ionicons
+                      name="navigate-outline"
+                      size={scale(16)}
+                      color={Colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.routeInfoText,
+                        { fontFamily: font.semibold },
+                      ]}
+                    >
+                      {routeInfo.distance}
+                    </Text>
+                  </View>
+                  <View style={styles.routeInfoDivider} />
+                  <View style={styles.routeInfoItem}>
+                    <Ionicons
+                      name="time-outline"
+                      size={scale(16)}
+                      color={Colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.routeInfoText,
+                        { fontFamily: font.semibold },
+                      ]}
+                    >
+                      {routeInfo.duration}
+                    </Text>
+                  </View>
+                </>
+              )}
+              {routeError && (
+                <>
+                  <View style={styles.routeInfoItem}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={scale(16)}
+                      color="#F59E0B"
+                    />
+                    <Text
+                      style={[
+                        styles.routeInfoText,
+                        { fontFamily: font.medium },
+                      ]}
+                    >
+                      {t("delivery.approximateRoute")}
+                    </Text>
+                  </View>
+                  <View style={styles.routeErrorBadge}>
+                    <Ionicons
+                      name="alert-circle"
+                      size={scale(18)}
+                      color="#F59E0B"
+                    />
+                  </View>
+                </>
+              )}
             </View>
           )}
 
@@ -604,21 +636,22 @@ export default function DeliveryRoute() {
             style={styles.map}
             initialRegion={initialMapRegion}
             onRegionChangeComplete={handleRegionChangeComplete}
+            onPanDrag={stopFollowing}
             showsUserLocation={false}
             showsMyLocationButton={false}
           >
-            {routeCoordinates.length > 0 && (
+            {displayedRoute.length > 0 && (
               <Polyline
-                coordinates={routeCoordinates}
+                coordinates={displayedRoute}
                 strokeColor="rgba(121, 0, 243, 0.15)"
                 strokeWidth={12}
                 lineCap="round"
                 lineJoin="round"
               />
             )}
-            {routeCoordinates.length > 0 && (
+            {displayedRoute.length > 0 && (
               <Polyline
-                coordinates={routeCoordinates}
+                coordinates={displayedRoute}
                 strokeColor="#B894FF"
                 strokeWidth={5}
                 lineCap="round"
@@ -660,11 +693,11 @@ export default function DeliveryRoute() {
           )}
         </View>
 
-        {/* ── Zoom + Location Buttons ── */}
+        {/* ── Zoom + Location Buttons — native RTL swaps the absolute
+            right offset automatically ── */}
         <View
           style={[
             styles.floatingButtons,
-            rtl ? { left: spacing.lg } : { right: spacing.lg },
             { bottom: sheetHeight + verticalScale(80) }, // ← moves with sheet
           ]}
         >
@@ -720,7 +753,7 @@ export default function DeliveryRoute() {
               restaurantLocation={sheetSubtitle}
               primaryActionLabel={
                 phase === "pickup"
-                  ? t("delivery.arrivedAtRestaurant")
+                  ? t("delivery.pickedUp")
                   : t("delivery.arrivedAtCustomer")
               }
               activeTab="navigate"
@@ -756,6 +789,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     zIndex: 1,
+    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -899,6 +933,7 @@ const styles = StyleSheet.create({
   // Zoom Buttons
   floatingButtons: {
     position: "absolute",
+    right: spacing.lg,
     alignItems: "center",
     gap: scale(10),
     zIndex: 10,

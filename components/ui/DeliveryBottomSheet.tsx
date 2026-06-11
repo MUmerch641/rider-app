@@ -1,10 +1,15 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  I18nManager,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgXml } from "react-native-svg";
 
@@ -54,9 +59,9 @@ type TabKey = "navigate" | "orderDetails" | "support";
 interface DeliveryBottomSheetProps {
   restaurantName?: string;
   restaurantLocation?: string;
-  /** Label for the primary (arrived) button. Phase-aware: "Arrived at
-   *  Restaurant" while heading to the store, "Arrived at Customer" while
-   *  heading to the customer. Falls back to the restaurant label. */
+  /** Label for the primary status button. Phase-aware: "Picked Up" while
+   *  heading to the store, "Arrived at Customer" while heading to the
+   *  customer. Falls back to the "Picked Up" label. */
   primaryActionLabel?: string;
   onCall?: () => void;
   onArrived?: () => void;
@@ -81,10 +86,8 @@ export function DeliveryBottomSheet({
   onSupport,
   activeTab = "navigate",
 }: DeliveryBottomSheetProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
-  const dir = rtl ? "row-reverse" : "row";
   const insets = useSafeAreaInsets();
 
   const tabs: { key: TabKey; labelKey: string; icon: string }[] = [
@@ -107,22 +110,14 @@ export function DeliveryBottomSheet({
       {/* ── Drag handle ── */}
       <View style={styles.dragHandle} />
 
-      {/* ── Restaurant info row ── */}
-      <View style={[styles.infoRow, { flexDirection: dir }]}>
-        <View style={{ flex: 1, alignItems: rtl ? "flex-end" : "flex-start" }}>
-          <Text
-            style={[
-              styles.restaurantName,
-              { fontFamily: font.bold, textAlign: rtl ? "right" : "left" },
-            ]}
-          >
+      {/* ── Restaurant info row — native RTL mirrors the row automatically ── */}
+      <View style={styles.infoRow}>
+        <View style={{ flex: 1, alignItems: "flex-start" }}>
+          <Text style={[styles.restaurantName, { fontFamily: font.bold }]}>
             {restaurantName}
           </Text>
           <Text
-            style={[
-              styles.restaurantLocation,
-              { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-            ]}
+            style={[styles.restaurantLocation, { fontFamily: font.regular }]}
           >
             {restaurantLocation}
           </Text>
@@ -141,18 +136,19 @@ export function DeliveryBottomSheet({
       {/* ── Arrived button ── */}
       <LinearGradient
         colors={["#BA97FF", "#8140FF", "#BC99FF"]}
-        start={{ x: rtl ? 1 : 0, y: 0 }}
-        end={{ x: rtl ? 0 : 1, y: 0 }}
+        // Gradient coords don't auto-mirror under native RTL — flip manually.
+        start={{ x: I18nManager.isRTL ? 1 : 0, y: 0 }}
+        end={{ x: I18nManager.isRTL ? 0 : 1, y: 0 }}
         style={styles.arrivedBtn}
       >
         <TouchableOpacity
-          style={[styles.arrivedBtnInner, { flexDirection: dir }]}
+          style={styles.arrivedBtnInner}
           onPress={onArrived}
           activeOpacity={0.85}
         >
           <SvgXml xml={CHECK_CIRCLE_SVG} width={scale(22)} height={scale(22)} />
           <Text style={[styles.arrivedBtnText, { fontFamily: font.semibold }]}>
-            {primaryActionLabel ?? t("delivery.arrivedAtRestaurant")}
+            {primaryActionLabel ?? t("delivery.pickedUp")}
           </Text>
         </TouchableOpacity>
       </LinearGradient>
@@ -169,7 +165,7 @@ export function DeliveryBottomSheet({
       </TouchableOpacity>
 
       {/* ── Tab bar ── */}
-      <View style={[styles.tabBar, { flexDirection: dir }]}>
+      <View style={styles.tabBar}>
         {tabs.map(({ key, labelKey, icon }) => {
           const isActive = activeTab === key;
           return (
@@ -234,6 +230,7 @@ const styles = StyleSheet.create({
 
   /* Info row */
   infoRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: verticalScale(16),
@@ -265,6 +262,7 @@ const styles = StyleSheet.create({
     marginBottom: verticalScale(12),
   },
   arrivedBtnInner: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: scale(10),
@@ -290,6 +288,7 @@ const styles = StyleSheet.create({
 
   /* Tab bar */
   tabBar: {
+    flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
     borderWidth: 1,

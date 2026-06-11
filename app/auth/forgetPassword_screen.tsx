@@ -1,6 +1,5 @@
 import { authApi, type ApiError } from "@/api";
 import { Button, Input, PhoneInput, ScreenHeader } from "@/components/ui";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { spacing, verticalScale } from "@/utils/responsive";
@@ -9,6 +8,7 @@ import { useNavGuard } from "@/hooks/useNavGuard";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  I18nManager,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -25,10 +25,8 @@ function validateEmail(email: string) {
 
 export default function ForgotPasswordScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const font = useAppFont();
-  const row = rtl ? "row-reverse" : "row";
 
   // Default to phone — drivers register/sign in by phone, not email.
   const [mode, setMode] = useState<Mode>("phone");
@@ -92,8 +90,9 @@ export default function ForgotPasswordScreen() {
     <LinearGradient
       colors={["#DFCFFF", "#F5EEFF", "#FFFFFF", "#FFF8F0"]}
       locations={[0, 0.1, 0.6, 1]}
-      start={{ x: rtl ? 0.9 : 0, y: 0 }}
-      end={{ x: rtl ? 0 : 0.9, y: 1 }}
+      // Gradient coords don't auto-mirror under native RTL — flip manually.
+      start={{ x: I18nManager.isRTL ? 0.9 : 0, y: 0 }}
+      end={{ x: I18nManager.isRTL ? 0 : 0.9, y: 1 }}
       style={styles.root}
     >
       <KeyboardAvoidingView
@@ -129,7 +128,6 @@ export default function ForgotPasswordScreen() {
                 if (emailError) setEmailError("");
               }}
               error={emailError}
-              rtl={rtl}
             />
           ) : (
             <PhoneInput
@@ -142,7 +140,6 @@ export default function ForgotPasswordScreen() {
                 if (phoneError) setPhoneError("");
               }}
               error={phoneError}
-              rtl={rtl}
             />
           )}
         </View>
@@ -155,7 +152,7 @@ export default function ForgotPasswordScreen() {
             loading={loading}
           />
           <TouchableOpacity
-            style={[styles.switchRow, { flexDirection: row }]}
+            style={styles.switchRow}
             onPress={() => {
               setMode(mode === "email" ? "phone" : "email");
               setEmailError("");

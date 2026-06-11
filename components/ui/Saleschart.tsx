@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -88,7 +87,6 @@ interface SalesChartProps {
 export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartProps) {
   const font = useAppFont();
   const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
 
   const [activeTab, setActiveTab] = useState<ChartTab>("revenue");
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -147,10 +145,8 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
 
   return (
     <View style={[styles.container, style]}>
-      {/* Header */}
-      <View
-        style={[styles.header, { flexDirection: rtl ? "row-reverse" : "row" }]}
-      >
+      {/* Header — native RTL mirrors the row automatically */}
+      <View style={styles.header}>
         <Text style={[styles.title, { fontFamily: font.regular }]}>
           {t("revenue.salesOverview")}
         </Text>
@@ -164,12 +160,7 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
       {/* Chart Card */}
       <View style={styles.chartCard}>
         {/* Tabs */}
-        <View
-          style={[
-            styles.subTabs,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
+        <View style={styles.subTabs}>
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab.key}
@@ -297,6 +288,7 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
 const styles = StyleSheet.create({
   container: {},
   header: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: spacing.sm,
@@ -311,7 +303,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.inputBg,
   },
-  subTabs: { gap: spacing.lg, marginBottom: spacing.xl },
+  subTabs: { flexDirection: "row", gap: spacing.lg, marginBottom: spacing.xl },
   subTab: { alignItems: "center" },
   subTabLabel: { fontSize: fontSize.md },
   subTabActive: { color: Colors.primary },

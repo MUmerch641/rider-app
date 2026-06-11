@@ -5,7 +5,6 @@ import {
     type OrderAssignment,
 } from "@/api";
 import { OpenStatusToggle } from "@/components/ui";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
 import { useAuth, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -15,6 +14,7 @@ import {
     formatNumber,
 } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { ACTIVE_STATUSES } from "@/utils/orderLifecycle";
 import { avatarSource, storeSource } from "@/utils/placeholders";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +24,7 @@ import { useNavGuard } from "@/hooks/useNavGuard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    I18nManager,
     Image,
     ScrollView,
     StyleSheet,
@@ -33,20 +34,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const ACTIVE_STATUSES = new Set([
-  "accepted",
-  "arrived_store",
-  "picked_up",
-  "on_the_way",
-  "arrived",
-]);
-
 export default function OrdersScreen() {
   const font = useAppFont();
   const { t, i18n } = useTranslation();
   const router = useNavGuard();
-  const rtl = isRTL(i18n.language);
-  const dir = rtl ? "row-reverse" : "row";
+  // Layout mirrors natively; rtl is only kept for typography (letterSpacing
+  // breaks Arabic/Kurdish ligatures).
+  const rtl = I18nManager.isRTL;
   const langKey: LangKey = (i18n.language as LangKey) || "en";
 
   const { driver, updateStatus } = useAuth();
@@ -101,6 +95,19 @@ export default function OrdersScreen() {
     }
   }, [newOrder, cancelledOrder, refreshAssignments, refreshSummary]);
 
+  // Driver display name shown in the header next to the avatar.
+  const driverName = useMemo(() => {
+    if (!driver) return "";
+    return (
+      [driver.firstName, driver.lastName]
+        .map((part) => part?.trim())
+        .filter(Boolean)
+        .join(" ") ||
+      driver.username ||
+      ""
+    );
+  }, [driver]);
+
   const activeOrders = useMemo(
     () => assignments.filter((a) => ACTIVE_STATUSES.has(a.status)),
     [assignments],
@@ -133,7 +140,7 @@ export default function OrdersScreen() {
       await ordersApi.accept(orderId);
       await refreshAssignments();
       router.push({
-        pathname: "/orders/active_delivery_screen",
+        pathname: "/orders/delivery_route",
         params: { id: orderId },
       });
     } catch (err) {
@@ -159,10 +166,12 @@ export default function OrdersScreen() {
   return (
     <SafeAreaView style={styles.root} edges={{}}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ── Header ── */}
-        <View style={[styles.header, { flexDirection: dir }]}>
+        {/* ── Header ── This is THE place riders toggle online/offline — the
+            map screen deliberately has no toggle of its own. */}
+        <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.push("./profile/profile_screen")}
+            style={styles.profileRow}
           >
             <View style={styles.profileWrap}>
               <Image
@@ -176,6 +185,12 @@ export default function OrdersScreen() {
                 ]}
               />
             </View>
+            <Text
+              style={[styles.driverName, { fontFamily: font.semibold }]}
+              numberOfLines={1}
+            >
+              {driverName}
+            </Text>
           </TouchableOpacity>
           <OpenStatusToggle
             isOpen={driver?.isOnline ?? false}
@@ -185,14 +200,14 @@ export default function OrdersScreen() {
 
         {/* ── Today's Summary Card ── */}
         <View style={styles.summaryCard}>
-          <View style={[styles.summaryTop, { flexDirection: dir }]}>
+          <View style={styles.summaryTop}>
             <Text style={[styles.summaryTitle, { fontFamily: font.semibold }]}>
               {t("orders.todaySummary")}
             </Text>
             <Ionicons name="bar-chart-outline" size={scale(22)} color="#fff" />
           </View>
-          <View style={[styles.summaryBottom, { flexDirection: dir }]}>
-            <View style={{ alignItems: rtl ? "flex-end" : "flex-start" }}>
+          <View style={styles.summaryBottom}>
+            <View style={{ alignItems: "flex-start" }}>
               <Text
                 style={[
                   styles.earningsLabel,
@@ -205,7 +220,7 @@ export default function OrdersScreen() {
                 {todayEarnings} {t("common.iqd")}
               </Text>
             </View>
-            <View style={{ alignItems: rtl ? "flex-start" : "flex-end" }}>
+            <View style={{ alignItems: "flex-end" }}>
               <Text
                 style={[
                   styles.ordersLabel,
@@ -222,11 +237,13 @@ export default function OrdersScreen() {
         </View>
 
         {/* ── Active Orders ── */}
-        <View style={[styles.sectionRow, { flexDirection: dir }]}>
+        <View style={styles.sectionRow}>
           <Text style={[styles.sectionTitle, { fontFamily: font.semibold }]}>
             {t("orders.activeOrders")}
           </Text>
-          <View style={[styles.badge, { left: scale(190) }]}>
+          {/* In flow: sectionRow's gap places the badge after the title in
+              every language/direction — no per-language pixel tuning. */}
+          <View style={styles.badge}>
             <Text style={[styles.badgeText, { fontFamily: font.bold }]}>
               {activeOrders.length}
             </Text>
@@ -236,27 +253,20 @@ export default function OrdersScreen() {
         {/* Active Order Card */}
         {activeOrder && (
           <View style={styles.activeCard}>
-            <View style={[styles.activeTop, { flexDirection: dir }]}>
+            <View style={styles.activeTop}>
               <View
-                style={[
-                  {
-                    flexDirection: dir,
-                    alignItems: "center",
-                    gap: scale(10),
-                    flex: 1,
-                  },
-                ]}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: scale(10),
+                  flex: 1,
+                }}
               >
                 <Image
                   source={storeSource(activeOrder.order?.store?.avatar)}
                   style={styles.restaurantLogo}
                 />
-                <View
-                  style={{
-                    flex: 1,
-                    alignItems: rtl ? "flex-end" : "flex-start",
-                  }}
-                >
+                <View style={{ flex: 1, alignItems: "flex-start" }}>
                   <Text
                     style={[styles.restaurantName, { fontFamily: font.bold }]}
                   >
@@ -270,7 +280,7 @@ export default function OrdersScreen() {
                   </Text>
                 </View>
               </View>
-              <View style={{ alignItems: rtl ? "flex-start" : "flex-end" }}>
+              <View style={{ alignItems: "flex-end" }}>
                 <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
                   {formatCurrency(
                     activeOrder.order?.total,
@@ -286,11 +296,13 @@ export default function OrdersScreen() {
               </View>
             </View>
 
-            <View style={[styles.activeBottom, { flexDirection: dir }]}>
+            <View style={styles.activeBottom}>
               <View
-                style={[
-                  { flexDirection: dir, alignItems: "center", gap: scale(4) },
-                ]}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: scale(4),
+                }}
               >
                 <Ionicons
                   name="location-outline"
@@ -303,7 +315,7 @@ export default function OrdersScreen() {
                   {activeOrder.order?.store?.address ?? ""}
                 </Text>
               </View>
-              <View style={[styles.timerPill, { flexDirection: dir }]}>
+              <View style={styles.timerPill}>
                 <Ionicons
                   name="time-outline"
                   size={scale(13)}
@@ -327,7 +339,7 @@ export default function OrdersScreen() {
                 activeOpacity={0.85}
                 onPress={() =>
                   router.push({
-                    pathname: "/orders/active_delivery_screen",
+                    pathname: "/orders/delivery_route",
                     params: { id: activeOrder.orderId },
                   })
                 }
@@ -344,13 +356,11 @@ export default function OrdersScreen() {
 
         {/* ── New Orders Nearby ── */}
         <View style={styles.newOrder}>
-          <View style={[styles.sectionRow, { flexDirection: dir }]}>
+          <View style={styles.sectionRow}>
             <Text style={[styles.sectionTitle, { fontFamily: font.semibold }]}>
               {t("orders.newOrdersNearby")}
             </Text>
-            <View
-              style={[styles.badge, { left: rtl ? scale(185) : scale(150) }]}
-            >
+            <View style={styles.badge}>
               <Text style={[styles.badgeText, { fontFamily: font.bold }]}>
                 {nearbyOrders.length}
               </Text>
@@ -378,24 +388,17 @@ export default function OrdersScreen() {
             return (
               <View key={a.id} style={styles.nearbyCard}>
                 {/* Top row */}
-                <View style={[styles.nearbyTop, { flexDirection: dir }]}>
+                <View style={styles.nearbyTop}>
                   <View
-                    style={[
-                      {
-                        flexDirection: dir,
-                        alignItems: "center",
-                        gap: scale(10),
-                        flex: 1,
-                      },
-                    ]}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: scale(10),
+                      flex: 1,
+                    }}
                   >
                     <Image source={storeSource(logo)} style={styles.nearbyLogo} />
-                    <View
-                      style={{
-                        flex: 1,
-                        alignItems: rtl ? "flex-end" : "flex-start",
-                      }}
-                    >
+                    <View style={{ flex: 1, alignItems: "flex-start" }}>
                       <Text
                         style={[
                           styles.restaurantName,
@@ -405,13 +408,11 @@ export default function OrdersScreen() {
                         {restaurant}
                       </Text>
                       <View
-                        style={[
-                          {
-                            flexDirection: dir,
-                            alignItems: "center",
-                            gap: scale(3),
-                          },
-                        ]}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: scale(3),
+                        }}
                       >
                         <Ionicons
                           name="location-outline"
@@ -437,13 +438,11 @@ export default function OrdersScreen() {
                 {/* Pickup / Dropoff with connected line */}
                 <View style={styles.routeContainer}>
                   <View
-                    style={[
-                      {
-                        flexDirection: dir,
-                        alignItems: "center",
-                        gap: scale(10),
-                      },
-                    ]}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: scale(10),
+                    }}
                   >
                     <View style={styles.dotColumn}>
                       <View style={styles.dotGray} />
@@ -456,13 +455,11 @@ export default function OrdersScreen() {
                     </Text>
                   </View>
                   <View
-                    style={[
-                      {
-                        flexDirection: dir,
-                        alignItems: "center",
-                        gap: scale(10),
-                      },
-                    ]}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: scale(10),
+                    }}
                   >
                     <View style={styles.dotGreenOuter}>
                       <View style={styles.dotGreenInner} />
@@ -476,7 +473,7 @@ export default function OrdersScreen() {
                 </View>
 
                 {/* Action buttons */}
-                <View style={[styles.actionRow, { flexDirection: dir }]}>
+                <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={styles.declineBtn}
                     activeOpacity={0.75}
@@ -520,13 +517,26 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
   header: {
+    flexDirection: "row",
     paddingTop: scale(70),
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  profileRow: {
+    flexDirection: "row",
+    flex: 1,
+    alignItems: "center",
+    gap: scale(10),
+  },
   profileWrap: { position: "relative" },
+  driverName: {
+    flexShrink: 1,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginHorizontal: scale(2),
+  },
   profileImg: {
     width: scale(46),
     height: scale(46),
@@ -562,12 +572,17 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   summaryTop: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.lg,
   },
   summaryTitle: { fontSize: FontSize.lg, color: "#fff" },
-  summaryBottom: { justifyContent: "space-between", alignItems: "flex-end" },
+  summaryBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
   earningsLabel: {
     fontSize: FontSize.sm,
     color: "#DCC6F3",
@@ -581,6 +596,7 @@ const styles = StyleSheet.create({
   },
   ordersCount: { fontSize: FontSize.xxl, color: "#fff" },
   sectionRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.xxl,
@@ -607,6 +623,7 @@ const styles = StyleSheet.create({
     ...Shadow.subtle,
   },
   activeTop: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.lg,
@@ -632,12 +649,14 @@ const styles = StyleSheet.create({
     marginTop: scale(2),
   },
   activeBottom: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
   },
   locationText: { fontSize: FontSize.xs, color: Colors.textSecondary },
   timerPill: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(3),
     backgroundColor: "#fff0f4",
@@ -673,6 +692,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   nearbyTop: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.lg,
@@ -736,7 +756,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(10),
     backgroundColor: "#22c55e",
   },
-  actionRow: { gap: spacing.sm },
+  actionRow: { flexDirection: "row", gap: spacing.sm },
   declineBtn: {
     flex: 1,
     height: verticalScale(46),

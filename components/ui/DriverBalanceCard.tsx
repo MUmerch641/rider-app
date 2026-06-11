@@ -1,13 +1,16 @@
-import { isRTL } from "@/constants/i18n";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, verticalScale } from "@/utils/responsive";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
+  I18nManager,
   Image,
   ImageSourcePropType,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
   ViewStyle,
 } from "react-native";
@@ -22,6 +25,10 @@ interface DriverBalanceCardProps {
   balance: number;
   /** Avatar image source */
   avatar?: ImageSourcePropType;
+  /** Tap handler for the avatar (change profile photo). Adds a camera badge. */
+  onAvatarPress?: () => void;
+  /** Shows a spinner over the avatar while the new photo uploads. */
+  avatarUploading?: boolean;
   /** Optional extra style for the outer card */
   style?: ViewStyle;
 }
@@ -32,83 +39,82 @@ export function DriverBalanceCard({
   phone,
   balance,
   avatar,
+  onAvatarPress,
+  avatarUploading = false,
   style,
 }: DriverBalanceCardProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
+
+  const avatarBody = (
+    <View style={styles.avatarRing}>
+      {avatar ? (
+        <Image source={avatar} style={styles.avatar} resizeMode="cover" />
+      ) : (
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={[styles.avatarInitial, { fontFamily: font.bold }]}>
+            {name?.charAt(0)?.toUpperCase() ?? "?"}
+          </Text>
+        </View>
+      )}
+      {avatarUploading && (
+        <View style={styles.avatarLoading}>
+          <ActivityIndicator color="#FFFFFF" />
+        </View>
+      )}
+      {!!onAvatarPress && !avatarUploading && (
+        <View style={styles.avatarBadge}>
+          <Ionicons name="camera" size={scale(11)} color="#FFFFFF" />
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <LinearGradient
       colors={["#ffffffce", "#e6dcfa", "#faf6f6", "#fadecd"]}
-      start={{ x: rtl ? 1.2 : 0, y: rtl ? 0 : 0 }}
-      end={{ x: rtl ? 0 : 1, y: rtl ? 1 : 1 }}
+      // Gradient coords don't auto-mirror under native RTL — flip manually.
+      start={{ x: I18nManager.isRTL ? 1.2 : 0, y: 0 }}
+      end={{ x: I18nManager.isRTL ? 0 : 1, y: 1 }}
       style={[styles.card, style]}
     >
-      {/* ── Driver info row ── */}
-      <View style={[{ flexDirection: rtl ? "row-reverse" : "row" }]}>
-        {/* Avatar with white ring */}
-        <View style={styles.avatarRing}>
-          {avatar ? (
-            <Image source={avatar} style={styles.avatar} resizeMode="cover" />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={[styles.avatarInitial, { fontFamily: font.bold }]}>
-                {name?.charAt(0)?.toUpperCase() ?? "?"}
-              </Text>
-            </View>
-          )}
-        </View>
+      {/* ── Driver info row — native RTL mirrors the row automatically ── */}
+      <View style={styles.infoRow}>
+        {/* Avatar with white ring (tappable when onAvatarPress is provided) */}
+        {onAvatarPress ? (
+          <TouchableOpacity
+            onPress={onAvatarPress}
+            disabled={avatarUploading}
+            activeOpacity={0.75}
+            accessibilityLabel={t("personalInfo.changePhoto", "Change photo")}
+          >
+            {avatarBody}
+          </TouchableOpacity>
+        ) : (
+          avatarBody
+        )}
 
         {/* Name + phone */}
-        <View
-          style={[
-            styles.driverInfo,
-            { alignItems: rtl ? "flex-end" : "flex-start" },
-          ]}
-        >
+        <View style={styles.driverInfo}>
           <Text
-            style={[
-              styles.driverName,
-              { fontFamily: font.bold, textAlign: rtl ? "right" : "left" },
-            ]}
+            style={[styles.driverName, { fontFamily: font.bold }]}
             numberOfLines={1}
           >
             {name}
           </Text>
-          <Text
-            style={[
-              styles.driverPhone,
-              { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-            ]}
-          >
+          <Text style={[styles.driverPhone, { fontFamily: font.regular }]}>
             {phone}
           </Text>
         </View>
       </View>
 
       {/* ── Balance section ── */}
-      <View
-        style={[
-          styles.balanceSection,
-          { alignItems: rtl ? "flex-end" : "flex-start" },
-        ]}
-      >
-        <Text
-          style={[
-            styles.balanceLabel,
-            { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-          ]}
-        >
+      <View style={styles.balanceSection}>
+        <Text style={[styles.balanceLabel, { fontFamily: font.regular }]}>
           {t("driverCard.availableBalance", "Available Balance")}
         </Text>
 
-        <View
-          style={[
-            styles.amountRow,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
+        <View style={styles.amountRow}>
           <Text style={[styles.balanceAmount, { fontFamily: font.bold }]}>
             {balance.toLocaleString()}
           </Text>
@@ -133,6 +139,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
+  infoRow: {
+    flexDirection: "row",
+  },
+
   // Avatar + white ring
   avatarRing: {
     borderRadius: scale(32),
@@ -153,12 +163,33 @@ const styles = StyleSheet.create({
     fontSize: scale(22),
     color: "#FFFFFF",
   },
+  avatarLoading: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: scale(28),
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: scale(20),
+    height: scale(20),
+    borderRadius: scale(10),
+    backgroundColor: "#5E28C6",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   // Name + phone
   driverInfo: {
     flex: 1,
     gap: verticalScale(3),
     marginHorizontal: scale(10),
+    alignItems: "flex-start",
   },
   driverName: {
     fontSize: scale(17),
@@ -174,6 +205,7 @@ const styles = StyleSheet.create({
   // ── Balance ───────────────────────────────────────────────────────────────
   balanceSection: {
     gap: verticalScale(8),
+    alignItems: "flex-start",
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderLeftWidth: 0.2,
@@ -193,6 +225,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   amountRow: {
+    flexDirection: "row",
     alignItems: "flex-end",
     gap: scale(8),
   },

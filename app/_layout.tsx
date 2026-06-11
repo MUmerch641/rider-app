@@ -4,6 +4,7 @@ import { LanguageOnboarding } from "@/components/ui/LanguageOnboarding";
 import "@/constants/i18n";
 import { installGlobalErrorHandler } from "@/utils/globalErrorHandler";
 import i18n, { isRTL, LANGUAGE_STORAGE_KEY } from "@/constants/i18n";
+import { localizeName, type LangKey } from "@/utils/localize";
 import {
   AuthProvider,
   NotificationProvider,
@@ -28,10 +29,17 @@ import {
   Vazirmatn_700Bold,
 } from "@expo-google-fonts/vazirmatn";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Location from "expo-location";
+import { reloadAppAsync } from "expo";
+// Top-level import: registers the background location task (TaskManager.defineTask
+// runs at module scope) before anything can start/stop it.
+import {
+  startDriverTracking,
+  stopDriverTracking,
+} from "@/utils/locationTracking";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { I18nManager } from "react-native";
 
 SplashScreen.preventAutoHideAsync();
@@ -61,6 +69,7 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
 function SocketBridges() {
   const { newOrder, pushedNotification, clearPushedNotification } = useSocket();
   const { addNotification } = useNotifications();
+  const { t } = useTranslation();
   const lastNewOrderIdRef = useRef<string | null>(null);
 
   // Mirror "notification:new" socket events into local notifications list.
@@ -76,59 +85,42 @@ function SocketBridges() {
     if (lastNewOrderIdRef.current === newOrder.orderId) return;
     lastNewOrderIdRef.current = newOrder.orderId;
 
-    const storeName = newOrder.store?.name;
+    // Notification text is stored at event time, so render it in the active
+    // language (en/ar/ku) and pick the store name for that language too.
     const storeLabel =
-      typeof storeName === "string"
-        ? storeName
-        : (storeName?.en ?? storeName?.ar ?? storeName?.ku ?? "store");
+      localizeName(newOrder.store?.name, i18n.language as LangKey) ||
+      t("notifications.storeFallback");
 
     addNotification({
       type: "new_order",
-      title: `Order #${newOrder.orderNumber}`,
-      body: `New delivery from ${storeLabel}`,
+      title: t("notifications.newOrderTitle", {
+        number: newOrder.orderNumber,
+      }),
+      body: t("notifications.newOrderBody", { store: storeLabel }),
       data: { orderId: newOrder.orderId },
     });
-  }, [newOrder, addNotification]);
+  }, [newOrder, addNotification, t]);
 
   return null;
 }
 
-// App-wide GPS heartbeat: while the driver is online, watch position and push
-// it to the backend (which relays order:location_update to the customer for
-// live tracking). Previously this lived only on the On-Map screen, so the
-// customer saw no live driver location unless the rider had that screen open.
+// App-wide GPS heartbeat: while the driver is online, utils/locationTracking
+// streams positions to the backend (background task with a foreground-watcher
+// fallback + offline queue), which relays order:location_update to the customer
+// for live tracking. This component only maps `driver.isOnline` to start/stop —
+// the single transmission path lives in that service.
 function DriverLocationBroadcaster() {
-  const { driver, updateLocation } = useAuth();
-  const isOnline = driver?.isOnline;
+  const { driver } = useAuth();
+  const isOnline = driver?.isOnline === true;
 
   useEffect(() => {
     if (!isOnline) return;
-    let cancelled = false;
-    let watcher: Location.LocationSubscription | null = null;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted" || cancelled) return;
-      watcher = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 5000,
-          distanceInterval: 10,
-        },
-        (loc) => {
-          if (cancelled) return;
-          updateLocation({
-            lat: loc.coords.latitude,
-            lng: loc.coords.longitude,
-            heading: loc.coords.heading ?? undefined,
-          }).catch(() => undefined);
-        },
-      );
-    })();
+    void startDriverTracking();
     return () => {
-      cancelled = true;
-      if (watcher) watcher.remove();
+      // Going offline, logging out (driver → null) or unmounting all stop here.
+      void stopDriverTracking();
     };
-  }, [isOnline, updateLocation]);
+  }, [isOnline]);
 
   return null;
 }
@@ -148,29 +140,38 @@ export default function RootLayout() {
     Vazirmatn_700Bold,
   });
 
+  // Load the saved language and align native RTL exactly once, on mount.
+  // Runtime language switching (and its single guarded reload) lives in
+  // setAppLanguage() in constants/i18n.ts.
   useEffect(() => {
-    AsyncStorage.getItem(LANGUAGE_STORAGE_KEY).then((saved) => {
-      if (saved && saved !== i18n.language) {
-        i18n.changeLanguage(saved);
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
+        const lang = saved ?? i18n.language;
+        if (saved && saved !== i18n.language) {
+          await i18n.changeLanguage(saved);
+        }
+        const shouldBeRTL = isRTL(lang);
+        if (I18nManager.isRTL !== shouldBeRTL) {
+          I18nManager.allowRTL(shouldBeRTL);
+          I18nManager.forceRTL(shouldBeRTL);
+          // Usually already aligned (setAppLanguage keeps them in sync); this
+          // only fires if the persisted direction drifted (e.g. the OS
+          // language changed). Deferred + guarded so it can't crash on launch.
+          if (!__DEV__) {
+            setTimeout(() => {
+              reloadAppAsync().catch(() => {});
+            }, 0);
+          }
+        }
+      } catch {
+        // ignore — keep whatever i18n initialised with
       }
-    });
+    })();
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
-
-    const applyRTL = async () => {
-      const shouldBeRTL = isRTL(i18n.language);
-      if (I18nManager.isRTL !== shouldBeRTL) {
-        I18nManager.allowRTL(shouldBeRTL);
-        I18nManager.forceRTL(shouldBeRTL);
-        SplashScreen.hideAsync();
-        return;
-      }
-      SplashScreen.hideAsync();
-    };
-
-    applyRTL();
+    if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
 
   if (!loaded || !notoLoaded) return null;

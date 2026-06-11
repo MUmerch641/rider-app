@@ -1,9 +1,7 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontWeight } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { fontSize, spacing } from "@/utils/responsive";
 import React from "react";
-import { useTranslation } from "react-i18next";
 import {
   StyleSheet,
   Text,
@@ -28,32 +26,15 @@ export function SectionHeader({
   style,
 }: SectionHeaderProps) {
   const font = useAppFont();
-  const { i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
 
   return (
-    <View
-      style={[
-        styles.row,
-        { flexDirection: rtl ? "row-reverse" : "row" },
-        style,
-      ]}
-    >
-      <Text
-        style={[
-          styles.title,
-          { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-        ]}
-      >
-        {title}
-      </Text>
+    // Native RTL mirrors the row automatically.
+    <View style={[styles.row, style]}>
+      <Text style={[styles.title, { fontFamily: font.regular }]}>{title}</Text>
       {(actionLabel || actionIcon) && (
         <TouchableOpacity
           onPress={onAction}
-          style={[
-            styles.action,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
+          style={styles.action}
           activeOpacity={0.7}
         >
           {actionIcon}
@@ -70,6 +51,7 @@ export function SectionHeader({
 
 const styles = StyleSheet.create({
   row: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
@@ -80,6 +62,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   action: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
   },

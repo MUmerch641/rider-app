@@ -1,6 +1,5 @@
 import { reviewsApi, type ApiError, type Review } from "@/api";
 import { ScreenHeader, StarRating } from "@/components/ui";
-import { isRTL } from "@/constants/i18n";
 import { Colors, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
@@ -12,9 +11,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ReviewsScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
 
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
@@ -40,6 +38,7 @@ export default function ReviewsScreen() {
   }, []);
 
   return (
+    // Native RTL mirrors rows and text alignment automatically.
     <SafeAreaView style={styles.root} edges={["top"]}>
       <ScreenHeader
         title={t("reviews.title")}
@@ -51,15 +50,7 @@ export default function ReviewsScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        <Text
-          style={[
-            styles.reviewsCount,
-            {
-              fontFamily: font.semibold,
-              textAlign: rtl ? "right" : "left",
-            },
-          ]}
-        >
+        <Text style={[styles.reviewsCount, { fontFamily: font.semibold }]}>
           {t("reviews.reviewsCount", {
             count: totalReviews,
           })}
@@ -68,30 +59,11 @@ export default function ReviewsScreen() {
         {/* Review Cards */}
         <View style={styles.reviewsList}>
           {reviewsList.map((review) => (
-            <View
-              key={review.id}
-              style={[
-                styles.reviewCard,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.reviewText,
-                  {
-                    fontFamily: font.regular,
-                    textAlign: rtl ? "right" : "left",
-                  },
-                ]}
-              >
+            <View key={review.id} style={styles.reviewCard}>
+              <Text style={[styles.reviewText, { fontFamily: font.regular }]}>
                 {review.comment ?? ""}
               </Text>
-              <View
-                style={[
-                  styles.reviewRating,
-                  { flexDirection: rtl ? "row-reverse" : "row" },
-                ]}
-              >
+              <View style={styles.reviewRating}>
                 <StarRating rating={1} maxStars={1} size={scale(18)} />
                 <Text
                   style={[styles.reviewRatingText, { fontFamily: font.bold }]}
@@ -132,6 +104,7 @@ const styles = StyleSheet.create({
   },
   reviewsList: { gap: spacing.md },
   reviewCard: {
+    flexDirection: "row",
     backgroundColor: Colors.card,
     borderRadius: Radius.md,
     padding: spacing.md,
@@ -148,6 +121,11 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: verticalScale(20),
   },
-  reviewRating: { alignItems: "center", gap: scale(4), flexShrink: 0 },
+  reviewRating: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(4),
+    flexShrink: 0,
+  },
   reviewRatingText: { fontSize: fontSize.md, color: Colors.textPrimary },
 });

@@ -74,6 +74,16 @@
     "passwordEmpty": "وشەی نهێنی پێویستە",
     "confirmEmpty": "تکایە وشەی نهێنی پشتڕاست بکەرەوە"
   },
+  "changePassword": {
+    "title": "گۆڕینی وشەی نهێنی",
+    "subtitle": "وشەی نهێنی ئێستات بنووسە، پاشان دانەیەکی نوێ دابنێ",
+    "currentPassword": "وشەی نهێنی ئێستا",
+    "currentPasswordPlace": "وشەی نهێنی ئێستا بنووسە",
+    "currentEmpty": "وشەی نهێنی ئێستا پێویستە",
+    "currentWrong": "وشەی نهێنی ئێستا هەڵەیە",
+    "failedTitle": "گۆڕین سەرکەوتوو نەبوو",
+    "failedBody": "وشەی نهێنی نەگۆڕدرا. تکایە دووبارە هەوڵ بدەرەوە."
+  },
   "common": {
     "open": "کراوەیە",
     "close": "داخراوە",
@@ -113,12 +123,16 @@
     "orderRadius": "بواری داواکاری",
     "reviews": "هەڵسەنگاندن",
     "changePassword": "گۆڕینی وشەی نهێنی",
-    "signOut": "دەرچوون"
+    "signOut": "دەرچوون",
+    "signOutConfirmTitle": "دەرچوون؟",
+    "signOutConfirmMessage": "داواکاری نوێت پێ ناگات هەتا دووبارە بچیتە ژوورەوە."
   },
   "location": {
     "chooseLocation": "شوێن هەڵبژێرە",
     "searchLocation": "گەڕان بە شوێن",
-    "submitLocation": "شوێنەکە پەسەند بکە"
+    "submitLocation": "شوێنەکە پەسەند بکە",
+    "trackingNotificationTitle": "شوێنکەوتنی گەیاندن چالاکە",
+    "trackingNotificationBody": "OnWay شوێنی ڕاستەوخۆت لەگەڵ کڕیاران بەشدەکات کاتێک ئۆنلاینیت."
   },
   "inbox": {
     "title": "ئاگاداریەکان",
@@ -262,7 +276,11 @@
     "chooseOption": "هەڵبژاردنی جۆر"
   },
   "onmap": {
-    "calculateRoute": "حیسابکردنی ڕێگا..."
+    "calculateRoute": "حیسابکردنی ڕێگا...",
+    "acquiringLocation": "دیاریکردنی شوێن…",
+    "acceptFailedTitle": "نەتوانرا داواکارییەکە وەربگیرێت",
+    "offerUnavailableMessage": "ئەم ئۆفەرە بەسەرچووە یان شۆفێرێکی تر وەریگرتووە.",
+    "offerNetworkMessage": "کێشەی تۆڕ — پەیوەندییەکەت بپشکنە و دووبارە هەوڵبدەوە."
   },
   "orders": {
     "todaySummary": "کورتەی ئەمڕۆ",
@@ -278,8 +296,13 @@
     "decline": "ڕەتکردنەوە",
     "accept": "قبووڵکردن",
     "acceptedOrders": "داواکاریە وەرگیراوەکان",
-    "delivered": "گەیەندراو",
-    "goToRestaurant": "بڕۆ بۆ چێشتخانە"
+    "status": {
+      "accepted": "قبووڵکرا",
+      "arrived_store": "لە فرۆشگا",
+      "picked_up": "وەرگیرا",
+      "on_the_way": "لە ڕێگادایە",
+      "arrived": "گەیشت"
+    }
   },
   "orderRadius": {
     "title": "بازنەی داواکاری",
@@ -304,7 +327,6 @@
     "callDesc": "پەیوەندی بکە کاتێک خواردن گەیشت",
     "ringing": "دەنگدان",
     "ringingDesc": "زەنگی دەرگاکە بدە کاتی گەیشتن",
-    "arrivedAtRestaurant": "گەیشتوومە چێشتخانەکە",
     "arrivedAtCustomer": "گەیشتوومە کڕیارەکە",
     "pickedUp": "وەرگیرا",
     "onTheWay": "لە ڕێگادایە",
@@ -314,9 +336,10 @@
     "orderDetails": "وردەکاری داواکاری",
     "support": "پاڵپشتی",
     "arrivedFailed": "ناتوانیت گەیشتن دیاری بکەیت",
-    "deliverFailed": "ناتوانیت گەیاندن دیاری بکەیت",
     "statusFailed": "ناتوانیت دۆخ نوێ بکەیتەوە",
-    "requestCancellation": "داواکردنی هەڵوەشاندنەوە"
+    "requestCancellation": "داواکردنی هەڵوەشاندنەوە",
+    "approximateRoute": "ڕێگای نزیکەیی",
+    "delivered": "گەیەندرا"
   },
   "orderHeader": {
     "order": "داواکاری",
@@ -326,11 +349,6 @@
   "driverCard": {
     "availableBalance": "باڵانسی بەردەست",
     "totalEarning": "کۆی گشتی داهات"
-  },
-  "driver": {
-    "online": "چالاك",
-    "offline": "ناچالاك",
-    "earningsToday": "داهاتی ئەمڕۆ"
   },
   "stats": {
     "efficiencyStat": "ئامار",
@@ -396,7 +414,12 @@
     "updateFailed": "نوێکردنەوەی پرۆفایل سەرکەوتوو نەبوو",
     "deleteFailed": "سڕینەوەی ئەکاونت سەرکەوتوو نەبوو",
     "accountDeleted": "ئەکاونت سڕایەوە",
-    "accountDeletedMsg": "ئەکاونتەکەت سڕایەوە."
+    "accountDeletedMsg": "ئەکاونتەکەت سڕایەوە.",
+    "changePhoto": "گۆڕینی وێنە",
+    "photoPermTitle": "مۆڵەت پێویستە",
+    "photoPermBody": "تکایە ڕێگە بدە بە دەستڕاگەیشتن بە وێنەکان بۆ گۆڕینی وێنەی پرۆفایلەکەت.",
+    "uploadFailedTitle": "بارکردن سەرکەوتوو نەبوو",
+    "uploadFailedBody": "وێنەکە بار نەکرا. تکایە دووبارە هەوڵ بدەرەوە."
   },
   "orderRequestCard": {
     "orderItems": "بەشەکانی داواکاری",
@@ -418,5 +441,22 @@
     "sentTitle": "داواکاری نێردرا",
     "sentMessage": "پشتگیری ئاگادار کرایەوە و ئەم داواکارییە دووبارە دیاری دەکات. دەتوانیت تا ئەو کاتە بەردەوام بیت لە گەیاندن.",
     "failedTitle": "نەتوانرا داواکاری بنێردرێت"
+  },
+  "errors": {
+    "somethingWentWrong": "هەڵەیەک ڕوویدا",
+    "tryAgainSubtitle": "هەڵەیەکی چاوەڕواننەکراو ڕوویدا — تکایە دووبارە هەوڵ بدەرەوە.",
+    "reload": "دووبارە بارکردنەوە"
+  },
+  "notifications": {
+    "newOrdersChannel": "داواکاری نوێ",
+    "newOrderTitle": "داواکاری ژمارە {{number}}",
+    "newOrderBody": "گەیاندنی نوێ لە {{store}}",
+    "storeFallback": "فرۆشگا"
+  },
+  "orderStatusErrors": {
+    "gpsRequired": "نەتوانرا شوێنی GPSەکەت بخوێنرێتەوە. خزمەتگوزاری شوێن چالاک بکە و دووبارە هەوڵبدەوە.",
+    "outOfRange": "تۆ {{distance}} مەتر دووریت — بۆ بەردەوامبوون پێویستە لە {{threshold}} مەتر نزیکتر بیت.",
+    "outOfRangeGeneric": "هێشتا بە تەواوی نزیک نیت — نزیکتر ببەرەوە و دووبارە هەوڵبدەوە.",
+    "updateFailed": "نەتوانرا دۆخی داواکارییەکە نوێ بکرێتەوە. تکایە دووبارە هەوڵبدەوە."
   }
 }

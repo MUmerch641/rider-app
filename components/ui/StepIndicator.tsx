@@ -1,9 +1,7 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { fontSize, moderateScale, scale, spacing } from "@/utils/responsive";
 import React from "react";
-import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 
 interface StepIndicatorProps {
@@ -18,17 +16,10 @@ export function StepIndicator({
   style,
 }: StepIndicatorProps) {
   const font = useAppFont();
-  const { i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
 
   return (
-    <View
-      style={[
-        styles.container,
-        { flexDirection: rtl ? "row-reverse" : "row" },
-        style,
-      ]}
-    >
+    // Native RTL mirrors the row automatically.
+    <View style={[styles.container, style]}>
       {Array.from({ length: totalSteps }, (_, i) => {
         const stepNum = i + 1;
         const isCompleted = stepNum < currentStep;
@@ -79,6 +70,7 @@ export function StepIndicator({
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing.md,
   },

@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { useAppFont } from "@/hooks/useAppFont";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Animated,
+  I18nManager,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -62,9 +62,10 @@ export function OrderHeader({
   currencyFallback = "IQD",
   onBack,
 }: OrderHeaderProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
+  // Layout mirrors natively; only glyph/gradient/typography need a condition.
+  const rtl = I18nManager.isRTL;
 
   const [expanded, setExpanded] = useState(false);
 
@@ -174,12 +175,7 @@ export function OrderHeader({
         {/* Single unified animated container */}
         <Animated.View style={[styles.card, { height: heightAnim }]}>
           {/* ── Header row ── */}
-          <View
-            style={[
-              styles.headerRow,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          <View style={styles.headerRow}>
             {/* Back button */}
             <TouchableOpacity
               style={styles.iconBtn}
@@ -242,19 +238,13 @@ export function OrderHeader({
               locations={rtl ? [1, 0.75, 0.4, 0] : [0, 0.4, 0.75, 1]}
               start={{ x: rtl ? 0 : 1.1, y: 0.5 }}
               end={{ x: rtl ? 0.8 : 0, y: 0.5 }}
-              style={[
-                styles.earningsPanel,
-                {
-                  alignItems: rtl ? "flex-end" : "flex-start",
-                },
-              ]}
+              style={styles.earningsPanel}
             >
               <Text
                 style={[
                   styles.earningsLabel,
                   {
                     fontFamily: font.semibold,
-                    textAlign: rtl ? "right" : "left",
                     letterSpacing: rtl ? 0 : scale(1.2),
                   },
                 ]}
@@ -262,12 +252,7 @@ export function OrderHeader({
                 {t("orderHeader.estimatedEarnings", "ESTIMATED EARNINGS")}
               </Text>
 
-              <View
-                style={[
-                  styles.earningsAmountRow,
-                  { flexDirection: rtl ? "row-reverse" : "row" },
-                ]}
-              >
+              <View style={styles.earningsAmountRow}>
                 <Text
                   style={[styles.earningsAmount, { fontFamily: font.bold }]}
                 >
@@ -309,6 +294,7 @@ const styles = StyleSheet.create({
 
   // Header row
   headerRow: {
+    flexDirection: "row",
     height: HEADER_ROW_HEIGHT,
     paddingHorizontal: spacing.sm,
     alignItems: "center",
@@ -343,6 +329,7 @@ const styles = StyleSheet.create({
 
   // Earnings panel
   earningsPanel: {
+    alignItems: "flex-start",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     gap: verticalScale(4),
@@ -356,6 +343,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   earningsAmountRow: {
+    flexDirection: "row",
     alignItems: "flex-end",
     gap: spacing.sm,
     paddingBottom: scale(15),

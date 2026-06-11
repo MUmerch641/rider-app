@@ -100,9 +100,47 @@ export type ResetPasswordRequest = {
   newPassword: string;
 };
 
+/** Authenticated change-password (profile flow, not the OTP reset flow). */
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+/** POST /upload (driver-scoped) — file stored in MinIO. */
+export type UploadResponse = {
+  url: string;
+  thumbnailUrl?: string;
+  filename?: string;
+  size?: number;
+  mimeType?: string;
+};
+
+/** GET /settings/notification-sound — dashboard-managed alarm sound. */
+export type NotificationSoundResponse = {
+  url: string | null;
+};
+
 // ─── Driver status / location ────────────────────────────────────────
 export type StatusUpdateRequest = { isOnline: boolean };
-export type LocationUpdateRequest = { lat: number; lng: number; heading?: number };
+
+/** An offline-buffered GPS point, replayed via `LocationUpdateRequest.queued`. */
+export type QueuedLocationPoint = {
+  lat: number;
+  lng: number;
+  heading?: number;
+  /** ISO 8601 datetime the point was recorded at. */
+  recordedAt: string;
+};
+
+export type LocationUpdateRequest = {
+  lat: number;
+  lng: number;
+  heading?: number;
+  /** ISO 8601 datetime — the server defaults to now() when omitted. */
+  recordedAt?: string;
+  /** Older offline-buffered points (max 100) — written to history only. */
+  queued?: QueuedLocationPoint[];
+};
 
 // ─── Orders ──────────────────────────────────────────────────────────
 export type DriverAssignmentStatus =
@@ -212,7 +250,8 @@ export type OrderAssignment = {
 
 export type RejectOrderRequest = { reason: RejectReason };
 // lat/lng are required by the backend for the range-gated transitions
-// (arrived_store + delivered) — pulled from Location.getCurrentPositionAsync.
+// (picked_up, arrived, delivered + legacy arrived_store) — see
+// utils/orderStatusGps.ts.
 export type UpdateOrderStatusRequest = {
   status: DriverNextStatus;
   lat?: number;

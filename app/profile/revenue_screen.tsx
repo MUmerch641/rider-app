@@ -3,7 +3,6 @@ import { PeriodTabs, SalesChart } from "@/components/ui";
 import { CartIcon, ChartIcon } from "@/components/ui/icons";
 import { RevenueBalanceCard } from "@/components/ui/RevenueBalanceCard";
 import StatCircleCard from "@/components/ui/StatCircleCard";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
@@ -13,6 +12,7 @@ import { useNavGuard } from "@/hooks/useNavGuard";
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    I18nManager,
     ScrollView,
     StyleSheet,
     Text,
@@ -23,10 +23,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RevenueScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const font = useAppFont();
-  const rtl = isRTL(i18n.language);
-  const align = rtl ? "right" : "left";
+  // Layout mirrors natively; only glyph/gradient mirrors need a condition.
+  const rtl = I18nManager.isRTL;
 
   const [period, setPeriod] = useState("revenue.today");
   const [balance, setBalance] = useState<number>(0);
@@ -143,13 +143,7 @@ export default function RevenueScreen() {
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Top Nav ── */}
       <View
-        style={[
-          styles.topNav,
-          {
-            flexDirection: rtl ? "row-reverse" : "row",
-            backgroundColor: Colors.background,
-          },
-        ]}
+        style={[styles.topNav, { backgroundColor: Colors.background }]}
       >
         <TouchableOpacity
           style={styles.backBtn}
@@ -193,54 +187,31 @@ export default function RevenueScreen() {
         {/* ── Stats row ── */}
         <LinearGradient
           colors={["#fadecd", "#fadecd56", "#e6dcfa5e", "#e6dcfa"]}
-          start={{ x: rtl ? 1.2 : 0, y: rtl ? 0 : 0 }}
-          end={{ x: rtl ? 0 : 1, y: rtl ? 1 : 1 }}
-          style={[
-            styles.statsRow,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
+          start={{ x: rtl ? 1.2 : 0, y: 0 }}
+          end={{ x: rtl ? 0 : 1, y: 1 }}
+          style={styles.statsRow}
         >
           {/* Orders */}
           <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>
-            <View
-              style={[
-                styles.statIconWrapper,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.statIconWrapper}>
               <CartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.orders")}
               </Text>
             </View>
-            <Text
-              style={[
-                styles.statValue,
-                { fontFamily: font.medium, textAlign: align },
-              ]}
-            >
+            <Text style={[styles.statValue, { fontFamily: font.medium }]}>
               {String(orders)}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>
-            <View
-              style={[
-                styles.statIconWrapper,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.statIconWrapper}>
               <ChartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.onTime")}
               </Text>
             </View>
-            <View
-              style={[
-                styles.profitRow,
-                { flexDirection: rtl ? "row-reverse" : "row" },
-              ]}
-            >
+            <View style={styles.profitRow}>
               <Text style={[styles.statValue, { fontFamily: font.medium }]}>
                 {Math.round(onTimeRate)}%
               </Text>
@@ -248,10 +219,7 @@ export default function RevenueScreen() {
                 name="trending-up"
                 size={scale(16)}
                 color={Colors.textSecondary}
-                style={{
-                  marginLeft: rtl ? 0 : -scale(1),
-                  marginRight: rtl ? -scale(1) : 0,
-                }}
+                style={{ marginLeft: -scale(1) }}
               />
             </View>
           </TouchableOpacity>
@@ -265,20 +233,10 @@ export default function RevenueScreen() {
         />
 
         {/* ── Reports ── */}
-        <Text
-          style={[
-            styles.reportsTitle,
-            { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-          ]}
-        >
+        <Text style={[styles.reportsTitle, { fontFamily: font.regular }]}>
           {t("stats.efficiencyStat")}
         </Text>
-        <View
-          style={[
-            styles.reportsGrid,
-            { flexDirection: rtl ? "row-reverse" : "row" },
-          ]}
-        >
+        <View style={styles.reportsGrid}>
           <StatCircleCard
             label="stats.acceptance"
             value={Math.round(acceptance)}
@@ -304,6 +262,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
 
   topNav: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
@@ -328,6 +287,7 @@ const styles = StyleSheet.create({
 
   // Stats card
   statsRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: spacing.sm,
     marginHorizontal: spacing.md,
@@ -348,6 +308,7 @@ const styles = StyleSheet.create({
     borderWidth: scale(0.5),
   },
   statIconWrapper: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(6),
     marginBottom: spacing.sm,
@@ -361,6 +322,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   profitRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: scale(4),
   },
@@ -375,6 +337,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   reportsGrid: {
+    flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     marginHorizontal: spacing.md,

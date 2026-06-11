@@ -18,6 +18,9 @@
       "autoIncrement": true,
       "ios": {
         "credentialsSource": "local"
+      },
+      "env": {
+        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCCQ2e9r0KOyxW3XXjVH6YmkKUvj1I0e0c"
       }
     }
   },

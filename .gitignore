@@ -48,3 +48,4 @@ play-service-account.json
 
 # Local iOS build artifacts
 *.ipa
+.env

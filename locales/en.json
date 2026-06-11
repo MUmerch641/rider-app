@@ -74,6 +74,16 @@
     "passwordEmpty": "Password is required",
     "confirmEmpty": "Please confirm your password"
   },
+  "changePassword": {
+    "title": "Change Password",
+    "subtitle": "Enter your current password, then set a new one",
+    "currentPassword": "Current Password",
+    "currentPasswordPlace": "Enter current password",
+    "currentEmpty": "Current password is required",
+    "currentWrong": "Current password is incorrect",
+    "failedTitle": "Change failed",
+    "failedBody": "Couldn't change your password. Please try again."
+  },
   "common": {
     "open": "Open",
     "close": "Close",
@@ -113,12 +123,16 @@
     "orderRadius": "Order Radius",
     "reviews": "Reviews",
     "changePassword": "Change Password",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signOutConfirmTitle": "Log out?",
+    "signOutConfirmMessage": "You will stop receiving new orders until you log in again."
   },
   "location": {
     "chooseLocation": "Choose location",
     "searchLocation": "Search Location",
-    "submitLocation": "Submit Location"
+    "submitLocation": "Submit Location",
+    "trackingNotificationTitle": "Delivery tracking active",
+    "trackingNotificationBody": "OnWay shares your live location with customers while you are online."
   },
   "inbox": {
     "title": "Inbox",
@@ -275,11 +289,20 @@
     "decline": "Decline",
     "accept": "Accept",
     "acceptedOrders": "Accepted Orders",
-    "delivered": "Delivered",
-    "goToRestaurant": "Go To Restaurant"
+    "status": {
+      "accepted": "Accepted",
+      "arrived_store": "At Store",
+      "picked_up": "Picked Up",
+      "on_the_way": "On the Way",
+      "arrived": "Arrived"
+    }
   },
   "onmap": {
-    "calculateRoute": "Calculating route..."
+    "calculateRoute": "Calculating route...",
+    "acquiringLocation": "Acquiring location…",
+    "acceptFailedTitle": "Couldn't accept the order",
+    "offerUnavailableMessage": "This offer has expired or was taken by another driver.",
+    "offerNetworkMessage": "Network problem — check your connection and try again."
   },
   "orderRadius": {
     "title": "Order Radius",
@@ -304,7 +327,6 @@
     "callDesc": "Call when the food is delivered",
     "ringing": "Ringing",
     "ringingDesc": "Ring the doorbell on arrival",
-    "arrivedAtRestaurant": "Arrived at Restaurant",
     "arrivedAtCustomer": "Arrived at Customer",
     "pickedUp": "Picked Up",
     "onTheWay": "On the Way",
@@ -314,9 +336,10 @@
     "orderDetails": "Order Details",
     "support": "Support",
     "arrivedFailed": "Cannot mark arrived",
-    "deliverFailed": "Cannot mark delivered",
     "statusFailed": "Cannot update status",
-    "requestCancellation": "Request Cancellation"
+    "requestCancellation": "Request Cancellation",
+    "approximateRoute": "Approximate route",
+    "delivered": "Delivered"
   },
   "orderHeader": {
     "order": "Order",
@@ -326,11 +349,6 @@
   "driverCard": {
     "availableBalance": "Available Balance",
     "totalEarning": "Total of Earning"
-  },
-  "driver": {
-    "online": "Online",
-    "offline": "Offline",
-    "earningsToday": "Earnings Today"
   },
   "stats": {
     "efficiencyStat": "Efficiency Stat",
@@ -396,7 +414,12 @@
     "updateFailed": "Failed to update profile",
     "deleteFailed": "Failed to delete account",
     "accountDeleted": "Account Deleted",
-    "accountDeletedMsg": "Your account has been deleted."
+    "accountDeletedMsg": "Your account has been deleted.",
+    "changePhoto": "Change photo",
+    "photoPermTitle": "Permission needed",
+    "photoPermBody": "Please allow photo library access to change your profile picture.",
+    "uploadFailedTitle": "Upload failed",
+    "uploadFailedBody": "Couldn't upload the image. Please try again."
   },
   "orderRequestCard": {
     "orderItems": "ORDER ITEMS",
@@ -418,5 +441,22 @@
     "sentTitle": "Request sent",
     "sentMessage": "Support has been notified and will reassign this order. You can keep delivering until then.",
     "failedTitle": "Couldn't send request"
+  },
+  "errors": {
+    "somethingWentWrong": "Something went wrong",
+    "tryAgainSubtitle": "An unexpected error occurred — please try again.",
+    "reload": "Reload"
+  },
+  "notifications": {
+    "newOrdersChannel": "New orders",
+    "newOrderTitle": "Order #{{number}}",
+    "newOrderBody": "New delivery from {{store}}",
+    "storeFallback": "store"
+  },
+  "orderStatusErrors": {
+    "gpsRequired": "We couldn't read your GPS location. Turn on location services and try again.",
+    "outOfRange": "You are {{distance}}m away — get within {{threshold}}m to continue.",
+    "outOfRangeGeneric": "You are not close enough yet — move closer and try again.",
+    "updateFailed": "Couldn't update the order status. Please try again."
   }
 }

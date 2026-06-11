@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -50,25 +49,20 @@ export function RevenueHeader({
   style,
 }: RevenueHeaderProps) {
   const font = useAppFont();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   return (
+    // Native RTL mirrors rows, alignment, and absolute offsets automatically.
     <View
       style={[
         styles.container,
-        {
-          flexDirection: rtl ? "row-reverse" : "row",
-          backgroundColor: Colors.background,
-        },
+        { backgroundColor: Colors.background },
         style,
       ]}
     >
       {/* Restaurant Info */}
-      <View
-        style={[styles.infoRow, { flexDirection: rtl ? "row-reverse" : "row" }]}
-      >
+      <View style={styles.infoRow}>
         {logoUrl ? (
           <SafeImage uri={logoUrl} variant="store" style={styles.logo} />
         ) : (
@@ -76,26 +70,11 @@ export function RevenueHeader({
             <Ionicons name="flame" size={iconSize.md} color={Colors.primary} />
           </View>
         )}
-        <View
-          style={[
-            styles.infoText,
-            { alignItems: rtl ? "flex-end" : "flex-start" },
-          ]}
-        >
-          <Text
-            style={[
-              styles.restaurantName,
-              { fontFamily: font.bold, textAlign: rtl ? "right" : "left" },
-            ]}
-          >
+        <View style={styles.infoText}>
+          <Text style={[styles.restaurantName, { fontFamily: font.bold }]}>
             {restaurantName}
           </Text>
-          <View
-            style={[
-              styles.statusRow,
-              { flexDirection: rtl ? "row-reverse" : "row" },
-            ]}
-          >
+          <View style={styles.statusRow}>
             <View
               style={[
                 styles.dot,
@@ -122,10 +101,7 @@ export function RevenueHeader({
 
       {/* Period Selector */}
       <TouchableOpacity
-        style={[
-          styles.periodBtn,
-          { flexDirection: rtl ? "row-reverse" : "row" },
-        ]}
+        style={styles.periodBtn}
         onPress={() => setDropdownVisible(true)}
         activeOpacity={0.8}
       >
@@ -152,18 +128,12 @@ export function RevenueHeader({
           activeOpacity={1}
           onPress={() => setDropdownVisible(false)}
         >
-          <View
-            style={[
-              styles.dropdown,
-              rtl ? { left: spacing.md } : { right: spacing.md },
-            ]}
-          >
+          <View style={styles.dropdown}>
             {PERIODS.map((p) => (
               <TouchableOpacity
                 key={p}
                 style={[
                   styles.dropdownItem,
-                  { flexDirection: rtl ? "row-reverse" : "row" },
                   p === selectedPeriod && styles.dropdownItemActive,
                 ]}
                 onPress={() => {
@@ -185,7 +155,6 @@ export function RevenueHeader({
                     {
                       fontFamily:
                         p === selectedPeriod ? font.semibold : font.regular,
-                      textAlign: rtl ? "right" : "left",
                     },
                     p === selectedPeriod && styles.dropdownTextActive,
                   ]}
@@ -203,6 +172,7 @@ export function RevenueHeader({
 
 const styles = StyleSheet.create({
   container: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
@@ -210,6 +180,7 @@ const styles = StyleSheet.create({
     top: -verticalScale(50),
   },
   infoRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
     flex: 1,
@@ -231,13 +202,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  infoText: { gap: scale(2) },
+  infoText: { gap: scale(2), alignItems: "flex-start" },
   restaurantName: { fontSize: fontSize.md, color: Colors.textPrimary },
-  statusRow: { alignItems: "center", gap: spacing.xs },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   dot: { width: scale(8), height: scale(8), borderRadius: scale(4) },
   statusText: { fontSize: fontSize.xs },
   restaurantId: { fontSize: fontSize.xs, color: Colors.textMuted },
   periodBtn: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     backgroundColor: Colors.background,
@@ -252,6 +224,7 @@ const styles = StyleSheet.create({
   dropdown: {
     position: "absolute",
     top: verticalScale(165),
+    right: spacing.md,
     backgroundColor: Colors.card,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -261,6 +234,7 @@ const styles = StyleSheet.create({
     ...Shadow.card,
   },
   dropdownItem: {
+    flexDirection: "row",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     alignItems: "center",

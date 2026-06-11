@@ -1,8 +1,6 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
-import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 
@@ -155,8 +153,6 @@ export function OrderProgressCard({
   paymentMethod = "CASH",
   activeColor = "#6B21E8",
 }: OrderProgressProps) {
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
   const font = useAppFont();
   return (
     <View style={styles.card}>

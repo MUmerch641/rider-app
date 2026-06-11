@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -41,8 +40,7 @@ export function TotalRevenueCard({
   style,
 }: TotalRevenueCardProps) {
   const font = useAppFont();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const isPositive = changePercent >= 0;
   const [hidden, setHidden] = useState(true);
 
@@ -56,12 +54,9 @@ export function TotalRevenueCard({
       end={{ x: 1, y: 0 }}
       style={[styles.card, style]}
     >
-      {/* Eye icon */}
+      {/* Eye icon — native RTL swaps the absolute right offset automatically */}
       <TouchableOpacity
-        style={[
-          styles.eyeBtn,
-          rtl ? { left: spacing.md, right: undefined } : { right: spacing.md },
-        ]}
+        style={styles.eyeBtn}
         onPress={() => setHidden((v) => !v)}
         activeOpacity={0.8}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -74,32 +69,17 @@ export function TotalRevenueCard({
       </TouchableOpacity>
 
       {/* Label */}
-      <Text
-        style={[
-          styles.label,
-          { fontFamily: font.medium, textAlign: rtl ? "right" : "left" },
-        ]}
-      >
+      <Text style={[styles.label, { fontFamily: font.medium }]}>
         {t("revenue.totalRevenue")}
       </Text>
 
       {/* Amount */}
-      <View
-        style={[
-          styles.amountRow,
-          { flexDirection: rtl ? "row-reverse" : "row" },
-        ]}
-      >
+      <View style={styles.amountRow}>
         <Text style={[styles.amount, { fontFamily: font.extrabold }]}>
           {hidden ? "••••••" : totalRevenue.toLocaleString()}
         </Text>
         {!hidden && (
-          <Text
-            style={[
-              styles.currency,
-              { fontFamily: font.regular, textAlign: rtl ? "right" : "left" },
-            ]}
-          >
+          <Text style={[styles.currency, { fontFamily: font.regular }]}>
             {currency}
           </Text>
         )}
@@ -110,8 +90,6 @@ export function TotalRevenueCard({
         style={[
           styles.changeBadge,
           {
-            flexDirection: rtl ? "row-reverse" : "row",
-            alignSelf: rtl ? "flex-end" : "flex-start",
             backgroundColor: isPositive ? "#2DD67033" : "#d65d2d33",
             borderColor: isPositive ? Colors.success : Colors.danger,
           },
@@ -138,18 +116,8 @@ export function TotalRevenueCard({
       </View>
 
       {/* Stats row */}
-      <View
-        style={[
-          styles.statsRow,
-          { flexDirection: rtl ? "row-reverse" : "row" },
-        ]}
-      >
-        <View
-          style={[
-            styles.statItem,
-            { alignItems: rtl ? "flex-end" : "flex-start" },
-          ]}
-        >
+      <View style={styles.statsRow}>
+        <View style={[styles.statItem, { alignItems: "flex-start" }]}>
           <Text style={[styles.statValue, { fontFamily: font.medium }]}>
             {hidden ? "•••" : orders}
           </Text>
@@ -165,12 +133,7 @@ export function TotalRevenueCard({
             {t("revenue.netProfit")}
           </Text>
         </View>
-        <View
-          style={[
-            styles.statItem,
-            { alignItems: rtl ? "flex-start" : "flex-end" },
-          ]}
-        >
+        <View style={[styles.statItem, { alignItems: "flex-end" }]}>
           <Text style={[styles.statValue, { fontFamily: font.medium }]}>
             {hidden ? "•••" : formatK(commission)}
           </Text>
@@ -195,6 +158,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     position: "absolute",
     top: spacing.md,
+    right: spacing.md,
   },
   label: {
     fontSize: fontSize.sm,
@@ -202,6 +166,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   amountRow: {
+    flexDirection: "row",
     alignItems: "flex-end",
     gap: scale(4),
   },
@@ -215,6 +180,8 @@ const styles = StyleSheet.create({
     marginBottom: scale(4),
   },
   changeBadge: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
     alignItems: "center",
     gap: scale(4),
     paddingHorizontal: spacing.sm,
@@ -228,6 +195,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   statsRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
   },

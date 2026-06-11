@@ -27,23 +27,22 @@ export const RTL_LANGS = ["ar", "ku"];
 export const isRTL = (lang: string) => RTL_LANGS.includes(lang);
 export const getDirection = () => (isRTL(i18n.language) ? "rtl" : "ltr");
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      en: { translation: en },
-      ar: { translation: ar },
-      ku: { translation: ku },
-    },
-    lng: getDeviceLanguage(),
-    fallbackLng: "en",
-  })
-  .then(() => {
-    // Baseline writing direction for the language we booted in (runs once).
-    const shouldBeRTL = isRTL(i18n.language);
-    I18nManager.allowRTL(shouldBeRTL);
-    I18nManager.forceRTL(shouldBeRTL);
-  });
+// NOTE: no forceRTL here. The device locale is only a provisional language —
+// the saved app language (AsyncStorage) wins, and app/_layout.tsx is the single
+// boot authority that loads it and aligns the native direction (with one
+// guarded reload on drift). Writing the direction from the device locale here
+// used to re-poison the persisted native direction every session for riders
+// whose OS locale direction differs from their saved language (e.g. English OS
+// + Arabic app), causing a forced reload on every production cold start.
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+    ar: { translation: ar },
+    ku: { translation: ku },
+  },
+  lng: getDeviceLanguage(),
+  fallbackLng: "en",
+});
 
 export type AppLanguage = "en" | "ar" | "ku";
 

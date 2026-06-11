@@ -4,10 +4,13 @@ import type { DriverNextStatus } from "@/api/types";
 
 // Backend range-gates these transitions — the request must include the rider's
 // current GPS so the server can verify proximity to the store / customer.
+// `picked_up` is gated at ~200m from the store (it replaced `arrived_store` in
+// the forward flow; `arrived_store` is kept for legacy in-flight orders).
 // `arrived` (arrived at customer) reuses the deliveredDistanceThreshold on the
 // backend since both events happen at the customer's address.
 const GPS_GATED: ReadonlySet<DriverNextStatus> = new Set<DriverNextStatus>([
   "arrived_store",
+  "picked_up",
   "arrived",
   "delivered",
 ]);
@@ -79,7 +82,8 @@ async function getRiderCoords(): Promise<{ lat: number; lng: number } | undefine
 
 /**
  * Drive `ordersApi.updateStatus` while attaching the rider's current GPS for
- * range-gated transitions (arrived_store, arrived, delivered). The backend
+ * range-gated transitions (picked_up, arrived, delivered — plus the legacy
+ * arrived_store). The backend
  * rejects with "You are not in range yet" / "Rider location is required..."
  * when the rider is outside the admin-configured radius; those errors
  * propagate as-is so the calling screen can surface them in a dialog.

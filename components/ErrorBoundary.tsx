@@ -1,3 +1,4 @@
+import i18n from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import * as Updates from "expo-updates";
 import React from "react";
@@ -36,12 +37,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Something went wrong</Text>
-        <Text style={styles.subtitle}>
-          حدث خطأ ما — please try again.
-        </Text>
+        <Text style={styles.title}>{i18n.t("errors.somethingWentWrong")}</Text>
+        <Text style={styles.subtitle}>{i18n.t("errors.tryAgainSubtitle")}</Text>
         <TouchableOpacity style={styles.btn} onPress={this.reload} activeOpacity={0.85}>
-          <Text style={styles.btnText}>Reload</Text>
+          <Text style={styles.btnText}>{i18n.t("errors.reload")}</Text>
         </TouchableOpacity>
       </View>
     );

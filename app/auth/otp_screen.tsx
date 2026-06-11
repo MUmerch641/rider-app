@@ -1,6 +1,5 @@
 import { authApi, type ApiError } from "@/api";
 import { Button, ScreenHeader } from "@/components/ui";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
@@ -10,6 +9,7 @@ import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    I18nManager,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -24,8 +24,7 @@ const RESEND_SECONDS = 60;
 
 export default function OtpScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const font = useAppFont();
 
   const params = useLocalSearchParams<{ contact?: string; channel?: string }>();
@@ -134,8 +133,9 @@ export default function OtpScreen() {
       <LinearGradient
         colors={["#DFCFFF", "#F5EEFF", "#FFFFFF", "#FFF8F0"]}
         locations={[0, 0.1, 0.6, 1]}
-        start={{ x: rtl ? 0.9 : 0, y: 0 }}
-        end={{ x: rtl ? 0 : 0.9, y: 1 }}
+        // Gradient coords don't auto-mirror under native RTL — flip manually.
+        start={{ x: I18nManager.isRTL ? 0.9 : 0, y: 0 }}
+        end={{ x: I18nManager.isRTL ? 0 : 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView

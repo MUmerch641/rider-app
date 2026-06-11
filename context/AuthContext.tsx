@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { Platform } from "react-native";
@@ -16,6 +17,10 @@ import {
   type LoginRequest,
   type ProfileUpdateRequest,
 } from "@/api";
+import {
+  clearLocationQueue,
+  stopDriverTracking,
+} from "@/utils/locationTracking";
 import {
   configurePushHandler,
   registerForPushNotifications,
@@ -50,6 +55,7 @@ const buildDeviceInfo = () => {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [driver, setDriver] = useState<Driver | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isLoggingOutRef = useRef(false);
 
   const persistDriver = useCallback(async (next: Driver | null) => {
     setDriver(next);
@@ -130,15 +136,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    // Optimistic logout (bug #1): tell the server in the background (best-effort)
-    // and clear local auth + driver state immediately so the app returns to the
-    // login screen at once. Previously this awaited authApi.logout() first, so a
-    // slow/hanging request (or the 401→refresh retry) made logout take ~10s.
-    void authApi.logout().catch(() => {
-      // best-effort; the session is already cleared locally
-    });
-    setDriver(null);
-    await clearAllAuth();
+    // Single-shot: concurrent calls (sign-out button + a racing 401 handler)
+    // each flipped state and churned renders on the login screen.
+    if (isLoggingOutRef.current) return;
+    isLoggingOutRef.current = true;
+    try {
+      // Optimistic logout (bug #1): tell the server in the background (best-effort)
+      // and clear local auth + driver state immediately so the app returns to the
+      // login screen at once. Previously this awaited authApi.logout() first, so a
+      // slow/hanging request (or the 401→refresh retry) made logout take ~10s.
+      void authApi.logout().catch(() => {
+        // best-effort; the session is already cleared locally
+      });
+      // Stop GPS streaming, then drop any offline-buffered points so they can't
+      // be flushed under a different account on this device.
+      void stopDriverTracking()
+        .then(() => clearLocationQueue())
+        .catch(() => undefined);
+      setDriver(null);
+      await clearAllAuth();
+    } finally {
+      isLoggingOutRef.current = false;
+    }
   }, []);
 
   const refreshProfile = useCallback(async (): Promise<Driver | null> => {

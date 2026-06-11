@@ -193,7 +193,6 @@ interface InputProps extends TextInputProps {
   containerStyle?: ViewStyle;
   prefix?: string;
   borderColor?: string;
-  rtl?: boolean;
 }
 
 export function Input({
@@ -205,28 +204,23 @@ export function Input({
   containerStyle,
   prefix,
   borderColor,
-  rtl = false,
   ...props
 }: InputProps) {
   const font = useAppFont();
   const [visible, setVisible] = useState(false);
   const hasError = !!error;
-  const align = rtl ? "right" : "left";
-  const row = rtl ? "row-reverse" : "row";
 
   return (
+    // Native RTL mirrors rows and text alignment automatically.
     <View style={[styles.wrapper, containerStyle]}>
       {label && (
-        <Text
-          style={[styles.label, { textAlign: align, fontFamily: font.medium }]}
-        >
+        <Text style={[styles.label, { fontFamily: font.medium }]}>
           {label}
         </Text>
       )}
       <View
         style={[
           styles.container,
-          { flexDirection: row },
           hasError && styles.containerError,
           borderColor ? { borderColor, borderWidth: 1.5 } : null,
           props.editable === false && styles.containerDisabled,
@@ -243,11 +237,7 @@ export function Input({
         <TextInput
           {...props}
           secureTextEntry={isPassword && !visible}
-          style={[
-            styles.input,
-            { textAlign: align, fontFamily: font.regular },
-            props.style,
-          ]}
+          style={[styles.input, { fontFamily: font.regular }, props.style]}
           placeholderTextColor={Colors.textMuted}
           autoCapitalize="none"
         />
@@ -267,12 +257,7 @@ export function Input({
         ) : null}
       </View>
       {hasError && (
-        <Text
-          style={[
-            styles.errorText,
-            { textAlign: align, fontFamily: font.regular },
-          ]}
-        >
+        <Text style={[styles.errorText, { fontFamily: font.regular }]}>
           {error}
         </Text>
       )}
@@ -392,7 +377,6 @@ interface PhoneInputProps {
   onChangePhone: (v: string) => void;
   error?: string;
   label?: string;
-  rtl?: boolean;
 }
 
 export function PhoneInput({
@@ -402,25 +386,21 @@ export function PhoneInput({
   onChangePhone,
   error,
   label,
-  rtl = false,
 }: PhoneInputProps) {
   const font = useAppFont();
   const [pickerVisible, setPickerVisible] = useState(false);
-  const align = rtl ? "right" : "left";
-  const row = rtl ? "row-reverse" : "row";
   const selectedCountry = COUNTRIES.find((c) => c.code === countryCode);
   const { t } = useTranslation();
 
   return (
+    // Native RTL mirrors rows and text alignment automatically.
     <View style={styles.wrapper}>
       {label && (
-        <Text
-          style={[styles.label, { textAlign: align, fontFamily: font.medium }]}
-        >
+        <Text style={[styles.label, { fontFamily: font.medium }]}>
           {label}
         </Text>
       )}
-      <View style={[styles.phoneRow, { flexDirection: row }]}>
+      <View style={styles.phoneRow}>
         <TouchableOpacity
           style={[
             styles.container,
@@ -446,10 +426,7 @@ export function PhoneInput({
           <TextInput
             value={phone}
             onChangeText={onChangePhone}
-            style={[
-              styles.input,
-              { textAlign: align, fontFamily: font.regular },
-            ]}
+            style={[styles.input, { fontFamily: font.regular }]}
             keyboardType="phone-pad"
             placeholderTextColor={Colors.textMuted}
             placeholder={t("auth.phone")}
@@ -457,12 +434,7 @@ export function PhoneInput({
         </View>
       </View>
       {!!error && (
-        <Text
-          style={[
-            styles.errorText,
-            { textAlign: align, fontFamily: font.regular },
-          ]}
-        >
+        <Text style={[styles.errorText, { fontFamily: font.regular }]}>
           {error}
         </Text>
       )}

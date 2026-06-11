@@ -1,4 +1,3 @@
-import { isRTL } from "@/constants/i18n";
 import { Colors } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
@@ -38,20 +37,14 @@ interface PeriodTabsProps {
 
 export function PeriodTabs({ activeTab, onChange, style }: PeriodTabsProps) {
   const font = useAppFont();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
 
   return (
+    // Native RTL mirrors the tab row automatically.
     <View
       style={[styles.wrapper, style, { backgroundColor: Colors.background }]}
     >
-      <View
-        style={[
-          styles.container,
-          { gap: rtl ? spacing.xxl : spacing.lg },
-          { transform: rtl ? [{ scaleX: -1 }] : [] },
-        ]}
-      >
+      <View style={styles.container}>
         {TABS.map((tab) => {
           const isActive = tab === activeTab;
           return (
@@ -59,7 +52,7 @@ export function PeriodTabs({ activeTab, onChange, style }: PeriodTabsProps) {
               key={tab}
               onPress={() => onChange(tab)}
               activeOpacity={0.75}
-              style={[styles.tab, { transform: rtl ? [{ scaleX: -1 }] : [] }]}
+              style={styles.tab}
             >
               {isActive ? (
                 <MaskedView
@@ -112,6 +105,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: spacing.lg,
     flexDirection: "row",
+    gap: spacing.lg,
   },
   tab: {
     flex: 1,

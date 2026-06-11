@@ -74,6 +74,16 @@
     "passwordEmpty": "كلمة المرور مطلوبة",
     "confirmEmpty": "يرجى تأكيد كلمة المرور"
   },
+  "changePassword": {
+    "title": "تغيير كلمة المرور",
+    "subtitle": "أدخل كلمة المرور الحالية ثم عيّن كلمة مرور جديدة",
+    "currentPassword": "كلمة المرور الحالية",
+    "currentPasswordPlace": "أدخل كلمة المرور الحالية",
+    "currentEmpty": "كلمة المرور الحالية مطلوبة",
+    "currentWrong": "كلمة المرور الحالية غير صحيحة",
+    "failedTitle": "فشل التغيير",
+    "failedBody": "تعذّر تغيير كلمة المرور. يرجى المحاولة مرة أخرى."
+  },
   "common": {
     "open": "مفتوح",
     "close": "مغلق",
@@ -112,7 +122,9 @@
   "location": {
     "chooseLocation": "اختر الموقع",
     "searchLocation": "ابحث عن موقع",
-    "submitLocation": "تأكيد الموقع"
+    "submitLocation": "تأكيد الموقع",
+    "trackingNotificationTitle": "تتبع التوصيل نشط",
+    "trackingNotificationBody": "يشارك OnWay موقعك المباشر مع العملاء أثناء كونك متاحًا للتوصيل."
   },
   "inbox": {
     "title": "صندوق الوارد",
@@ -153,7 +165,9 @@
     "orderRadius": "نطاق الطلبات",
     "reviews": "التقييمات",
     "changePassword": "تغيير كلمة المرور",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "signOutConfirmTitle": "تسجيل الخروج؟",
+    "signOutConfirmMessage": "لن تستلم طلبات جديدة حتى تسجّل الدخول مرة أخرى."
   },
   "reviews": {
     "title": "التقييمات",
@@ -282,11 +296,20 @@
     "decline": "رفض",
     "accept": "قبول",
     "acceptedOrders": "الطلبات المقبولة",
-    "delivered": "تم التوصيل",
-    "goToRestaurant": "اذهب إلى المطعم"
+    "status": {
+      "accepted": "مقبول",
+      "arrived_store": "في المتجر",
+      "picked_up": "تم الاستلام",
+      "on_the_way": "في الطريق",
+      "arrived": "وصل"
+    }
   },
   "onmap": {
-    "calculateRoute": "جاري حساب المسار..."
+    "calculateRoute": "جاري حساب المسار...",
+    "acquiringLocation": "جارٍ تحديد الموقع…",
+    "acceptFailedTitle": "تعذّر قبول الطلب",
+    "offerUnavailableMessage": "انتهت صلاحية هذا العرض أو استلمه سائق آخر.",
+    "offerNetworkMessage": "مشكلة في الشبكة — تحقق من اتصالك وحاول مرة أخرى."
   },
   "delivery": {
     "activeDelivery": "توصيل نشط",
@@ -304,7 +327,6 @@
     "callDesc": "اتصل عند تسليم الطعام",
     "ringing": "رنين",
     "ringingDesc": "اضغط جرس الباب عند الوصول",
-    "arrivedAtRestaurant": "وصلت إلى المطعم",
     "arrivedAtCustomer": "وصلت إلى الزبون",
     "pickedUp": "تم الاستلام",
     "onTheWay": "في الطريق",
@@ -314,9 +336,10 @@
     "orderDetails": "تفاصيل الطلب",
     "support": "الدعم",
     "arrivedFailed": "تعذّر تأكيد الوصول",
-    "deliverFailed": "تعذّر تأكيد التسليم",
     "statusFailed": "تعذّر تحديث الحالة",
-    "requestCancellation": "طلب إلغاء"
+    "requestCancellation": "طلب إلغاء",
+    "approximateRoute": "مسار تقريبي",
+    "delivered": "تم التسليم"
   },
   "orderHeader": {
     "order": "طلب",
@@ -326,11 +349,6 @@
   "driverCard": {
     "availableBalance": "الرصيد المتاح",
     "totalEarning": "إجمالي الأرباح"
-  },
-  "driver": {
-    "online": "نشط",
-    "offline": "غير نشط",
-    "earningsToday": "أرباح اليوم"
   },
   "stats": {
     "efficiencyStat": "إحصائية الكفاءة",
@@ -396,7 +414,12 @@
     "updateFailed": "فشل تحديث الملف الشخصي",
     "deleteFailed": "فشل حذف الحساب",
     "accountDeleted": "تم حذف الحساب",
-    "accountDeletedMsg": "تم حذف حسابك."
+    "accountDeletedMsg": "تم حذف حسابك.",
+    "changePhoto": "تغيير الصورة",
+    "photoPermTitle": "الإذن مطلوب",
+    "photoPermBody": "يرجى السماح بالوصول إلى مكتبة الصور لتغيير صورة ملفك الشخصي.",
+    "uploadFailedTitle": "فشل الرفع",
+    "uploadFailedBody": "تعذّر رفع الصورة. يرجى المحاولة مرة أخرى."
   },
   "orderRequestCard": {
     "orderItems": "عناصر الطلب",
@@ -418,5 +441,22 @@
     "sentTitle": "تم إرسال الطلب",
     "sentMessage": "تم إبلاغ الدعم وسيعيد تعيين هذا الطلب. يمكنك متابعة التوصيل حتى ذلك الحين.",
     "failedTitle": "تعذر إرسال الطلب"
+  },
+  "errors": {
+    "somethingWentWrong": "حدث خطأ ما",
+    "tryAgainSubtitle": "حدث خطأ غير متوقع — يرجى المحاولة مرة أخرى.",
+    "reload": "إعادة التحميل"
+  },
+  "notifications": {
+    "newOrdersChannel": "طلبات جديدة",
+    "newOrderTitle": "طلب رقم {{number}}",
+    "newOrderBody": "توصيل جديد من {{store}}",
+    "storeFallback": "المتجر"
+  },
+  "orderStatusErrors": {
+    "gpsRequired": "تعذّر قراءة موقعك عبر GPS. فعّل خدمات الموقع وحاول مرة أخرى.",
+    "outOfRange": "أنت على بُعد {{distance}} متر — اقترب إلى أقل من {{threshold}} متر للمتابعة.",
+    "outOfRangeGeneric": "لست قريبًا بما يكفي بعد — اقترب أكثر وحاول مرة أخرى.",
+    "updateFailed": "تعذّر تحديث حالة الطلب. حاول مرة أخرى."
   }
 }

@@ -1,6 +1,5 @@
 import type { ApiError } from "@/api";
 import { Button, Input, PhoneInput } from "@/components/ui";
-import { isRTL } from "@/constants/i18n";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAuth } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -68,8 +67,7 @@ function RiderCircle() {
 
 export default function AuthScreen() {
   const router = useNavGuard();
-  const { t, i18n } = useTranslation();
-  const rtl = isRTL(i18n.language);
+  const { t } = useTranslation();
   const font = useAppFont();
   const { login } = useAuth();
 
@@ -150,7 +148,6 @@ export default function AuthScreen() {
               if (phoneError) setPhoneError("");
             }}
             error={phoneError}
-            rtl={rtl}
           />
 
           <Input
@@ -163,7 +160,6 @@ export default function AuthScreen() {
               if (passwordError) setPasswordError("");
             }}
             error={passwordError}
-            rtl={rtl}
           />
 
           {/* Gradient Login button */}
@@ -184,7 +180,8 @@ export default function AuthScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.forgotRow, rtl && styles.forgotRowRTL]}
+            // Native RTL flips alignSelf flex-start automatically.
+            style={styles.forgotRow}
             onPress={() => router.push("/auth/forgetPassword_screen")}
           >
             <Text style={[styles.forgotText, { fontFamily: font.medium }]}>
@@ -277,9 +274,6 @@ const styles = StyleSheet.create({
   /* ── Forgot ── */
   forgotRow: {
     alignSelf: "flex-start",
-  },
-  forgotRowRTL: {
-    alignSelf: "flex-end",
   },
   forgotText: {
     fontSize: FontSize.sm,
