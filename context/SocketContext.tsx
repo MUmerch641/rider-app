@@ -19,6 +19,8 @@ import {
   SOCKET_URL,
   apiClient,
   ENDPOINTS,
+  ordersApi,
+  type OrderAssignment,
   type SocketNewOrderPayload,
   type SocketNotificationNewPayload,
   type SocketOrderCancelledPayload,
@@ -326,6 +328,76 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
+
+  // ── Poll fallback: ring for offers the socket missed ─────────────────────
+  // If the 'new-order' event is lost (socket down, expired session at connect
+  // time, app just resumed), the assignment still appears in GET /driver/orders
+  // as status 'assigned'. Poll while online and synthesize the offer card +
+  // alarm for any assigned row we haven't announced yet. First pass seeds
+  // silently so app-launch doesn't re-ring for an offer already on screen.
+  const announcedOfferIdsRef = useRef<Set<string>>(new Set());
+  const offerPollSeededRef = useRef(false);
+  const newOrderRef = useRef<SocketNewOrderPayload | null>(null);
+  newOrderRef.current = newOrder;
+  useEffect(() => {
+    if (!isAuthenticated || !driver?.isOnline) return;
+    let cancelled = false;
+    const checkAssigned = async () => {
+      let list: OrderAssignment[];
+      try {
+        list = await ordersApi.list();
+      } catch {
+        return; // network/auth hiccup — next tick retries
+      }
+      if (cancelled) return;
+      const assigned = list.filter((a) => a.status === "assigned");
+      if (!offerPollSeededRef.current) {
+        offerPollSeededRef.current = true;
+        assigned.forEach((a) => announcedOfferIdsRef.current.add(a.orderId));
+        return;
+      }
+      for (const a of assigned) {
+        if (announcedOfferIdsRef.current.has(a.orderId)) continue;
+        announcedOfferIdsRef.current.add(a.orderId);
+        if (newOrderRef.current) continue; // an offer is already ringing
+        const assignedAtMs = a.assignedAt ? Date.parse(a.assignedAt) : NaN;
+        const elapsed = Number.isFinite(assignedAtMs)
+          ? Math.floor((Date.now() - assignedAtMs) / 1000)
+          : 0;
+        const expiresInSeconds = Math.max(5, 60 - elapsed);
+        const store = a.order?.store;
+        if (!store?.geoLocation) continue; // not enough data for the card
+        setNewOrder({
+          orderId: a.orderId,
+          orderNumber: a.order?.orderNumber ?? "",
+          store: {
+            id: store.id,
+            name: store.name,
+            logoUrl: store.avatar ?? null,
+            address: store.address ?? "",
+            location: store.geoLocation,
+          },
+          customer: a.order?.deliveryAddress
+            ? { address: [a.order.deliveryAddress.building, a.order.deliveryAddress.street].filter(Boolean).join(", "), location: a.order.deliveryAddress.geoLocation }
+            : undefined,
+          items: [],
+          total: a.order?.total ?? 0,
+          currency: a.order?.currency ?? "IQD",
+          distanceKm: a.distanceKm ?? 0,
+          estimatedMinutes: a.estimatedMinutes ?? 0,
+          expiresInSeconds,
+        });
+        void startAlarmRef.current();
+        break;
+      }
+    };
+    void checkAssigned();
+    const id = setInterval(checkAssigned, 20_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [isAuthenticated, driver?.isOnline]);
 
   // Acknowledging an order (accept/decline) clears it and silences the alarm.
   const clearNewOrder = useCallback(() => {

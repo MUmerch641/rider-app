@@ -99,7 +99,14 @@
       ],
       "expo-font",
       "expo-localization",
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "OnWay Driver uses your photo library so you can set a profile photo.",
+          "cameraPermission": "OnWay Driver uses the camera so you can take a profile photo."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
