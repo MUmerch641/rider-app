@@ -79,7 +79,10 @@ export async function setAppLanguage(code: AppLanguage): Promise<void> {
   I18nManager.forceRTL(shouldBeRTL);
 
   // In dev, auto-reloading just fights Fast Refresh; the setting still persists.
-  if (__DEV__) return;
+  // Reload in dev too — skipping it (an old guard) left the first session
+  // after a language switch in the WRONG layout direction on simulators,
+  // while production reloaded correctly. reloadAppAsync works in dev (it
+  // re-requests the bundle from Metro), so behavior now matches prod.
 
   // Defer the single reload so this handler unwinds and the runtime is torn
   // down at an idle point, not mid event-loop tick.
