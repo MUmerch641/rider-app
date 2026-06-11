@@ -339,7 +339,10 @@
     "statusFailed": "تعذّر تحديث الحالة",
     "requestCancellation": "طلب إلغاء",
     "approximateRoute": "مسار تقريبي",
-    "delivered": "تم التسليم"
+    "delivered": "تم التسليم",
+    "whatsappUnavailableTitle": "واتساب غير متوفر",
+    "whatsappUnavailableMsg": "يبدو أن واتساب غير مثبّت على هذا الجهاز. ثبّته للتواصل مع الزبون.",
+    "whatsappOrderMessage": "مرحباً، أنا سائق أونواي — بخصوص الطلب #{{orderNumber}}."
   },
   "orderHeader": {
     "order": "طلب",

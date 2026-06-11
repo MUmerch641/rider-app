@@ -339,7 +339,10 @@
     "statusFailed": "Cannot update status",
     "requestCancellation": "Request Cancellation",
     "approximateRoute": "Approximate route",
-    "delivered": "Delivered"
+    "delivered": "Delivered",
+    "whatsappUnavailableTitle": "WhatsApp not available",
+    "whatsappUnavailableMsg": "WhatsApp doesn't seem to be installed on this device. Install it to contact the customer.",
+    "whatsappOrderMessage": "Hi, this is your OnWay driver — about order #{{orderNumber}}."
   },
   "orderHeader": {
     "order": "Order",

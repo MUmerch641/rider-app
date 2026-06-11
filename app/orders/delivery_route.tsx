@@ -43,6 +43,7 @@ import {
 } from "react-native";
 import { translateOrderStatusError } from "@/utils/orderStatusErrors";
 import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
+import { openWhatsAppChat } from "@/utils/whatsapp";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -481,8 +482,30 @@ export default function DeliveryRoute() {
   // else the full fetched route.
   const displayedRoute = trimmedRoute ?? routeCoordinates;
 
-  const handleCall = () => {
-    if (callPhone) Linking.openURL(`tel:${callPhone}`).catch(() => undefined);
+  const handleCall = async () => {
+    if (!callPhone) return; // button is disabled, but guard anyway
+    if (phase === "pickup") {
+      // Store contact stays a plain phone call — WhatsApp routing only
+      // applies to customer ↔ rider contact.
+      Linking.openURL(`tel:${callPhone}`).catch(() => undefined);
+      return;
+    }
+    // Customer contact opens a WhatsApp chat (WhatsApp can't deep-link a
+    // voice call) prefilled with the order number so the customer has
+    // context; the rider can start a WhatsApp call from inside the chat.
+    const opened = await openWhatsAppChat(
+      callPhone,
+      t("delivery.whatsappOrderMessage", {
+        orderNumber: assignment?.order?.orderNumber ?? "",
+      }),
+    );
+    if (!opened) {
+      dialog.show({
+        title: t("delivery.whatsappUnavailableTitle"),
+        message: t("delivery.whatsappUnavailableMsg"),
+        tone: "error",
+      });
+    }
   };
 
   const handleArrived = async () => {
@@ -758,6 +781,9 @@ export default function DeliveryRoute() {
               }
               activeTab="navigate"
               onCall={handleCall}
+              // No phone yet (legacy orders served by a backend without the
+              // customer block, or payload still loading) — dim + disable.
+              callDisabled={!callPhone}
               onArrived={handleArrived}
               onCancelDelivery={() => setCancelModalOpen(true)}
               onNavigate={() => {}}

@@ -64,6 +64,9 @@ interface DeliveryBottomSheetProps {
    *  customer. Falls back to the "Picked Up" label. */
   primaryActionLabel?: string;
   onCall?: () => void;
+  /** Contact phone for the current phase is missing (e.g. legacy order
+   *  payloads without the customer block) — dim + disable the button. */
+  callDisabled?: boolean;
   onArrived?: () => void;
   onCancelDelivery?: () => void;
   onNavigate?: () => void;
@@ -79,6 +82,7 @@ export function DeliveryBottomSheet({
   restaurantLocation = "Sulaimany-baxtyari",
   primaryActionLabel,
   onCall,
+  callDisabled = false,
   onArrived,
   onCancelDelivery,
   onNavigate,
@@ -125,8 +129,9 @@ export function DeliveryBottomSheet({
 
         {/* Phone button */}
         <TouchableOpacity
-          style={styles.phoneBtn}
+          style={[styles.phoneBtn, callDisabled && styles.phoneBtnDisabled]}
           onPress={onCall}
+          disabled={callDisabled}
           activeOpacity={0.75}
         >
           <SvgXml xml={PHONE_SVG} width={scale(22)} height={scale(22)} />
@@ -253,6 +258,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     alignItems: "center",
     justifyContent: "center",
+  },
+  phoneBtnDisabled: {
+    opacity: 0.4,
   },
 
   /* Arrived button */

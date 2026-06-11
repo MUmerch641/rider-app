@@ -339,7 +339,10 @@
     "statusFailed": "ناتوانیت دۆخ نوێ بکەیتەوە",
     "requestCancellation": "داواکردنی هەڵوەشاندنەوە",
     "approximateRoute": "ڕێگای نزیکەیی",
-    "delivered": "گەیەندرا"
+    "delivered": "گەیەندرا",
+    "whatsappUnavailableTitle": "واتسئاپ بەردەست نییە",
+    "whatsappUnavailableMsg": "وا دیارە واتسئاپ لەم ئامێرەدا دانەمەزراوە. دایبمەزرێنە بۆ پەیوەندیکردن بە کڕیارەوە.",
+    "whatsappOrderMessage": "سڵاو، من شۆفێرەکەی ئۆنوەیم — دەربارەی داواکاری #{{orderNumber}}."
   },
   "orderHeader": {
     "order": "داواکاری",
