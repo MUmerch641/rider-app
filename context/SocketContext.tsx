@@ -176,43 +176,51 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       const p = ensureAlarmPlayer();
       if (!p) return;
 
-      // expo-audio does NOT auto-reset position — seek to start so a previously
-      // played/paused alarm actually restarts instead of sitting at the end.
-      try {
-        p.seekTo(0);
-      } catch (e) {
-        console.warn("alarm: seekTo failed", e);
-      }
-
-      // The asset loads asynchronously; play() before it's loaded no-ops. Retry
-      // until the player reports it's truly playing (or we give up ~2s in).
+      // The asset loads asynchronously. expo-audio flips `playing` to true the
+      // instant play() is called — even while the source is still buffering and
+      // NOT decoded (isLoaded:false, duration:NaN) — which produces a silent
+      // "playing" state. So we must gate on `isLoaded`, not `playing`: keep
+      // re-issuing play() (and seekTo(0), which only takes once the source is
+      // loaded) until the player is genuinely loaded AND playing. Give up ~2s in.
       if (playRetryRef.current) clearTimeout(playRetryRef.current);
       let attempts = 0;
+      const ready = () => p.isLoaded && p.playing;
       const pump = () => {
         if (alarmPlayerRef.current !== p) return; // stopped or rebuilt meanwhile
         try {
+          // Reset to the start each tick so a previously played/paused alarm
+          // restarts; harmless to repeat and only effective once loaded.
+          // seekTo is async and rejects on an unloaded source — swallow it.
+          void p.seekTo(0)?.catch(() => {});
           p.play();
         } catch (e) {
           console.warn("alarm: play() threw", e);
         }
         attempts += 1;
-        if (!p.playing && attempts < 16) {
+        if (!ready() && attempts < 16) {
           playRetryRef.current = setTimeout(pump, 120);
-        } else if (
-          !p.playing &&
-          builtSoundKeyRef.current?.startsWith("remote:")
-        ) {
-          // The downloaded custom sound never started (corrupt / unsupported
+        } else if (!ready() && builtSoundKeyRef.current?.startsWith("remote:")) {
+          // The downloaded custom sound never loaded (corrupt / unsupported
           // file) — rebuild with the bundled preset and ring with that.
           remoteSoundUriRef.current = null;
           const fallback = ensureAlarmPlayer();
           if (fallback && fallback !== p) {
-            try {
-              fallback.seekTo(0);
-              fallback.play();
-            } catch (e2) {
-              console.warn("alarm: fallback play failed", e2);
-            }
+            let fbAttempts = 0;
+            const fbReady = () => fallback.isLoaded && fallback.playing;
+            const fbPump = () => {
+              if (alarmPlayerRef.current !== fallback) return;
+              try {
+                void fallback.seekTo(0)?.catch(() => {});
+                fallback.play();
+              } catch (e2) {
+                console.warn("alarm: fallback play failed", e2);
+              }
+              fbAttempts += 1;
+              if (!fbReady() && fbAttempts < 16) {
+                playRetryRef.current = setTimeout(fbPump, 120);
+              }
+            };
+            fbPump();
           }
         }
       };
