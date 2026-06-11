@@ -44,7 +44,7 @@ export default function OrdersScreen() {
   const langKey: LangKey = (i18n.language as LangKey) || "en";
 
   const { driver, updateStatus } = useAuth();
-  const { newOrder, cancelledOrder } = useSocket();
+  const { newOrder, cancelledOrder, clearNewOrder, stopAlarm } = useSocket();
 
   const [assignments, setAssignments] = useState<OrderAssignment[]>([]);
   const [todayEarnings, setTodayEarnings] = useState<string>("0");
@@ -138,6 +138,10 @@ export default function OrdersScreen() {
     setActing((m) => ({ ...m, [orderId]: true }));
     try {
       await ordersApi.accept(orderId);
+      // Accepting from this tab must also silence/clear the offer card+alarm
+      // (the socket/poll offer for this order may be ringing on the map tab).
+      stopAlarm();
+      if (newOrder?.orderId === orderId) clearNewOrder();
       await refreshAssignments();
       router.push({
         pathname: "/orders/delivery_route",
@@ -155,6 +159,8 @@ export default function OrdersScreen() {
     setActing((m) => ({ ...m, [orderId]: true }));
     try {
       await ordersApi.reject(orderId, { reason: "too_far" });
+      stopAlarm();
+      if (newOrder?.orderId === orderId) clearNewOrder();
       await refreshAssignments();
     } catch (err) {
       console.warn("Decline failed:", (err as ApiError)?.message);

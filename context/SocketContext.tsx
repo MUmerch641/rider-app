@@ -15,6 +15,7 @@ import {
   type AudioPlayer,
 } from "expo-audio";
 import * as Haptics from "expo-haptics";
+import { AppState } from "react-native";
 import {
   SOCKET_URL,
   apiClient,
@@ -127,12 +128,16 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       playRetryRef.current = null;
     }
     try {
-      // Pause + rewind so the next order starts the siren cleanly.
+      // Pause AND release the native player — a paused instance could still be
+      // resumed by a surviving pump tick or a rebuilt effect; releasing makes
+      // silence unconditional. The next alarm rebuilds a fresh player.
       alarmPlayerRef.current?.pause();
-      alarmPlayerRef.current?.seekTo(0);
+      alarmPlayerRef.current?.remove();
     } catch (e) {
-      console.warn("alarm: pause failed", e);
+      console.warn("alarm: stop failed", e);
     }
+    alarmPlayerRef.current = null;
+    builtSoundKeyRef.current = undefined;
     if (vibrateTimerRef.current) {
       clearInterval(vibrateTimerRef.current);
       vibrateTimerRef.current = null;
@@ -351,6 +356,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
       if (cancelled) return;
       const assigned = list.filter((a) => a.status === "assigned");
+      // If the offer on screen is no longer 'assigned' to us (accepted from
+      // the Orders tab, expired, or taken by re-dispatch), clear + silence it
+      // — covers every accept path that bypasses the offer card.
+      const current = newOrderRef.current;
+      if (current && !assigned.some((a) => a.orderId === current.orderId)) {
+        stopAlarm();
+        setNewOrder(null);
+      }
       if (!offerPollSeededRef.current) {
         offerPollSeededRef.current = true;
         assigned.forEach((a) => announcedOfferIdsRef.current.add(a.orderId));
@@ -397,7 +410,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
       clearInterval(id);
     };
-  }, [isAuthenticated, driver?.isOnline]);
+  }, [isAuthenticated, driver?.isOnline, stopAlarm]);
+
+  // Backgrounding the app must not leave the siren looping — the FCM push is
+  // the background alerting channel. Foreground return re-rings via poll/socket
+  // only if a fresh offer arrives.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active") stopAlarm();
+    });
+    return () => sub.remove();
+  }, [stopAlarm]);
 
   // Acknowledging an order (accept/decline) clears it and silences the alarm.
   const clearNewOrder = useCallback(() => {
