@@ -28,7 +28,8 @@
           "location",
           "fetch",
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
