@@ -116,7 +116,6 @@ export default function OrdersScreen() {
     () => assignments.filter((a) => a.status === "assigned"),
     [assignments],
   );
-  const activeOrder = activeOrders[0] ?? null;
 
   const handleToggle = useCallback(
     async (_value: boolean) => {
@@ -256,9 +255,13 @@ export default function OrdersScreen() {
           </View>
         </View>
 
-        {/* Active Order Card */}
-        {activeOrder && (
-          <View style={styles.activeCard}>
+        {/* Active Order Cards — a rider can hold up to MAX_ACTIVE_ORDERS_PER_DRIVER
+            (2) at once, so render EVERY active assignment, not just the first.
+            The badge above counts activeOrders.length; this keeps the rendered
+            cards in lock-step with that count. Each card navigates with its OWN
+            order id. */}
+        {activeOrders.map((activeOrder) => (
+          <View key={activeOrder.id} style={styles.activeCard}>
             <View style={styles.activeTop}>
               <View
                 style={{
@@ -358,7 +361,7 @@ export default function OrdersScreen() {
               </TouchableOpacity>
             </LinearGradient>
           </View>
-        )}
+        ))}
 
         {/* ── New Orders Nearby ── */}
         <View style={styles.newOrder}>

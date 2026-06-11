@@ -25,7 +25,7 @@ import { formatCurrency } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { nextStep } from "@/utils/orderLifecycle";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -74,6 +74,12 @@ interface AcceptedOrdersSheetProps {
   maxHeight?: number;
   /** Start collapsed? Default: true */
   defaultCollapsed?: boolean;
+  /**
+   * Monotonic counter — every time it changes the sheet force-expands. The map
+   * screen bumps it on focus so returning from the delivery-route screen always
+   * re-reveals the order list instead of leaving the rider on a bare header.
+   */
+  expandSignal?: number;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -86,11 +92,19 @@ export function AcceptedOrdersSheet({
   style,
   maxHeight = verticalScale(460),
   defaultCollapsed = true,
+  expandSignal,
 }: AcceptedOrdersSheetProps) {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const langKey: LangKey = (i18n.language as LangKey) || "en";
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  // Force the list open whenever the parent bumps expandSignal (screen focus).
+  // The rider can still collapse it manually afterwards; the next focus reopens.
+  useEffect(() => {
+    if (expandSignal === undefined) return;
+    setCollapsed(false);
+  }, [expandSignal]);
 
   return (
     <View style={[styles.container, style]}>

@@ -24,6 +24,7 @@ import {
 import {
   configurePushHandler,
   registerForPushNotifications,
+  setupNotificationTapHandling,
 } from "@/utils/pushToken";
 import { clearAllAuth, driverStorage, tokenStorage } from "@/utils/storage";
 
@@ -82,6 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     configurePushHandler();
+    // Tapping a push must deep-link straight to its target (order → live route,
+    // support → chat) instead of dumping the rider on the inbox list.
+    setupNotificationTapHandling();
     let cancelled = false;
     (async () => {
       const [stored, accessToken] = await Promise.all([

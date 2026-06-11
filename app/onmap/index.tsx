@@ -92,6 +92,11 @@ export default function OnMap() {
   const [sheetHeight] = useState(verticalScale(160));
   const [locating, setLocating] = useState(false);
   const [gpsReady, setGpsReady] = useState(false); // true once first fix arrives
+  // Bumped on every screen focus. Drives the AcceptedOrdersSheet to re-expand
+  // when the rider returns from the delivery-route screen so the accepted-order
+  // list is reliably visible again (it previously only reappeared after a full
+  // tab switch because the sheet kept its collapsed state across the blur).
+  const [focusTick, setFocusTick] = useState(0);
 
   // Live driver position — null until GPS provides a real fix
   const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
@@ -117,10 +122,14 @@ export default function OnMap() {
   }, []);
 
   // Refetch on mount + every focus so deliveries advanced on other screens
-  // (active delivery / route) surface here immediately.
+  // (active delivery / route) surface here immediately. The focusTick bump
+  // re-expands the accepted-orders sheet on return (see AcceptedOrdersSheet
+  // expandSignal) — the screen stays mounted under the pushed route, so its
+  // collapsed state would otherwise persist and hide the list.
   useFocusEffect(
     useCallback(() => {
       void refreshAssignments();
+      setFocusTick((n) => n + 1);
     }, [refreshAssignments]),
   );
 
@@ -893,12 +902,19 @@ export default function OnMap() {
           />
         )}
 
-        <AcceptedOrdersSheet
-          orders={sheetOrders}
-          advancingIds={advancing}
-          onOrderPress={handleOrderPress}
-          onAdvance={handleAdvance}
-        />
+        {/* Only mount the sheet when the rider actually holds active orders —
+            an empty "0" sheet was previously always pinned to the map. The
+            expandSignal (bumped on focus) re-opens it whenever the rider returns
+            from the live-navigation screen. */}
+        {sheetOrders.length > 0 && (
+          <AcceptedOrdersSheet
+            orders={sheetOrders}
+            advancingIds={advancing}
+            onOrderPress={handleOrderPress}
+            onAdvance={handleAdvance}
+            expandSignal={focusTick}
+          />
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );

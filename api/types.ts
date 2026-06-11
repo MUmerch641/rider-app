@@ -340,6 +340,9 @@ export type DriverNotification = {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  // Backend-stored deep-link hint (e.g. `/orders/<id>`, `/support/<ticketId>`).
+  // Resolved to a real in-app route via utils/notificationRoutes — never used raw.
+  actionUrl?: string | null;
   isRead: boolean;
   createdAt: string;
 };

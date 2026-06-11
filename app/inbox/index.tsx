@@ -32,6 +32,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { AVATAR_PLACEHOLDER } from "@/utils/placeholders";
+import { resolveNotificationRoute } from "@/utils/notificationRoutes";
 
 type InboxTab = "notification" | "support";
 
@@ -41,6 +42,10 @@ type InboxNotificationItem = {
   body: string;
   time: string;
   unread: boolean;
+  // Routing inputs so a tap can deep-link to the notification's target page.
+  type?: string;
+  data?: Record<string, unknown>;
+  actionUrl?: string | null;
 };
 
 type InboxNotificationGroup = {
@@ -90,6 +95,9 @@ function groupNotifications(
       body: n.body,
       time: formatRelativeTime(n.createdAt),
       unread: !n.isRead,
+      type: n.type,
+      data: n.data,
+      actionUrl: n.actionUrl,
     };
     if (k === today) buckets.today.push(item);
     else if (k === yesterday) buckets.yesterday.push(item);
@@ -223,7 +231,8 @@ export default function InboxScreen() {
   );
   const chatGroups = useMemo(() => groupChatThreads(threads), [threads]);
 
-  const handleNotificationPress = async (id: string) => {
+  const handleNotificationPress = async (item: InboxNotificationItem) => {
+    const id = item.id;
     // Optimistic local update
     setNotificationList((prev) =>
       prev.map((n) =>
@@ -232,6 +241,19 @@ export default function InboxScreen() {
     );
     // Decrement the tab-bar dot for this item.
     markAsRead(id);
+
+    // Deep-link straight to the notification's target page (order → live route,
+    // support → chat). Raw actionUrls aren't real routes here, so always resolve
+    // them; only truly unrouteable notifications stay on the inbox.
+    const data = (item.data ?? {}) as Record<string, unknown>;
+    const route = resolveNotificationRoute({
+      type: item.type,
+      orderId: typeof data.orderId === "string" ? data.orderId : undefined,
+      threadId: typeof data.threadId === "string" ? data.threadId : undefined,
+      actionUrl: item.actionUrl ?? undefined,
+    });
+    router.push(route);
+
     try {
       await notificationsApi.markRead(id);
     } catch (err) {
@@ -347,7 +369,7 @@ export default function InboxScreen() {
                     key={item.id}
                     style={styles.card}
                     activeOpacity={0.75}
-                    onPress={() => handleNotificationPress(item.id)}
+                    onPress={() => handleNotificationPress(item)}
                   >
                     <Image source={AVATAR_PLACEHOLDER} style={styles.avatar} />
                     <View style={styles.cardContent}>

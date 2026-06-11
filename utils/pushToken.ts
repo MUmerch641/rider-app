@@ -1,9 +1,77 @@
 import i18n from "@/constants/i18n";
+import {
+    resolveNotificationRoute,
+    type NotificationPayload,
+} from "@/utils/notificationRoutes";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 import { Platform } from "react-native";
 
 let configured = false;
+let tapHandlingInstalled = false;
+let lastHandledResponseAt = 0;
+
+/**
+ * Navigate to the page a tapped notification targets. Resolves the backend
+ * `data`/`actionUrl` to a REAL expo-router route — never the raw actionUrl,
+ * which would land the rider on the "Unmatched Route" screen.
+ */
+function navigateForNotification(
+    response: Notifications.NotificationResponse | null,
+): void {
+    if (!response) return;
+    try {
+        const data = (response.notification?.request?.content?.data ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const payload: NotificationPayload = {
+            type: typeof data.type === "string" ? data.type : undefined,
+            orderId: typeof data.orderId === "string" ? data.orderId : undefined,
+            actionUrl:
+                typeof data.actionUrl === "string" ? data.actionUrl : undefined,
+            threadId: typeof data.threadId === "string" ? data.threadId : undefined,
+        };
+        const route = resolveNotificationRoute(payload);
+        // Defer slightly so the root navigator is mounted on cold start.
+        setTimeout(() => {
+            try {
+                router.push(route);
+            } catch (e) {
+                console.warn("push: navigation for notification tap failed", e);
+            }
+        }, 350);
+    } catch (e) {
+        console.warn("push: failed to handle notification tap", e);
+    }
+}
+
+/**
+ * Route the rider when they TAP a push notification (foreground, background,
+ * or cold start) straight to its target page. Idempotent — safe to call
+ * multiple times; only the first call installs the listener.
+ */
+export function setupNotificationTapHandling(): void {
+    if (tapHandlingInstalled) return;
+    tapHandlingInstalled = true;
+    try {
+        Notifications.addNotificationResponseReceivedListener((response) => {
+            lastHandledResponseAt = Date.now();
+            navigateForNotification(response);
+        });
+        // Cold start: the tap that launched the app fires before any listener
+        // exists — fetch it explicitly. Skip if the live listener already ran.
+        void Notifications.getLastNotificationResponseAsync()
+            .then((response) => {
+                if (!response || lastHandledResponseAt > 0) return;
+                navigateForNotification(response);
+            })
+            .catch(() => {});
+    } catch {
+        // Notifications API unavailable (Expo Go on iOS, web) — ignore.
+    }
+}
 
 /**
  * Configure how foreground push notifications are displayed.
