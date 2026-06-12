@@ -521,8 +521,17 @@ export default function OnMap() {
       return;
     }
 
+    // clearNewOrder() also silences the incoming-order alarm (sound + haptics)
+    // — see SocketContext.clearNewOrder.
     clearNewOrder();
     await refreshAssignments();
+    // Open live navigation for the accepted order — same destination the Orders
+    // tab's accept routes to. Without this the rider was left on the passive map
+    // with no clear next step after accepting.
+    router.push({
+      pathname: "/orders/delivery_route",
+      params: { id: orderId },
+    });
   };
 
   const handleDecline = async () => {

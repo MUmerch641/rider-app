@@ -422,7 +422,15 @@
     "photoPermTitle": "Permission needed",
     "photoPermBody": "Please allow photo library access to change your profile picture.",
     "uploadFailedTitle": "Upload failed",
-    "uploadFailedBody": "Couldn't upload the image. Please try again."
+    "uploadFailedBody": "Couldn't upload the image. Please try again.",
+    "vehicleTypeLabel": "Vehicle Type",
+    "plateNumber": "Plate Number",
+    "vehicleType": {
+      "bike": "Bicycle",
+      "motor": "Motorcycle",
+      "scooter": "Scooter",
+      "car": "Car"
+    }
   },
   "orderRequestCard": {
     "orderItems": "ORDER ITEMS",

@@ -422,7 +422,15 @@
     "photoPermTitle": "الإذن مطلوب",
     "photoPermBody": "يرجى السماح بالوصول إلى مكتبة الصور لتغيير صورة ملفك الشخصي.",
     "uploadFailedTitle": "فشل الرفع",
-    "uploadFailedBody": "تعذّر رفع الصورة. يرجى المحاولة مرة أخرى."
+    "uploadFailedBody": "تعذّر رفع الصورة. يرجى المحاولة مرة أخرى.",
+    "vehicleTypeLabel": "نوع المركبة",
+    "plateNumber": "رقم اللوحة",
+    "vehicleType": {
+      "bike": "دراجة هوائية",
+      "motor": "دراجة نارية",
+      "scooter": "سكوتر",
+      "car": "سيارة"
+    }
   },
   "orderRequestCard": {
     "orderItems": "عناصر الطلب",

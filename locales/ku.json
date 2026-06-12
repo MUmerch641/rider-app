@@ -422,7 +422,15 @@
     "photoPermTitle": "مۆڵەت پێویستە",
     "photoPermBody": "تکایە ڕێگە بدە بە دەستڕاگەیشتن بە وێنەکان بۆ گۆڕینی وێنەی پرۆفایلەکەت.",
     "uploadFailedTitle": "بارکردن سەرکەوتوو نەبوو",
-    "uploadFailedBody": "وێنەکە بار نەکرا. تکایە دووبارە هەوڵ بدەرەوە."
+    "uploadFailedBody": "وێنەکە بار نەکرا. تکایە دووبارە هەوڵ بدەرەوە.",
+    "vehicleTypeLabel": "جۆری ئامێر",
+    "plateNumber": "ژمارەی پلێت",
+    "vehicleType": {
+      "bike": "پایسکیل",
+      "motor": "ماتۆڕ",
+      "scooter": "سکوتەر",
+      "car": "ئۆتۆمبێل"
+    }
   },
   "orderRequestCard": {
     "orderItems": "بەشەکانی داواکاری",

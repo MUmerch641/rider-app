@@ -33,6 +33,14 @@ export default function PersonalInformationScreen() {
   const { driver, updateProfile, logout } = useAuth();
   const { pickAndUploadAvatar, uploading: avatarUploading } = useAvatarUpload();
 
+  // Vehicle is admin-managed (no driver-side edit endpoint) — show it read-only.
+  // vehicleType is one of bike|motor|scooter|car; map to a localized label.
+  const vehicleTypeLabel = driver?.vehicleType
+    ? t(`personalInfo.vehicleType.${driver.vehicleType}`, {
+        defaultValue: driver.vehicleType,
+      })
+    : t("personalInfo.notSet", { defaultValue: "Not set" });
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [nickname, setNickname] = useState("");
@@ -393,6 +401,40 @@ export default function PersonalInformationScreen() {
                 {t("personalInfo.edit")}
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── Vehicle Card (read-only — vehicle is admin-managed) ── */}
+        <View style={styles.contactCard}>
+          {/* Vehicle Type */}
+          <View style={styles.contactRow}>
+            <View style={styles.contactInfo}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+                {t("personalInfo.vehicleTypeLabel", {
+                  defaultValue: "Vehicle Type",
+                })}
+              </Text>
+              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+                {vehicleTypeLabel}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.contactDivider} />
+
+          {/* Plate Number */}
+          <View style={styles.contactRow}>
+            <View style={styles.contactInfo}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+                {t("personalInfo.plateNumber", {
+                  defaultValue: "Plate Number",
+                })}
+              </Text>
+              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+                {driver?.vehiclePlate ??
+                  t("personalInfo.notSet", { defaultValue: "Not set" })}
+              </Text>
+            </View>
           </View>
         </View>
 
