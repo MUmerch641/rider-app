@@ -26,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import {
     I18nManager,
     Image,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -51,6 +52,7 @@ export default function OrdersScreen() {
   const [todayCount, setTodayCount] = useState<number>(0);
   const [statusBusy, setStatusBusy] = useState(false);
   const [acting, setActing] = useState<Record<string, boolean>>({});
+  const [refreshing, setRefreshing] = useState(false);
 
   const refreshAssignments = useCallback(async () => {
     try {
@@ -72,6 +74,15 @@ export default function OrdersScreen() {
       // ignore — keep last-known values
     }
   }, [driver?.id]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refreshAssignments(), refreshSummary()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshAssignments, refreshSummary]);
 
   // Refresh on every focus (mount + return-to-tab) so post-delivery state surfaces.
   // Also poll every 15s while focused as a safety net for missed socket events.
@@ -170,7 +181,17 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={{}}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
         {/* ── Header ── This is THE place riders toggle online/offline — the
             map screen deliberately has no toggle of its own. */}
         <View style={styles.header}>

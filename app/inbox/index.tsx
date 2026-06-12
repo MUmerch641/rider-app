@@ -347,6 +347,7 @@ export default function InboxScreen() {
               refreshing={refreshing}
               onRefresh={onPullRefresh}
               tintColor={Colors.primary}
+              colors={[Colors.primary]}
             />
           }
         >
@@ -458,6 +459,14 @@ export default function InboxScreen() {
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onPullRefresh}
+                tintColor={Colors.primary}
+                colors={[Colors.primary]}
+              />
+            }
           >
             {chatGroups.map((group) => (
               <View key={group.id}>

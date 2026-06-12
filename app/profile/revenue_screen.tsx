@@ -9,10 +9,11 @@ import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavGuard } from "@/hooks/useNavGuard";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     I18nManager,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -69,75 +70,78 @@ export default function RevenueScreen() {
     return { startDate: todayStr, endDate: todayStr };
   }, [period]);
 
-  // Year-wide series for the chart. Fetched once on mount; not tied to period tabs.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const year = new Date().getFullYear();
-        const startDate = `${year}-01-01`;
-        const endDate = `${year}-12-31`;
-        const summary: WalletSummary = await walletApi.summary({
-          startDate,
-          endDate,
-          groupBy: "month",
-        });
-        if (cancelled) return;
-        const revenueByMonth = Array(12).fill(0);
-        const orderByMonth = Array(12).fill(0);
-        for (const point of summary?.series ?? []) {
-          const monthIndex = new Date(point.date).getMonth();
-          if (monthIndex >= 0 && monthIndex < 12) {
-            revenueByMonth[monthIndex] = Math.round(
-              Number(point.earnings) || 0,
-            );
-            orderByMonth[monthIndex] = Number(point.count) || 0;
-          }
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Year-wide series for the chart. Not tied to the period tabs.
+  const fetchYearlyChart = useCallback(async () => {
+    try {
+      const year = new Date().getFullYear();
+      const startDate = `${year}-01-01`;
+      const endDate = `${year}-12-31`;
+      const summary: WalletSummary = await walletApi.summary({
+        startDate,
+        endDate,
+        groupBy: "month",
+      });
+      const revenueByMonth = Array(12).fill(0);
+      const orderByMonth = Array(12).fill(0);
+      for (const point of summary?.series ?? []) {
+        const monthIndex = new Date(point.date).getMonth();
+        if (monthIndex >= 0 && monthIndex < 12) {
+          revenueByMonth[monthIndex] = Math.round(Number(point.earnings) || 0);
+          orderByMonth[monthIndex] = Number(point.count) || 0;
         }
-        setChartData({
-          revenue: revenueByMonth,
-          order: orderByMonth,
-        });
-      } catch (err) {
-        console.warn("Yearly chart fetch failed:", (err as ApiError)?.message);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      setChartData({
+        revenue: revenueByMonth,
+        order: orderByMonth,
+      });
+    } catch (err) {
+      console.warn("Yearly chart fetch failed:", (err as ApiError)?.message);
+    }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const summary = await walletApi.summary({
-          startDate: range.startDate,
-          endDate: range.endDate,
-          groupBy: "day",
-        });
-        if (cancelled) return;
-        const totalEarnings = Number(summary?.summary?.totalEarnings ?? 0);
-        const deliveryCount = Number(summary?.summary?.deliveryCount ?? 0);
-        const acc = Number(summary?.summary?.acceptanceRate ?? 0);
-        const rt = Number(summary?.summary?.rating ?? 0);
-        const onTime = Number(summary?.summary?.onTimeRate ?? 0);
-        setBalance(Number.isFinite(totalEarnings) ? totalEarnings : 0);
-        setOrders(Number.isFinite(deliveryCount) ? deliveryCount : 0);
-        setAcceptance(Number.isFinite(acc) ? acc : 0);
-        setRating(Number.isFinite(rt) ? rt : 0);
-        setOnTimeRate(Number.isFinite(onTime) ? onTime : 0);
-      } catch (err) {
-        console.warn(
-          "Wallet summary fetch failed:",
-          (err as ApiError)?.message,
-        );
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  // Period-scoped summary stats (balance, orders, acceptance, rating, on-time).
+  const fetchPeriodSummary = useCallback(async () => {
+    try {
+      const summary = await walletApi.summary({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        groupBy: "day",
+      });
+      const totalEarnings = Number(summary?.summary?.totalEarnings ?? 0);
+      const deliveryCount = Number(summary?.summary?.deliveryCount ?? 0);
+      const acc = Number(summary?.summary?.acceptanceRate ?? 0);
+      const rt = Number(summary?.summary?.rating ?? 0);
+      const onTime = Number(summary?.summary?.onTimeRate ?? 0);
+      setBalance(Number.isFinite(totalEarnings) ? totalEarnings : 0);
+      setOrders(Number.isFinite(deliveryCount) ? deliveryCount : 0);
+      setAcceptance(Number.isFinite(acc) ? acc : 0);
+      setRating(Number.isFinite(rt) ? rt : 0);
+      setOnTimeRate(Number.isFinite(onTime) ? onTime : 0);
+    } catch (err) {
+      console.warn("Wallet summary fetch failed:", (err as ApiError)?.message);
+    }
   }, [range.startDate, range.endDate]);
+
+  // Fetched once on mount.
+  useEffect(() => {
+    fetchYearlyChart();
+  }, [fetchYearlyChart]);
+
+  // Re-fetched whenever the active period tab changes.
+  useEffect(() => {
+    fetchPeriodSummary();
+  }, [fetchPeriodSummary]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchYearlyChart(), fetchPeriodSummary()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchYearlyChart, fetchPeriodSummary]);
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
@@ -180,6 +184,14 @@ export default function RevenueScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       >
         {/*Delivery Card Balance */}
         <RevenueBalanceCard balance={balance} />

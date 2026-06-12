@@ -17,10 +17,11 @@ import {
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavGuard } from "@/hooks/useNavGuard";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
     I18nManager,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -109,39 +110,48 @@ export default function ProfileScreen() {
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [onTimeRate, setOnTimeRate] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Available balance comes from /wallet/balance (delivered-but-not-paid-out
   // earnings — what the rider can actually withdraw). On-time rate comes
   // from /wallet/summary's lifetime aggregate. The label used to show
   // *lifetime* earnings from /wallet/summary which the BALANCE card label
   // ("Available Balance") explicitly contradicts.
-  useEffect(() => {
+  const fetchWallet = useCallback(async () => {
     if (!driver?.id) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const today = new Date().toISOString().slice(0, 10);
-        const [balance, summary] = await Promise.all([
-          walletApi.balance().catch(() => null),
-          walletApi.summary({ startDate: "2020-01-01", endDate: today }).catch(() => null),
-        ]);
-        if (cancelled) return;
-        if (balance) {
-          const avail = Number(balance.available ?? 0);
-          setAvailableBalance(Number.isFinite(avail) ? avail : 0);
-        }
-        const rate = summary?.summary?.onTimeRate;
-        setOnTimeRate(
-          typeof rate === "number" && Number.isFinite(rate) ? rate : null,
-        );
-      } catch (err) {
-        console.warn("Wallet fetch failed:", (err as ApiError)?.message);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const [balance, summary] = await Promise.all([
+        walletApi.balance().catch(() => null),
+        walletApi
+          .summary({ startDate: "2020-01-01", endDate: today })
+          .catch(() => null),
+      ]);
+      if (balance) {
+        const avail = Number(balance.available ?? 0);
+        setAvailableBalance(Number.isFinite(avail) ? avail : 0);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      const rate = summary?.summary?.onTimeRate;
+      setOnTimeRate(
+        typeof rate === "number" && Number.isFinite(rate) ? rate : null,
+      );
+    } catch (err) {
+      console.warn("Wallet fetch failed:", (err as ApiError)?.message);
+    }
   }, [driver?.id]);
+
+  useEffect(() => {
+    fetchWallet();
+  }, [fetchWallet]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchWallet();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchWallet]);
 
   const driverDisplayName = useMemo(() => {
     if (!driver) return "";
@@ -235,6 +245,14 @@ export default function ProfileScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       >
         {/* ── Driver Balance Card ── */}
         <DriverBalanceCard

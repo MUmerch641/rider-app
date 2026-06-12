@@ -4,9 +4,15 @@ import { Colors, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { useNavGuard } from "@/hooks/useNavGuard";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ReviewsScreen() {
@@ -16,26 +22,33 @@ export default function ReviewsScreen() {
 
   const [reviewsList, setReviewsList] = useState<Review[]>([]);
   const [totalReviews, setTotalReviews] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchReviews = useCallback(async () => {
+    try {
+      const [summary, list] = await Promise.all([
+        reviewsApi.summary(),
+        reviewsApi.list({ page: 1, limit: 50 }),
+      ]);
+      setTotalReviews(summary?.totalReviews ?? 0);
+      setReviewsList(list);
+    } catch (err) {
+      console.warn("Reviews fetch failed:", (err as ApiError)?.message);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [summary, list] = await Promise.all([
-          reviewsApi.summary(),
-          reviewsApi.list({ page: 1, limit: 50 }),
-        ]);
-        if (cancelled) return;
-        setTotalReviews(summary?.totalReviews ?? 0);
-        setReviewsList(list);
-      } catch (err) {
-        console.warn("Reviews fetch failed:", (err as ApiError)?.message);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    fetchReviews();
+  }, [fetchReviews]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchReviews();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchReviews]);
 
   return (
     // Native RTL mirrors rows and text alignment automatically.
@@ -49,6 +62,14 @@ export default function ReviewsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       >
         <Text style={[styles.reviewsCount, { fontFamily: font.semibold }]}>
           {t("reviews.reviewsCount", {
