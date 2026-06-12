@@ -85,6 +85,42 @@ export default function DeliveryRoute() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
 
+  // ── Unmount safety + deferred-dialog timer ────────────────────────────────
+  // Async handlers below setState in their `finally` and schedule a dialog
+  // AFTER an await; if the screen pops first (back tap, socket re-route) those
+  // would land on an unmounted component. We track mounted state + any pending
+  // dialog timer and clear them on unmount.
+  const mountedRef = useRef(true);
+  const dialogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (dialogTimerRef.current) {
+        clearTimeout(dialogTimerRef.current);
+        dialogTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Show a branded dialog WITHOUT racing another native modal. The cancel
+  // sheet (CancelRequestModal) and the AppDialog are both RN <Modal>s; on iOS,
+  // presenting the dialog's modal while the sheet's modal is still dismissing
+  // deadlocks UIKit and FREEZES the whole app (it stops handling touches until
+  // force-closed). So we always close the sheet first, then defer the dialog
+  // past the sheet's ~250ms dismiss animation so only one modal transitions at
+  // a time. Guarded by mountedRef so a popped screen never shows it.
+  const showDialogAfterSheetClose = useCallback(
+    (opts: Parameters<typeof dialog.show>[0]) => {
+      if (dialogTimerRef.current) clearTimeout(dialogTimerRef.current);
+      dialogTimerRef.current = setTimeout(() => {
+        dialogTimerRef.current = null;
+        if (mountedRef.current) dialog.show(opts);
+      }, 320);
+    },
+    [dialog],
+  );
+
   // Drivers can't self-cancel a live delivery — they REQUEST an admin to
   // cancel/reassign it. This posts the reason; the dashboard surfaces it and
   // an admin reassigns. The order stays with this driver until then.
@@ -99,8 +135,12 @@ export default function DeliveryRoute() {
         reason,
         note: note || undefined,
       });
+      if (!mountedRef.current) return;
+      // Close the sheet FIRST, then defer the success dialog past its dismiss
+      // animation (see showDialogAfterSheetClose) — never present both modals
+      // in the same commit.
       setCancelModalOpen(false);
-      dialog.show({
+      showDialogAfterSheetClose({
         title: t("cancelRequest.sentTitle", "Request sent"),
         message: t(
           "cancelRequest.sentMessage",
@@ -109,14 +149,17 @@ export default function DeliveryRoute() {
         tone: "success",
       });
     } catch (err) {
+      if (!mountedRef.current) return;
       const msg = (err as ApiError)?.message ?? "Request failed";
-      dialog.show({
+      // Same modal-race fix on the error path: close the sheet, then defer.
+      setCancelModalOpen(false);
+      showDialogAfterSheetClose({
         title: t("cancelRequest.failedTitle", "Couldn't send request"),
         message: msg,
         tone: "error",
       });
     } finally {
-      setCancelSubmitting(false);
+      if (mountedRef.current) setCancelSubmitting(false);
     }
   };
 
@@ -515,8 +558,11 @@ export default function DeliveryRoute() {
     setArrivedBusy(true);
     try {
       await updateOrderStatusWithGps(orderId, next);
-      router.back();
+      // Only navigate while still mounted and with history to pop — a deferred
+      // back() on a popped screen throws.
+      if (mountedRef.current && router.canGoBack()) router.back();
     } catch (err) {
+      if (!mountedRef.current) return;
       // GPS_REQUIRED / OUT_OF_RANGE come back as backend codes — translate
       // them; unknown errors fall back to the raw message.
       const msg = translateOrderStatusError(err);
@@ -532,7 +578,7 @@ export default function DeliveryRoute() {
         tone: "error",
       });
     } finally {
-      setArrivedBusy(false);
+      if (mountedRef.current) setArrivedBusy(false);
     }
   };
 

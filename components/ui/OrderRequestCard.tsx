@@ -107,14 +107,22 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
   const cardAnim = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animRef = useRef<Animated.CompositeAnimation | null>(null);
+  // onTimerEnd fires a network reject + clears the offer in the parent. Keep it
+  // in a ref so the interval always calls the latest callback (the effect only
+  // re-runs on visible/timerSeconds) and a `firedRef` so it can fire at most
+  // once per offer — a double auto-decline raced the accept path.
+  const onTimerEndRef = useRef(onTimerEnd);
+  onTimerEndRef.current = onTimerEnd;
+  const firedRef = useRef(false);
 
   const formatPrice = (price: number) =>
-    `${price.toLocaleString()} ${currency}`;
+    `${(price ?? 0).toLocaleString()} ${currency}`;
 
   // ─── Card entrance animation ─────────────────────────────────────────────
   useEffect(() => {
     if (visible) {
       // Reset
+      firedRef.current = false;
       cardAnim.setValue(0);
       progressAnim.setValue(1);
       setTimeLeft(timerSeconds);
@@ -136,24 +144,38 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
       });
       animRef.current.start();
 
-      // Countdown
+      // Countdown. NOTE: never call onTimerEnd from INSIDE the setState updater
+      // — that runs during render and React throws "Cannot update a component
+      // while rendering a different component" when the parent setStates in
+      // response. Detect the hit-zero edge, then clear the timer and schedule
+      // onTimerEnd on the next tick (guarded by firedRef so it can't run twice).
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            clearInterval(timerRef.current!);
-            onTimerEnd?.();
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+            if (!firedRef.current) {
+              firedRef.current = true;
+              setTimeout(() => onTimerEndRef.current?.(), 0);
+            }
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
-    } else {
-      clearInterval(timerRef.current!);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
       animRef.current?.stop();
     }
 
     return () => {
-      clearInterval(timerRef.current!);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       animRef.current?.stop();
     };
   }, [visible, timerSeconds]);
@@ -224,7 +246,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
               ) : (
                 <View style={styles.logoPlaceholder}>
                   <Text style={styles.logoPlaceholderText}>
-                    {restaurantName.charAt(0)}
+                    {(restaurantName ?? "").charAt(0) || "?"}
                   </Text>
                 </View>
               )}

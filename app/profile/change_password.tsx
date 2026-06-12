@@ -6,7 +6,7 @@ import { useAppFont } from "@/hooks/useAppFont";
 import { useNavGuard } from "@/hooks/useNavGuard";
 import { spacing, verticalScale } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   I18nManager,
@@ -38,6 +38,15 @@ export default function ChangePasswordScreen() {
   const [confirmError, setConfirmError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Guard post-await setState if the screen is popped mid-request.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const validate = () => {
     let valid = true;
     if (!currentPassword) {
@@ -66,6 +75,7 @@ export default function ChangePasswordScreen() {
     setLoading(true);
     try {
       await authApi.changePassword({ currentPassword, newPassword });
+      if (!mountedRef.current) return;
       dialog.show({
         title: t("newPassword.successTitle"),
         message: t("newPassword.successSubtitle"),
@@ -79,6 +89,7 @@ export default function ChangePasswordScreen() {
         ],
       });
     } catch (err) {
+      if (!mountedRef.current) return;
       const apiErr = err as ApiError;
       if (apiErr?.status === 401) {
         // Wrong current password (the /auth/ prefix keeps the global 401
@@ -92,7 +103,7 @@ export default function ChangePasswordScreen() {
         });
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 

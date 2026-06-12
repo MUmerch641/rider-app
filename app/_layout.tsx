@@ -1,5 +1,6 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DialogProvider } from "@/components/ui/AppDialog";
+import { InAppNotificationBanner } from "@/components/ui/InAppNotificationBanner";
 import { LanguageOnboarding } from "@/components/ui/LanguageOnboarding";
 import "@/constants/i18n";
 import { installGlobalErrorHandler } from "@/utils/globalErrorHandler";
@@ -190,6 +191,11 @@ export default function RootLayout() {
                   <Stack.Screen name="auth" />
                 </Stack>
               </RouteGuard>
+              {/* Foreground in-app notification toast — taps deep-link via
+                  resolveNotificationRoute (same as the OS push-tap path),
+                  never the inbox list. Mounted above the navigator so it
+                  floats over every screen. */}
+              <InAppNotificationBanner />
               <LanguageOnboarding />
             </SocketProvider>
           </NotificationProvider>

@@ -95,6 +95,21 @@ export default function SupportChatScreen() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
 
+  // Unmount guard + tracked scroll timer so a send that resolves (or its
+  // deferred scrollToEnd) after the screen pops can't setState/throw.
+  const mountedRef = useRef(true);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+        scrollTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const { socket } = useSocket();
 
   // Resolve a thread id: use param if present, else create a new one.
@@ -173,20 +188,26 @@ export default function SupportChatScreen() {
     };
     setMessages((prev) => [...prev, optimistic]);
     setInput("");
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(
+      () => listRef.current?.scrollToEnd({ animated: true }),
+      100,
+    );
 
     try {
       const real = await supportApi.sendMessage(threadId, { body: trimmed });
+      if (!mountedRef.current) return;
       // Replace the temp message with the server-issued one.
       setMessages((prev) =>
         prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
       );
     } catch (err) {
       console.warn("Send message failed:", (err as ApiError)?.message);
+      if (!mountedRef.current) return;
       // Roll back the optimistic message on failure.
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
-      setSending(false);
+      if (mountedRef.current) setSending(false);
     }
   };
 

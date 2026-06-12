@@ -6,7 +6,7 @@ import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavGuard } from "@/hooks/useNavGuard";
 import { useDialog } from "@/components/ui/AppDialog";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -42,24 +42,40 @@ export default function PersonalInformationScreen() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Unmount guard: handleDeleteAccount logs out (RouteGuard then unmounts this
+  // screen) and the avatar/save flows setState after an await — none must land
+  // on an unmounted component.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const handleDeleteAccount = async () => {
     if (deleting) return;
     setDeleting(true);
     try {
       await authApi.deleteAccount();
+      // Close the confirm Modal BEFORE logout: logout() flips isAuthenticated
+      // and RouteGuard navigates to the login screen. Navigating away while a
+      // native <Modal> is still presented deadlocks UIKit on iOS (same class as
+      // the cancel-request freeze). Dismiss it first.
+      if (mountedRef.current) setShowDeleteModal(false);
       // Apple 5.1.1(v): user's data is gone server-side; clear local session too.
-      // RouteGuard redirects to the login screen on the auth flip.
       await logout();
     } catch (err) {
+      if (!mountedRef.current) return;
       const apiErr = err as ApiError;
+      setShowDeleteModal(false);
       dialog.show({
         title: t("personalInfo.deleteFailed", { defaultValue: "Delete failed" }),
         message: apiErr?.message ?? "",
         tone: "error",
       });
     } finally {
-      setDeleting(false);
-      setShowDeleteModal(false);
+      if (mountedRef.current) setDeleting(false);
     }
   };
 
@@ -100,6 +116,7 @@ export default function PersonalInformationScreen() {
         nickname: norm(nickname) ?? undefined,
         dateOfBirth: dobTrim ? dobTrim : undefined,
       });
+      if (!mountedRef.current) return;
       dialog.show({
         title: t("personalInfo.savedTitle", { defaultValue: "Saved" }),
         message: t("personalInfo.savedMessage", {
@@ -108,6 +125,7 @@ export default function PersonalInformationScreen() {
         tone: "success",
       });
     } catch (err) {
+      if (!mountedRef.current) return;
       const apiErr = err as ApiError;
       dialog.show({
         title: t("personalInfo.saveFailed", { defaultValue: "Save failed" }),
@@ -115,7 +133,7 @@ export default function PersonalInformationScreen() {
         tone: "error",
       });
     } finally {
-      setSaving(false);
+      if (mountedRef.current) setSaving(false);
     }
   };
 

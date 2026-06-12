@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as ImagePicker from "expo-image-picker";
 import { uploadApi, type ApiError } from "@/api";
@@ -17,6 +17,16 @@ export function useAvatarUpload() {
   const dialog = useDialog();
   const { updateProfile } = useAuth();
   const [uploading, setUploading] = useState(false);
+
+  // The host screen (profile / personal-info) can be popped mid-upload — guard
+  // the post-await setState + dialog so they don't land on an unmounted screen.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const pickAndUploadAvatar = useCallback(async () => {
     if (uploading) return;
@@ -50,6 +60,7 @@ export function useAvatarUpload() {
       // every screen rendering driver.avatar refreshes immediately.
       await updateProfile({ avatar: upload.url });
     } catch (err) {
+      if (!mountedRef.current) return;
       const apiErr = err as ApiError;
       dialog.show({
         title: t("personalInfo.uploadFailedTitle", {
@@ -63,7 +74,7 @@ export function useAvatarUpload() {
         tone: "error",
       });
     } finally {
-      setUploading(false);
+      if (mountedRef.current) setUploading(false);
     }
   }, [uploading, dialog, t, updateProfile]);
 
