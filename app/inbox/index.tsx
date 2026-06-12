@@ -21,6 +21,7 @@ import { useDialog } from "@/components/ui/AppDialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+    I18nManager,
     Image,
     RefreshControl,
     ScrollView,
@@ -292,8 +293,36 @@ export default function InboxScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
+      {/* ── Header (back button — shown when reached via push, e.g. a
+          notification tap; hidden on the root tab where there's no history) ── */}
+      {router.canGoBack() && (
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.back", "Back")}
+          >
+            <Ionicons
+              // Icon glyphs never auto-flip — mirror the back arrow manually.
+              name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+              size={scale(22)}
+              color={Colors.textPrimary}
+            />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* ── Tab Switcher ── */}
-      <View style={styles.tabRow}>
+      <View
+        style={[
+          styles.tabRow,
+          // The header already supplies top spacing; collapse the tab row's
+          // own margin so the switcher doesn't sit too low when pushed.
+          router.canGoBack() && { marginTop: spacing.md },
+        ]}
+      >
         <TabBtn
           label={t("inbox.notification")}
           active={activeTab === "notification"}
@@ -561,6 +590,22 @@ function TabBtn({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  backBtn: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    backgroundColor: Colors.inputBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   // Tabs
   tabRow: {
