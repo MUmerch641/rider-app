@@ -51,24 +51,35 @@ interface CancelRequestModalProps {
   submitting?: boolean;
   onSubmit: (reason: CancelRequestReason, note: string) => void;
   onClose: () => void;
+  // Fires once the sheet's native <Modal> has FULLY unmounted (after the close
+  // animation). The caller uses this to present a follow-up dialog without ever
+  // having two RN <Modal>s on screen at once — presenting one while another is
+  // still dismissing deadlocks UIKit on iOS and freezes the whole app.
+  onClosed?: () => void;
 }
 
 // ─── Animated Bottom Sheet (mirrors CloseRestaurantModal) ─────────────────────
 function AnimatedBottomSheet({
   visible,
   onClose,
+  onClosed,
   children,
 }: {
   visible: boolean;
   onClose: () => void;
+  onClosed?: () => void;
   children: React.ReactNode;
 }) {
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(600)).current;
   const [modalVisible, setModalVisible] = useState(false);
+  // Tracks whether we actually opened, so onClosed only fires after a real
+  // open→close cycle (not on the initial mount where visible starts false).
+  const wasVisibleRef = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      wasVisibleRef.current = true;
       setModalVisible(true);
       Animated.parallel([
         Animated.timing(overlayOpacity, {
@@ -94,7 +105,15 @@ function AnimatedBottomSheet({
           duration: 250,
           useNativeDriver: true,
         }),
-      ]).start(() => setModalVisible(false));
+      ]).start(() => {
+        // Unmount the native <Modal> FIRST, then signal "fully closed" so the
+        // caller can safely present a follow-up modal/dialog with no overlap.
+        setModalVisible(false);
+        if (wasVisibleRef.current) {
+          wasVisibleRef.current = false;
+          onClosed?.();
+        }
+      });
     }
   }, [visible]);
 
@@ -130,6 +149,7 @@ export function CancelRequestModal({
   submitting,
   onSubmit,
   onClose,
+  onClosed,
 }: CancelRequestModalProps) {
   const font = useAppFont();
   const { t } = useTranslation();
@@ -148,7 +168,7 @@ export function CancelRequestModal({
   const canSubmit = !!selected && !submitting;
 
   return (
-    <AnimatedBottomSheet visible={visible} onClose={onClose}>
+    <AnimatedBottomSheet visible={visible} onClose={onClose} onClosed={onClosed}>
       <Pressable style={{ flex: 1 }} onPress={onClose} />
 
       <KeyboardAvoidingView

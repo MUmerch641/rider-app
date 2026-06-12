@@ -107,18 +107,42 @@ export default function DeliveryRoute() {
   // sheet (CancelRequestModal) and the AppDialog are both RN <Modal>s; on iOS,
   // presenting the dialog's modal while the sheet's modal is still dismissing
   // deadlocks UIKit and FREEZES the whole app (it stops handling touches until
-  // force-closed). So we always close the sheet first, then defer the dialog
-  // past the sheet's ~250ms dismiss animation so only one modal transitions at
-  // a time. Guarded by mountedRef so a popped screen never shows it.
-  const showDialogAfterSheetClose = useCallback(
+  // force-closed).
+  //
+  // The fix is DETERMINISTIC, not timing-based: we close the sheet, stash the
+  // dialog options, and only present the dialog once the sheet reports it has
+  // FULLY unmounted its <Modal> (via CancelRequestModal's onClosed). A fallback
+  // timer guarantees the dialog still appears if onClosed never fires (e.g. the
+  // sheet was already closed). `dialogShownRef` makes the show idempotent so the
+  // onClosed and the fallback timer can't double-present.
+  const pendingDialogRef = useRef<Parameters<typeof dialog.show>[0] | null>(
+    null,
+  );
+  const dialogShownRef = useRef(false);
+
+  const flushPendingDialog = useCallback(() => {
+    if (dialogTimerRef.current) {
+      clearTimeout(dialogTimerRef.current);
+      dialogTimerRef.current = null;
+    }
+    const opts = pendingDialogRef.current;
+    if (!opts || dialogShownRef.current || !mountedRef.current) return;
+    dialogShownRef.current = true;
+    pendingDialogRef.current = null;
+    dialog.show(opts);
+  }, [dialog]);
+
+  const queueDialogAfterSheetClose = useCallback(
     (opts: Parameters<typeof dialog.show>[0]) => {
+      pendingDialogRef.current = opts;
+      dialogShownRef.current = false;
+      setCancelModalOpen(false);
+      // Fallback in case onClosed never arrives (sheet already closed, animation
+      // interrupted). Longer than the sheet's 250ms close animation.
       if (dialogTimerRef.current) clearTimeout(dialogTimerRef.current);
-      dialogTimerRef.current = setTimeout(() => {
-        dialogTimerRef.current = null;
-        if (mountedRef.current) dialog.show(opts);
-      }, 320);
+      dialogTimerRef.current = setTimeout(flushPendingDialog, 650);
     },
-    [dialog],
+    [flushPendingDialog],
   );
 
   // Drivers can't self-cancel a live delivery — they REQUEST an admin to
@@ -136,11 +160,10 @@ export default function DeliveryRoute() {
         note: note || undefined,
       });
       if (!mountedRef.current) return;
-      // Close the sheet FIRST, then defer the success dialog past its dismiss
-      // animation (see showDialogAfterSheetClose) — never present both modals
-      // in the same commit.
-      setCancelModalOpen(false);
-      showDialogAfterSheetClose({
+      // Close the sheet and present the success dialog only once the sheet's
+      // <Modal> has fully unmounted (queueDialogAfterSheetClose) — never two
+      // native modals on screen at once.
+      queueDialogAfterSheetClose({
         title: t("cancelRequest.sentTitle", "Request sent"),
         message: t(
           "cancelRequest.sentMessage",
@@ -151,9 +174,8 @@ export default function DeliveryRoute() {
     } catch (err) {
       if (!mountedRef.current) return;
       const msg = (err as ApiError)?.message ?? "Request failed";
-      // Same modal-race fix on the error path: close the sheet, then defer.
-      setCancelModalOpen(false);
-      showDialogAfterSheetClose({
+      // Same deterministic modal handoff on the error path.
+      queueDialogAfterSheetClose({
         title: t("cancelRequest.failedTitle", "Couldn't send request"),
         message: msg,
         tone: "error",
@@ -846,6 +868,7 @@ export default function DeliveryRoute() {
           submitting={cancelSubmitting}
           onSubmit={handleRequestCancellation}
           onClose={() => setCancelModalOpen(false)}
+          onClosed={flushPendingDialog}
         />
       </SafeAreaView>
     </GestureHandlerRootView>

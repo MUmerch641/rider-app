@@ -240,7 +240,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || !driver?.id) return;
     let cancelled = false;
-    void (async () => {
+    const fetchAlertSound = async () => {
       try {
         const env = (await apiClient.get(ENDPOINTS.auth.profile)) as {
           data?: { alertSound?: string };
@@ -251,7 +251,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // keep the default sound
       }
-    })();
+    };
+    void fetchAlertSound();
+    // Re-fetch the sound key on foreground so an admin's dashboard change
+    // applies on the next resume, not only after a full cold restart.
+    const soundSub = AppState.addEventListener("change", (s) => {
+      if (s === "active") void fetchAlertSound();
+    });
     // Dashboard-managed custom alarm file: use the cached copy immediately (so
     // the very first alarm already plays it), then refresh from the backend —
     // downloads when the admin changed it, null/404/error → bundled preset.
@@ -263,6 +269,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     })();
     return () => {
       cancelled = true;
+      soundSub.remove();
     };
   }, [isAuthenticated, driver?.id]);
 

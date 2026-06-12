@@ -54,10 +54,36 @@ export default function PersonalInformationScreen() {
   // screen) and the avatar/save flows setState after an await — none must land
   // on an unmounted component.
   const mountedRef = useRef(true);
+  // Deterministic modal→dialog handoff for the delete-account FAILURE path:
+  // presenting the error dialog's <Modal> while the confirm <Modal> is still
+  // dismissing deadlocks UIKit on iOS (same class as the cancel-request
+  // freeze). We stash the dialog, close the confirm modal, and only present it
+  // from the modal's onDismiss (iOS) — with a timer fallback for Android / a
+  // missed dismiss. `deleteDialogShownRef` keeps it idempotent.
+  const pendingDeleteDialogRef = useRef<Parameters<typeof dialog.show>[0] | null>(
+    null,
+  );
+  const deleteDialogShownRef = useRef(false);
+  const deleteDialogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushDeleteDialog = () => {
+    if (deleteDialogTimerRef.current) {
+      clearTimeout(deleteDialogTimerRef.current);
+      deleteDialogTimerRef.current = null;
+    }
+    const opts = pendingDeleteDialogRef.current;
+    if (!opts || deleteDialogShownRef.current || !mountedRef.current) return;
+    deleteDialogShownRef.current = true;
+    pendingDeleteDialogRef.current = null;
+    dialog.show(opts);
+  };
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (deleteDialogTimerRef.current) {
+        clearTimeout(deleteDialogTimerRef.current);
+        deleteDialogTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -76,12 +102,17 @@ export default function PersonalInformationScreen() {
     } catch (err) {
       if (!mountedRef.current) return;
       const apiErr = err as ApiError;
-      setShowDeleteModal(false);
-      dialog.show({
+      // Queue the error dialog, close the confirm modal, present it once the
+      // modal has dismissed (onDismiss) — never two native modals at once.
+      pendingDeleteDialogRef.current = {
         title: t("personalInfo.deleteFailed", { defaultValue: "Delete failed" }),
         message: apiErr?.message ?? "",
         tone: "error",
-      });
+      };
+      deleteDialogShownRef.current = false;
+      setShowDeleteModal(false);
+      if (deleteDialogTimerRef.current) clearTimeout(deleteDialogTimerRef.current);
+      deleteDialogTimerRef.current = setTimeout(flushDeleteDialog, 650);
     } finally {
       if (mountedRef.current) setDeleting(false);
     }
@@ -464,6 +495,7 @@ export default function PersonalInformationScreen() {
         transparent
         animationType="fade"
         statusBarTranslucent
+        onDismiss={flushDeleteDialog}
       >
         <View style={styles.deleteModalRoot}>
           <Pressable style={styles.deleteModalBackdrop} />
