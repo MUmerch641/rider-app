@@ -580,6 +580,19 @@ export default function DeliveryRoute() {
     setArrivedBusy(true);
     try {
       await updateOrderStatusWithGps(orderId, next);
+      // R3: picking up the order immediately puts the rider "On the way" — no
+      // separate button. picked_up is GPS-gated at the store (handled above);
+      // on_the_way is NOT gated, so this follows through right after. It also
+      // flips the customer's tracking to "on the way" and arms the automatic
+      // proximity ("rider is close") alert. Non-fatal if it fails — picked_up
+      // is already recorded and the rider can still mark Arrived.
+      if (next === "picked_up") {
+        try {
+          await ordersApi.updateStatus(orderId, { status: "on_the_way" });
+        } catch {
+          /* non-fatal */
+        }
+      }
       // Only navigate while still mounted and with history to pop — a deferred
       // back() on a popped screen throws.
       if (mountedRef.current && router.canGoBack()) router.back();
