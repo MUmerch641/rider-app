@@ -62,6 +62,18 @@ const CHEVRON_UP_SVG = `<svg width="24" height="24" viewBox="0 0 24 24" fill="no
 interface AcceptedOrdersSheetProps {
   /** In-progress assignments (already filtered to ACTIVE_STATUSES). */
   orders: OrderAssignment[];
+  /**
+   * Newly-offered assignments not yet accepted (status === "assigned").
+   * Surfaced as a second "New Orders Nearby" section so removing the Orders
+   * tab loses nothing (R4). Each renders an Accept / Decline pair.
+   */
+  nearbyOrders?: OrderAssignment[];
+  /** orderIds with an accept/decline request in flight → per-card disable. */
+  actingIds?: Record<string, boolean>;
+  /** Accept a nearby offer (reuses ordersApi.accept). */
+  onAcceptNearby?: (orderId: string) => void;
+  /** Decline a nearby offer (reuses ordersApi.reject). */
+  onDeclineNearby?: (orderId: string) => void;
   /** orderIds with a status-advance request in flight → per-card spinner. */
   advancingIds?: Record<string, boolean>;
   /** Tap anywhere on a card → open live navigation for that order. */
@@ -86,6 +98,10 @@ interface AcceptedOrdersSheetProps {
 
 export function AcceptedOrdersSheet({
   orders,
+  nearbyOrders = [],
+  actingIds,
+  onAcceptNearby,
+  onDeclineNearby,
   advancingIds,
   onOrderPress,
   onAdvance,
@@ -157,6 +173,41 @@ export function AcceptedOrdersSheet({
               onAdvance={onAdvance}
             />
           ))}
+
+          {/* ── New Orders Nearby (R4) ── offered-but-unaccepted assignments,
+              relocated here from the removed Orders tab. */}
+          {nearbyOrders.length > 0 && (
+            <>
+              <View style={styles.sectionHeaderRow}>
+                <Text
+                  style={[styles.sectionHeaderText, { fontFamily: font.bold }]}
+                >
+                  {t("orders.newOrdersNearby")}
+                </Text>
+                <View style={styles.sectionBadge}>
+                  <Text
+                    style={[styles.sectionBadgeText, { fontFamily: font.bold }]}
+                  >
+                    {nearbyOrders.length}
+                  </Text>
+                </View>
+              </View>
+
+              {nearbyOrders.map((assignment, idx) => (
+                <NearbyOrderCard
+                  key={assignment.orderId}
+                  assignment={assignment}
+                  langKey={langKey}
+                  font={font}
+                  t={t}
+                  isLast={idx === nearbyOrders.length - 1}
+                  acting={!!actingIds?.[assignment.orderId]}
+                  onAccept={onAcceptNearby}
+                  onDecline={onDeclineNearby}
+                />
+              ))}
+            </>
+          )}
         </ScrollView>
       )}
     </View>
@@ -317,6 +368,148 @@ function OrderCard({
         ) : null}
       </View>
     </TouchableOpacity>
+  );
+}
+
+// ── Nearby Order Card ────────────────────────────────────────────────────────
+// Mirrors the old Orders-tab "New Orders Nearby" card: store + price, pickup →
+// dropoff route, and an Accept / Decline pair (reusing ordersApi via the
+// parent's handlers).
+function NearbyOrderCard({
+  assignment,
+  langKey,
+  font,
+  t,
+  isLast,
+  acting,
+  onAccept,
+  onDecline,
+}: {
+  assignment: OrderAssignment;
+  langKey: LangKey;
+  font: ReturnType<typeof useAppFont>;
+  t: ReturnType<typeof useTranslation>["t"];
+  isLast: boolean;
+  acting: boolean;
+  onAccept?: (orderId: string) => void;
+  onDecline?: (orderId: string) => void;
+}) {
+  const order = assignment.order;
+  const storeName = localizeName(order?.store?.name, langKey);
+  const storeAvatar = order?.store?.avatar ?? undefined;
+  const price = formatCurrency(order?.total, order?.currency ?? "IQD");
+  const pickup = order?.store?.address ?? "";
+  const dropoff = (() => {
+    const da = order?.deliveryAddress;
+    if (!da) return "";
+    return ([da.building, da.street].filter(Boolean) as string[]).join(", ");
+  })();
+
+  return (
+    <View style={[styles.card, !isLast && styles.cardGap]}>
+      {/* ── Row 1: Avatar + Restaurant Name + Price ── */}
+      <View style={styles.cardTopRow}>
+        <View style={styles.avatarRing}>
+          {storeAvatar ? (
+            <SafeImage
+              uri={storeAvatar}
+              variant="store"
+              style={styles.avatar}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback]} />
+          )}
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            marginLeft: scale(10),
+            alignItems: "flex-start",
+          }}
+        >
+          <Text
+            style={[styles.restaurantName, { fontFamily: font.bold }]}
+            numberOfLines={1}
+          >
+            {storeName}
+          </Text>
+          {order?.orderNumber ? (
+            <Text
+              style={[styles.orderNumber, { fontFamily: font.regular }]}
+              numberOfLines={1}
+            >
+              #{order.orderNumber}
+            </Text>
+          ) : null}
+        </View>
+
+        <Text style={[styles.price, { fontFamily: font.bold }]}>{price}</Text>
+      </View>
+
+      {/* ── Row 2: Route (pickup → [connector] → dropoff) ── */}
+      <View style={[styles.routeRow, { marginTop: verticalScale(10) }]}>
+        <View style={styles.routePoint}>
+          <View style={styles.pickupDot} />
+          <Text
+            style={[styles.routeText, { fontFamily: font.regular }]}
+            numberOfLines={1}
+          >
+            {t("orders.pickup")}: {pickup}
+          </Text>
+        </View>
+
+        {dropoff ? (
+          <>
+            <View style={styles.routeConnector} />
+            <View style={styles.routePoint}>
+              <View style={styles.dropoffDotOuter}>
+                <View style={styles.dropoffDotInner} />
+              </View>
+              <Text
+                style={[styles.routeText, { fontFamily: font.regular }]}
+                numberOfLines={1}
+              >
+                {t("orders.dropoff")}: {dropoff}
+              </Text>
+            </View>
+          </>
+        ) : null}
+      </View>
+
+      {/* ── Row 3: Decline / Accept ── */}
+      <View style={[styles.actionRow, { marginTop: verticalScale(16) }]}>
+        <TouchableOpacity
+          style={styles.declineBtn}
+          activeOpacity={0.75}
+          disabled={acting}
+          onPress={() => onDecline?.(assignment.orderId)}
+        >
+          <Text
+            style={[styles.declineBtnText, { fontFamily: font.medium }]}
+          >
+            {t("orders.decline")}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.acceptBtn, acting && styles.actionBtnBusy]}
+          activeOpacity={0.85}
+          disabled={acting}
+          onPress={() => onAccept?.(assignment.orderId)}
+        >
+          {acting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text
+              style={[styles.acceptBtnText, { fontFamily: font.semibold }]}
+            >
+              {t("orders.accept")}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -534,6 +727,63 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   actionBtnText: {
+    fontSize: FontSize.md ?? 16,
+    color: "#FFFFFF",
+  },
+
+  // ── New Orders Nearby section (R4) ──────────────────────────────────────────
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(8),
+    marginTop: verticalScale(8),
+    marginBottom: verticalScale(2),
+    marginHorizontal: scale(10),
+  },
+  sectionHeaderText: {
+    fontSize: fontSize.lg,
+    color: "#1A1A2E",
+  },
+  sectionBadge: {
+    width: scale(22),
+    height: scale(22),
+    borderRadius: scale(11),
+    backgroundColor: "#E8E7EF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionBadgeText: {
+    fontSize: FontSize.xs,
+    color: "#1A1A2E",
+  },
+
+  // Decline / Accept pair for nearby offers
+  declineBtn: {
+    flex: 1,
+    borderRadius: scale(40),
+    paddingVertical: verticalScale(15),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+  },
+  declineBtnText: {
+    fontSize: FontSize.md ?? 16,
+    color: Colors.textSecondary,
+  },
+  acceptBtn: {
+    flex: 1,
+    borderRadius: scale(40),
+    paddingVertical: verticalScale(15),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#22C55E",
+    shadowColor: "#22C55E",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  acceptBtnText: {
     fontSize: FontSize.md ?? 16,
     color: "#FFFFFF",
   },

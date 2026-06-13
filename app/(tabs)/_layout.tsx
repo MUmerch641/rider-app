@@ -1,4 +1,4 @@
-import { BellTabIcon, MapIcon, ProfileTabIcon, RideIcon } from "@/components/ui/icons";
+import { BellTabIcon, MapIcon, ProfileTabIcon } from "@/components/ui/icons";
 import { Colors } from "@/constants/theme";
 import { useNotifications } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -7,12 +7,12 @@ import { Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 
+// On Map is the landing tab; the old Orders tab was removed from the bar
+// (R7) — its "Active / New Orders Nearby" content now lives in the map's
+// bottom sheet. The (tabs)/index route file is kept but hidden from the bar
+// (href: null below) so router.replace("/(tabs)") still resolves cleanly and
+// /orders detail routes stay reachable for navigation.
 const TAB_SCREENS = [
-  {
-    name: "index",
-    labelKey: "tabs.orders",
-    Icon: RideIcon,
-  },
   {
     name: "onmap",
     labelKey: "tabs.onmap",
@@ -40,6 +40,9 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      // On Map is the cold-start landing tab (R7). Navigating to /(tabs)
+      // (e.g. RouteGuard's post-login replace) lands here, not on index.
+      initialRouteName="onmap"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.primary,
@@ -75,6 +78,11 @@ export default function TabLayout() {
         ),
       }}
     >
+      {/* Orders tab removed from the bar (R7). The index route file still
+          exists (re-exports the orders screen) so /(tabs) resolves, but
+          href:null hides it from the tab bar and keeps it non-navigable as
+          a tab — the orders content moved into the map's bottom sheet. */}
+      <Tabs.Screen name="index" options={{ href: null }} />
       {screens.map(({ name, labelKey, Icon }) => (
         <Tabs.Screen
           key={name}

@@ -125,7 +125,10 @@
     "changePassword": "Change Password",
     "signOut": "Sign out",
     "signOutConfirmTitle": "Log out?",
-    "signOutConfirmMessage": "You will stop receiving new orders until you log in again."
+    "signOutConfirmMessage": "You will stop receiving new orders until you log in again.",
+    "availability": "Availability",
+    "online": "Online",
+    "offline": "Offline"
   },
   "location": {
     "chooseLocation": "Choose location",

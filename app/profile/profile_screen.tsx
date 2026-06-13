@@ -2,6 +2,7 @@ import { walletApi, type ApiError } from "@/api";
 import { DriverBalanceCard } from "@/components/ui/DriverBalanceCard";
 import { CartIcon, ChartIcon, StarIcon } from "@/components/ui/icons";
 import LanguageSelector from "@/components/ui/LanguageButton";
+import { OpenStatusToggle } from "@/components/ui";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAuth } from "@/context";
 import { useDialog } from "@/components/ui/AppDialog";
@@ -104,13 +105,28 @@ export default function ProfileScreen() {
   // Layout mirrors natively; only glyph/gradient mirrors need a condition.
   const rtl = I18nManager.isRTL;
 
-  const { driver, logout } = useAuth();
+  const { driver, logout, updateStatus } = useAuth();
   const dialog = useDialog();
   const { pickAndUploadAvatar, uploading: avatarUploading } = useAvatarUpload();
   const [availableBalance, setAvailableBalance] = useState<number>(0);
   const [onTimeRate, setOnTimeRate] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Online/offline availability toggle, moved here from the (removed) Orders
+  // tab header (R8). Same updateStatus(...) call it always made.
+  const [statusBusy, setStatusBusy] = useState(false);
+
+  const handleStatusToggle = useCallback(async () => {
+    if (statusBusy || !driver) return;
+    setStatusBusy(true);
+    try {
+      await updateStatus(!driver.isOnline);
+    } catch (err) {
+      console.warn("Status toggle failed:", (err as ApiError)?.message);
+    } finally {
+      setStatusBusy(false);
+    }
+  }, [statusBusy, driver, updateStatus]);
 
   // Available balance comes from /wallet/balance (delivered-but-not-paid-out
   // earnings — what the rider can actually withdraw). On-time rate comes
@@ -254,6 +270,38 @@ export default function ProfileScreen() {
           />
         }
       >
+        {/* ── Availability toggle ── moved here from the removed Orders tab
+            (R8). This is now THE place riders go online/offline; it calls the
+            same AuthContext.updateStatus the Orders header used. */}
+        <View style={styles.availabilityRow}>
+          <View style={styles.availabilityLeft}>
+            <View
+              style={[
+                styles.availabilityDot,
+                { backgroundColor: driver?.isOnline ? "#22c55e" : "#9ca3af" },
+              ]}
+            />
+            <View style={{ alignItems: "flex-start" }}>
+              <Text
+                style={[styles.availabilityLabel, { fontFamily: font.medium }]}
+              >
+                {t("profile.availability", "Availability")}
+              </Text>
+              <Text
+                style={[styles.availabilityState, { fontFamily: font.semibold }]}
+              >
+                {driver?.isOnline
+                  ? t("profile.online", "Online")
+                  : t("profile.offline", "Offline")}
+              </Text>
+            </View>
+          </View>
+          <OpenStatusToggle
+            isOpen={driver?.isOnline ?? false}
+            onToggle={() => void handleStatusToggle()}
+          />
+        </View>
+
         {/* ── Driver Balance Card ── */}
         <DriverBalanceCard
           name={driverDisplayName}
@@ -404,6 +452,39 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     flex: 1,
     textAlign: "center",
+  },
+
+  // Availability toggle row
+  availabilityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    borderColor: Colors.inputBg,
+    borderWidth: scale(0.5),
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.xs,
+  },
+  availabilityLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  availabilityDot: {
+    width: scale(12),
+    height: scale(12),
+    borderRadius: scale(6),
+  },
+  availabilityLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  availabilityState: {
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginTop: scale(1),
   },
 
   // Balance card

@@ -167,7 +167,10 @@
     "changePassword": "تغيير كلمة المرور",
     "signOut": "تسجيل الخروج",
     "signOutConfirmTitle": "تسجيل الخروج؟",
-    "signOutConfirmMessage": "لن تستلم طلبات جديدة حتى تسجّل الدخول مرة أخرى."
+    "signOutConfirmMessage": "لن تستلم طلبات جديدة حتى تسجّل الدخول مرة أخرى.",
+    "availability": "الحالة",
+    "online": "متصل",
+    "offline": "غير متصل"
   },
   "reviews": {
     "title": "التقييمات",

@@ -4,7 +4,6 @@ import {
     type ApiError,
     type OrderAssignment,
 } from "@/api";
-import { OpenStatusToggle } from "@/components/ui";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
 import { useAuth, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -44,13 +43,12 @@ export default function OrdersScreen() {
   const rtl = I18nManager.isRTL;
   const langKey: LangKey = (i18n.language as LangKey) || "en";
 
-  const { driver, updateStatus } = useAuth();
+  const { driver } = useAuth();
   const { newOrder, cancelledOrder, clearNewOrder, stopAlarm } = useSocket();
 
   const [assignments, setAssignments] = useState<OrderAssignment[]>([]);
   const [todayEarnings, setTodayEarnings] = useState<string>("0");
   const [todayCount, setTodayCount] = useState<number>(0);
-  const [statusBusy, setStatusBusy] = useState(false);
   const [acting, setActing] = useState<Record<string, boolean>>({});
   const [refreshing, setRefreshing] = useState(false);
 
@@ -128,21 +126,6 @@ export default function OrdersScreen() {
     [assignments],
   );
 
-  const handleToggle = useCallback(
-    async (_value: boolean) => {
-      if (statusBusy || !driver) return;
-      setStatusBusy(true);
-      try {
-        await updateStatus(!driver.isOnline);
-      } catch (err) {
-        console.warn("Status toggle failed:", (err as ApiError)?.message);
-      } finally {
-        setStatusBusy(false);
-      }
-    },
-    [statusBusy, driver, updateStatus],
-  );
-
   const handleAcceptNearby = async (orderId: string) => {
     if (acting[orderId]) return;
     setActing((m) => ({ ...m, [orderId]: true }));
@@ -192,8 +175,8 @@ export default function OrdersScreen() {
           />
         }
       >
-        {/* ── Header ── This is THE place riders toggle online/offline — the
-            map screen deliberately has no toggle of its own. */}
+        {/* ── Header ── Online/offline availability now lives on the Profile
+            screen (R8); this header only shows the rider identity. */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.push("./profile/profile_screen")}
@@ -218,10 +201,6 @@ export default function OrdersScreen() {
               {driverName}
             </Text>
           </TouchableOpacity>
-          <OpenStatusToggle
-            isOpen={driver?.isOnline ?? false}
-            onToggle={handleToggle}
-          />
         </View>
 
         {/* ── Today's Summary Card ── */}
@@ -585,15 +564,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  toggleBtn: {
-    width: scale(56),
-    height: scale(32),
-    borderRadius: scale(16),
-    backgroundColor: "#d1d5db",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toggleBtnOn: { backgroundColor: "#22c55e" },
   summaryCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,

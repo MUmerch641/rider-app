@@ -125,7 +125,10 @@
     "changePassword": "گۆڕینی وشەی نهێنی",
     "signOut": "دەرچوون",
     "signOutConfirmTitle": "دەرچوون؟",
-    "signOutConfirmMessage": "داواکاری نوێت پێ ناگات هەتا دووبارە بچیتە ژوورەوە."
+    "signOutConfirmMessage": "داواکاری نوێت پێ ناگات هەتا دووبارە بچیتە ژوورەوە.",
+    "availability": "بەردەستبوون",
+    "online": "سەرهێڵ",
+    "offline": "دەرهێڵ"
   },
   "location": {
     "chooseLocation": "شوێن هەڵبژێرە",

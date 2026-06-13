@@ -104,10 +104,19 @@ export default function OnMap() {
 
   const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
 
+  // Per-order busy flags while an accept/decline request for a NEARBY offer is
+  // in flight (mirrors the old Orders-tab "acting" map).
+  const [acting, setActing] = useState<Record<string, boolean>>({});
+
   // ─── Live data hooks ─────────────────────────────────────────────────────
   const { driver } = useAuth();
-  const { newOrder, cancelledOrder, clearNewOrder, clearCancelledOrder } =
-    useSocket();
+  const {
+    newOrder,
+    cancelledOrder,
+    clearNewOrder,
+    clearCancelledOrder,
+    stopAlarm,
+  } = useSocket();
 
   const langKey: LangKey = (i18n.language as LangKey) || "en";
 
@@ -150,6 +159,14 @@ export default function OnMap() {
   // Sheet items = in-progress deliveries only (shared ACTIVE_STATUSES set).
   const sheetOrders = useMemo(
     () => assignments.filter((a) => ACTIVE_STATUSES.has(a.status)),
+    [assignments],
+  );
+
+  // New-orders-nearby = offered-but-unaccepted assignments (status "assigned").
+  // Same derivation the old Orders tab used; relocated into the bottom sheet
+  // (R4) so removing that tab loses nothing.
+  const nearbyOrders = useMemo(
+    () => assignments.filter((a) => a.status === "assigned"),
     [assignments],
   );
 
@@ -570,6 +587,65 @@ export default function OnMap() {
     [router],
   );
 
+  // ─── Nearby offer Accept / Decline ───────────────────────────────────────
+  // Reuses the same ordersApi endpoints the old Orders tab called. Accepting
+  // also silences the offer card+alarm (the dispatch offer for this order may
+  // still be ringing) and opens live navigation, matching the offer-card path.
+  const handleAcceptNearby = useCallback(
+    async (orderId: string) => {
+      let alreadyActing = false;
+      setActing((m) => {
+        if (m[orderId]) {
+          alreadyActing = true;
+          return m;
+        }
+        return { ...m, [orderId]: true };
+      });
+      if (alreadyActing) return;
+      try {
+        await ordersApi.accept(orderId);
+        stopAlarm();
+        if (newOrder?.orderId === orderId) clearNewOrder();
+        await refreshAssignments();
+        router.push({
+          pathname: "/orders/delivery_route",
+          params: { id: orderId },
+        });
+      } catch (err) {
+        console.warn("Accept failed:", (err as ApiError)?.message);
+        void refreshAssignments();
+      } finally {
+        setActing((m) => ({ ...m, [orderId]: false }));
+      }
+    },
+    [newOrder, clearNewOrder, stopAlarm, refreshAssignments, router],
+  );
+
+  const handleDeclineNearby = useCallback(
+    async (orderId: string) => {
+      let alreadyActing = false;
+      setActing((m) => {
+        if (m[orderId]) {
+          alreadyActing = true;
+          return m;
+        }
+        return { ...m, [orderId]: true };
+      });
+      if (alreadyActing) return;
+      try {
+        await ordersApi.reject(orderId, { reason: "too_far" });
+        stopAlarm();
+        if (newOrder?.orderId === orderId) clearNewOrder();
+        await refreshAssignments();
+      } catch (err) {
+        console.warn("Decline failed:", (err as ApiError)?.message);
+      } finally {
+        setActing((m) => ({ ...m, [orderId]: false }));
+      }
+    },
+    [newOrder, clearNewOrder, stopAlarm, refreshAssignments],
+  );
+
   // ─── Advance button → next lifecycle status (GPS-gated server-side) ───────
   const handleAdvance = useCallback(
     async (assignment: OrderAssignment) => {
@@ -911,13 +987,17 @@ export default function OnMap() {
           />
         )}
 
-        {/* Only mount the sheet when the rider actually holds active orders —
-            an empty "0" sheet was previously always pinned to the map. The
-            expandSignal (bumped on focus) re-opens it whenever the rider returns
-            from the live-navigation screen. */}
-        {sheetOrders.length > 0 && (
+        {/* Mount the sheet when the rider holds active orders OR has new
+            nearby offers (R4) — an empty "0" sheet was previously always
+            pinned to the map. The expandSignal (bumped on focus) re-opens it
+            whenever the rider returns from the live-navigation screen. */}
+        {(sheetOrders.length > 0 || nearbyOrders.length > 0) && (
           <AcceptedOrdersSheet
             orders={sheetOrders}
+            nearbyOrders={nearbyOrders}
+            actingIds={acting}
+            onAcceptNearby={handleAcceptNearby}
+            onDeclineNearby={handleDeclineNearby}
             advancingIds={advancing}
             onOrderPress={handleOrderPress}
             onAdvance={handleAdvance}
