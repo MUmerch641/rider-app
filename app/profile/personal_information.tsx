@@ -17,7 +17,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -30,10 +29,13 @@ export default function PersonalInformationScreen() {
   const { t } = useTranslation();
   const font = useAppFont();
 
-  const { driver, updateProfile, logout } = useAuth();
+  const { driver, logout } = useAuth();
   const { pickAndUploadAvatar, uploading: avatarUploading } = useAvatarUpload();
 
-  // Vehicle is admin-managed (no driver-side edit endpoint) — show it read-only.
+  // Profile details are read-only for riders: the only changes a driver may make
+  // are the profile picture (avatar upload below) and their password (via the
+  // Change Password screen in the profile menu). All personal/contact/vehicle
+  // fields are admin-managed and shown as static rows.
   // vehicleType is one of bike|motor|scooter|car; map to a localized label.
   const vehicleTypeLabel = driver?.vehicleType
     ? t(`personalInfo.vehicleType.${driver.vehicleType}`, {
@@ -41,18 +43,17 @@ export default function PersonalInformationScreen() {
       })
     : t("personalInfo.notSet", { defaultValue: "Not set" });
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const fullName = [driver?.firstName, driver?.lastName]
+    .filter((p) => p && p.trim().length > 0)
+    .join(" ")
+    .trim();
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Unmount guard: handleDeleteAccount logs out (RouteGuard then unmounts this
-  // screen) and the avatar/save flows setState after an await — none must land
-  // on an unmounted component.
+  // screen) and the delete flow setState after an await — none must land on an
+  // unmounted component.
   const mountedRef = useRef(true);
   // Deterministic modal→dialog handoff for the delete-account FAILURE path:
   // presenting the error dialog's <Modal> while the confirm <Modal> is still
@@ -118,71 +119,6 @@ export default function PersonalInformationScreen() {
     }
   };
 
-  // Hydrate fields from the cached driver profile.
-  useEffect(() => {
-    if (!driver) return;
-    setFirstName(driver.firstName ?? "");
-    setLastName(driver.lastName ?? "");
-    setNickname(driver.nickname ?? "");
-    setDateOfBirth(driver.dateOfBirth ?? "");
-  }, [driver]);
-
-  const handleSave = async () => {
-    if (saving) return;
-    // Trim before sending. Empty strings → null to clear the column.
-    const norm = (s: string) => {
-      const v = s.trim();
-      return v.length === 0 ? null : v;
-    };
-    // Validate dateOfBirth shape if provided.
-    const dobTrim = dateOfBirth.trim();
-    if (dobTrim && !/^\d{4}-\d{2}-\d{2}$/.test(dobTrim)) {
-      dialog.show({
-        title: t("personalInfo.invalidDate", { defaultValue: "Invalid date" }),
-        message: t("personalInfo.invalidDateHint", {
-          defaultValue: "Please use YYYY-MM-DD format.",
-        }),
-        tone: "warning",
-      });
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await updateProfile({
-        firstName: norm(firstName) ?? undefined,
-        lastName: norm(lastName) ?? undefined,
-        nickname: norm(nickname) ?? undefined,
-        dateOfBirth: dobTrim ? dobTrim : undefined,
-      });
-      if (!mountedRef.current) return;
-      dialog.show({
-        title: t("personalInfo.savedTitle", { defaultValue: "Saved" }),
-        message: t("personalInfo.savedMessage", {
-          defaultValue: "Your profile has been updated.",
-        }),
-        tone: "success",
-      });
-    } catch (err) {
-      if (!mountedRef.current) return;
-      const apiErr = err as ApiError;
-      dialog.show({
-        title: t("personalInfo.saveFailed", { defaultValue: "Save failed" }),
-        message: apiErr?.message ?? "",
-        tone: "error",
-      });
-    } finally {
-      if (mountedRef.current) setSaving(false);
-    }
-  };
-
-  const getInputBorder = (field: string, value: string) => {
-    if (focusedField === field) return "#5E28C6";
-    if ((field === "firstName" || field === "lastName") && value.trim())
-      return "#5E28C6";
-    return "#EBEBEB";
-  };
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -235,150 +171,50 @@ export default function PersonalInformationScreen() {
           </Text>
         </View>
 
-        {/* ── Editable Fields ── */}
-        <View style={styles.fieldsGroup}>
-          {/* First Name */}
-          <View style={styles.fieldWrap}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { fontFamily: font.regular },
-              ]}
-            >
-              {t("personalInfo.firstName")}
-            </Text>
-            <View
-              style={[
-                styles.fieldInput,
-                { borderColor: getInputBorder("firstName", firstName) },
-              ]}
-            >
-              <TextInput
-                style={[
-                  styles.fieldText,
-                  { fontFamily: font.regular },
-                ]}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder={t("personalInfo.firstName")}
-                placeholderTextColor="#A8A5B8"
-                onFocus={() => setFocusedField("firstName")}
-                onBlur={() => setFocusedField(null)}
-              />
+        {/* ── Personal Details Card (read-only — managed by admin) ── */}
+        <View style={styles.contactCard}>
+          {/* Name */}
+          <View style={styles.contactRow}>
+            <View style={styles.contactInfo}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+                {t("personalInfo.fullName", { defaultValue: "Name" })}
+              </Text>
+              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+                {fullName || t("personalInfo.notSet")}
+              </Text>
             </View>
           </View>
 
-          {/* Last Name */}
-          <View style={styles.fieldWrap}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { fontFamily: font.regular },
-              ]}
-            >
-              {t("personalInfo.lastName")}
-            </Text>
-            <View
-              style={[
-                styles.fieldInput,
-                { borderColor: getInputBorder("lastName", lastName) },
-              ]}
-            >
-              <TextInput
-                style={[
-                  styles.fieldText,
-                  { fontFamily: font.regular },
-                ]}
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder={t("personalInfo.lastName")}
-                placeholderTextColor="#A8A5B8"
-                onFocus={() => setFocusedField("lastName")}
-                onBlur={() => setFocusedField(null)}
-              />
-            </View>
-          </View>
+          <View style={styles.contactDivider} />
 
           {/* Nickname */}
-          <View style={styles.fieldWrap}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { fontFamily: font.regular },
-              ]}
-            >
-              {t("personalInfo.nickname")}
-            </Text>
-            <View
-              style={[
-                styles.fieldInput,
-                { borderColor: getInputBorder("nickname", nickname) },
-              ]}
-            >
-              <TextInput
-                style={[
-                  styles.fieldText,
-                  { fontFamily: font.regular },
-                ]}
-                value={nickname}
-                onChangeText={setNickname}
-                placeholder={t("personalInfo.nickname")}
-                placeholderTextColor="#A8A5B8"
-                onFocus={() => setFocusedField("nickname")}
-                onBlur={() => setFocusedField(null)}
-              />
+          <View style={styles.contactRow}>
+            <View style={styles.contactInfo}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+                {t("personalInfo.nickname")}
+              </Text>
+              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+                {driver?.nickname || t("personalInfo.notSet")}
+              </Text>
             </View>
           </View>
+
+          <View style={styles.contactDivider} />
 
           {/* Date Of Birth */}
-          <View style={styles.fieldWrap}>
-            <Text
-              style={[
-                styles.fieldLabel,
-                { fontFamily: font.regular },
-              ]}
-            >
-              {t("personalInfo.dateOfBirth")}
-            </Text>
-            <View
-              style={[
-                styles.fieldInput,
-                { borderColor: getInputBorder("dob", dateOfBirth) },
-              ]}
-            >
-              <TextInput
-                style={[
-                  styles.fieldText,
-                  { fontFamily: font.regular },
-                ]}
-                value={dateOfBirth}
-                onChangeText={setDateOfBirth}
-                placeholder={t("personalInfo.dateOfBirth")}
-                placeholderTextColor="#A8A5B8"
-                onFocus={() => setFocusedField("dob")}
-                onBlur={() => setFocusedField(null)}
-              />
+          <View style={styles.contactRow}>
+            <View style={styles.contactInfo}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+                {t("personalInfo.dateOfBirth")}
+              </Text>
+              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+                {driver?.dateOfBirth || t("personalInfo.notSet")}
+              </Text>
             </View>
           </View>
-
-          {/* Save Button */}
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-            activeOpacity={0.8}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={[styles.saveBtnText, { fontFamily: font.semibold }]}>
-                {t("personalInfo.save")}
-              </Text>
-            )}
-          </TouchableOpacity>
         </View>
 
-        {/* ── Contact Info Card ── */}
+        {/* ── Contact Info Card (read-only) ── */}
         <View style={styles.contactCard}>
           {/* Email */}
           <View style={styles.contactRow}>
@@ -390,20 +226,6 @@ export default function PersonalInformationScreen() {
                 {driver?.email ?? t("personalInfo.notSet")}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.editBtn}
-              onPress={() =>
-                dialog.show({
-                  title: t("personalInfo.editEmail"),
-                  message: t("personalInfo.editEmailSoon"),
-                  tone: "info",
-                })
-              }
-            >
-              <Text style={[styles.editBtnText, { fontFamily: font.medium }]}>
-                {t("personalInfo.edit")}
-              </Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.contactDivider} />
@@ -418,20 +240,6 @@ export default function PersonalInformationScreen() {
                 {driver?.phone ?? t("personalInfo.notSet")}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.editBtn}
-              onPress={() =>
-                dialog.show({
-                  title: t("personalInfo.editPhone"),
-                  message: t("personalInfo.editPhoneSoon"),
-                  tone: "info",
-                })
-              }
-            >
-              <Text style={[styles.editBtnText, { fontFamily: font.medium }]}>
-                {t("personalInfo.edit")}
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -632,27 +440,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarHint: { fontSize: 14, color: "#7C7890" },
-  fieldsGroup: { gap: 24, marginBottom: 32 },
-  fieldWrap: { gap: 8 },
-  fieldLabel: { fontSize: 16, color: "#7C7890" },
-  fieldInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 22,
-    height: 60,
-  },
-  fieldText: { flex: 1, fontSize: 16, color: "#0D0B12" },
-  saveBtn: {
-    backgroundColor: "#09C454",
-    borderRadius: 16,
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  saveBtnText: { fontSize: 20, color: "#FFFFFF" },
   contactCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -676,14 +463,6 @@ const styles = StyleSheet.create({
   },
   contactLabel: { fontSize: 14, color: "#7C7890" },
   contactValue: { fontSize: 14, color: "#0D0B12" },
-  editBtn: {
-    borderWidth: 1,
-    borderColor: "#09C454",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-  },
-  editBtnText: { fontSize: 14, color: "#09C454" },
   contactDivider: { height: 1, backgroundColor: "#EBEBEB" },
   dangerTitle: {
     fontSize: 18,

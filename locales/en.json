@@ -392,6 +392,7 @@
     "title": "Personal Information",
     "firstName": "First Name",
     "lastName": "Last Name",
+    "fullName": "Name",
     "nickname": "Nickname",
     "dateOfBirth": "Date Of Birth",
     "save": "Save",
