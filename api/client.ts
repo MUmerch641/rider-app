@@ -116,7 +116,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
       try {
         // `/auth/refresh` is an auth endpoint, so a 401 here won't recurse into
-        // this handler — it just throws and we fall through to logout.
+        // this handler — it just throws and we decide below.
         const env = (await apiClient.post(ENDPOINTS.auth.refresh, {
           refreshToken,
         })) as { data?: { accessToken?: string; refreshToken?: string } };
@@ -132,10 +132,18 @@ apiClient.interceptors.response.use(
         original.headers = original.headers ?? {};
         (original.headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
         return apiClient(original);
-      } catch {
+      } catch (refreshErr) {
         isRefreshing = false;
         flushQueue(null);
-        if (onUnauthorized) {
+        // CRITICAL: only log the rider out when the refresh was genuinely
+        // REJECTED (the refresh token is invalid/expired → 401/403). A transient
+        // failure — no network (status undefined), timeout, or a 5xx — must NOT
+        // end the session: that's what was kicking riders out on flaky mobile
+        // data / when resuming from background before the network was ready. On
+        // a transient failure we just fail this request; the next one retries.
+        const status = (refreshErr as { status?: number })?.status;
+        const isAuthRejection = status === 401 || status === 403;
+        if (isAuthRejection && onUnauthorized) {
           try {
             await onUnauthorized();
           } catch {

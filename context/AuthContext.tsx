@@ -75,9 +75,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await authApi.refresh(refresh);
       await tokenStorage.setAccessToken(res.accessToken);
       await tokenStorage.setRefreshToken(res.refreshToken);
-    } catch {
-      await clearAllAuth();
-      setDriver(null);
+    } catch (e) {
+      // Only END the session on a genuine auth rejection (refresh token
+      // invalid/expired → 401/403). A transient failure — no network, timeout,
+      // or a 5xx — must NOT log the rider out (that was kicking riders out on
+      // flaky data / on resume from background). Keep the session; the next
+      // request retries the refresh.
+      const status = (e as { status?: number })?.status;
+      if (status === 401 || status === 403) {
+        await clearAllAuth();
+        setDriver(null);
+      }
     }
   }, []);
 
