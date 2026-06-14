@@ -45,8 +45,19 @@ export function resolveNotificationRoute(payload: NotificationPayload): Href {
       : "/inbox";
   }
 
+  // A NEW dispatch is just an OFFER the rider hasn't accepted yet — it must open
+  // the MAP, where the offer shows in the bottom sheet with Accept/Decline. The
+  // delivery_route (live navigation, "Picked Up") screen is ONLY for an order
+  // the rider has already accepted, so we must NOT deep-link there for an offer
+  // — even though the payload carries the orderId. This takes priority over the
+  // orderId → delivery_route deep-link below.
+  if (type === "new_order") {
+    return "/(tabs)";
+  }
+
   // Order pushes carry the order id in `data` — deep-link straight to the
-  // live-navigation screen for that order.
+  // live-navigation screen for that order (these are for an ALREADY-accepted
+  // order, e.g. an order_update).
   if (payload.orderId) {
     return {
       pathname: "/orders/delivery_route",
