@@ -22,16 +22,32 @@ function navigateForNotification(
 ): void {
     if (!response) return;
     try {
-        const data = (response.notification?.request?.content?.data ?? {}) as Record<
-            string,
-            unknown
-        >;
+        const req = response.notification?.request;
+        // On iOS, expo-notifications delivers a REMOTE push's custom keys in
+        // `request.trigger.payload` (the raw APNs dict, incl. `aps`) — NOT in
+        // `content.data`, which is empty for pushes. Merge both (+ any nested
+        // data/body/aps) so the routing fields are found on every platform.
+        const triggerPayload = (() => {
+            const t = req?.trigger as { payload?: Record<string, unknown> } | undefined;
+            return t && typeof t.payload === "object" ? t.payload : undefined;
+        })();
+        let data = {
+            ...(triggerPayload ?? {}),
+            ...((req?.content?.data ?? {}) as Record<string, unknown>),
+        } as Record<string, unknown>;
+        for (const k of ["data", "body", "aps"]) {
+            const nested = data[k];
+            if (nested && typeof nested === "object") {
+                data = { ...data, ...(nested as Record<string, unknown>) };
+            }
+        }
+        const str = (v: unknown) =>
+            typeof v === "string" ? v : v != null ? String(v) : undefined;
         const payload: NotificationPayload = {
-            type: typeof data.type === "string" ? data.type : undefined,
-            orderId: typeof data.orderId === "string" ? data.orderId : undefined,
-            actionUrl:
-                typeof data.actionUrl === "string" ? data.actionUrl : undefined,
-            threadId: typeof data.threadId === "string" ? data.threadId : undefined,
+            type: str(data.type),
+            orderId: str(data.orderId),
+            actionUrl: str(data.actionUrl),
+            threadId: str(data.threadId),
         };
         const route = resolveNotificationRoute(payload);
         // Defer slightly so the root navigator is mounted on cold start.
