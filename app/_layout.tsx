@@ -60,7 +60,7 @@ function RouteGuard({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/auth/auth_screen");
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/onmap");
     }
   }, [isAuthenticated, isLoading, segments, router]);
 

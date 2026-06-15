@@ -78,10 +78,10 @@ export default function TabLayout() {
         ),
       }}
     >
-      {/* Orders tab removed from the bar (R7). The index route file still
-          exists (re-exports the orders screen) so /(tabs) resolves, but
-          href:null hides it from the tab bar and keeps it non-navigable as
-          a tab — the orders content moved into the map's bottom sheet. */}
+      {/* The old Orders/Summary page is RETIRED (B3). The index route now
+          REDIRECTS to /(tabs)/onmap (see (tabs)/index.tsx), so any navigation
+          that resolves to /(tabs) lands on the map, never the summary.
+          href:null keeps it off the tab bar. */}
       <Tabs.Screen name="index" options={{ href: null }} />
       {screens.map(({ name, labelKey, Icon }) => (
         <Tabs.Screen

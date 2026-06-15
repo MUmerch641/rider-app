@@ -52,7 +52,7 @@ export function resolveNotificationRoute(payload: NotificationPayload): Href {
   // — even though the payload carries the orderId. This takes priority over the
   // orderId → delivery_route deep-link below.
   if (type === "new_order") {
-    return "/(tabs)";
+    return "/(tabs)/onmap";
   }
 
   // Order pushes carry the order id in `data` — deep-link straight to the
@@ -83,7 +83,7 @@ export function resolveNotificationRoute(payload: NotificationPayload): Href {
     type === "order_cancelled" ||
     type === "order_update"
   ) {
-    return "/(tabs)";
+    return "/(tabs)/onmap";
   }
 
   // Generic / unknown → the notifications inbox (acceptable fallback only).

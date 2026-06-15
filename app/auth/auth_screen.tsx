@@ -102,7 +102,7 @@ export default function AuthScreen() {
       await login({ phone: fullPhone, password });
       // RouteGuard in app/_layout.tsx will redirect once isAuthenticated flips.
       // Replace is kept as belt-and-suspenders for instant transition.
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/onmap");
     } catch (err) {
       const apiErr = err as ApiError;
       if (apiErr?.fields?.phone?.length) {
