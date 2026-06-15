@@ -283,7 +283,11 @@
     "acquiringLocation": "دیاریکردنی شوێن…",
     "acceptFailedTitle": "نەتوانرا داواکارییەکە وەربگیرێت",
     "offerUnavailableMessage": "ئەم ئۆفەرە بەسەرچووە یان شۆفێرێکی تر وەریگرتووە.",
-    "offerNetworkMessage": "کێشەی تۆڕ — پەیوەندییەکەت بپشکنە و دووبارە هەوڵبدەوە."
+    "offerNetworkMessage": "کێشەی تۆڕ — پەیوەندییەکەت بپشکنە و دووبارە هەوڵبدەوە.",
+    "distance": "دووری",
+    "eta": "کاتی خەمڵێنراو",
+    "prepTime": "کاتی ئامادەکردن",
+    "ready": "ئامادەیە"
   },
   "orders": {
     "todaySummary": "کورتەی ئەمڕۆ",

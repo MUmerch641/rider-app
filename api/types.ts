@@ -214,6 +214,10 @@ export type Order = {
   total?: string | number;
   currency?: string;
   paymentMethod?: "CASH" | "CARD" | "ONLINE";
+  // ISO 8601 datetime the merchant expects the order to be ready for pickup.
+  // Returned by the driver order list + getById endpoints; drives the prep
+  // countdown ring on the map's active-order overlay.
+  estimatedReadyAt?: string | null;
   deliveryAddress?: {
     street?: string;
     building?: string;

@@ -2,6 +2,7 @@ import { ordersApi, type ApiError, type OrderAssignment } from "@/api";
 import { AcceptedOrdersSheet } from "@/components/ui/AcceptedOrdersSheet";
 import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
 import OrderRequestCard from "@/components/ui/OrderRequestCard";
+import PrepCountdownRing from "@/components/ui/PrepCountdownRing";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAuth, useSocket } from "@/context";
 import { formatDistanceKm, formatDurationMinutes } from "@/utils/format";
@@ -236,6 +237,21 @@ export default function OnMap() {
     const first = sheetOrders[0];
     return first ? assignmentTarget(first) : null;
   }, [sheetOrders]);
+
+  // Active-order info overlay data: distance (km) + ETA from the assignment's
+  // own routing fields, and the merchant prep deadline (estimatedReadyAt) for
+  // the countdown ring. Driven by the first active assignment; the overlay is
+  // hidden whenever an offer card is on screen (currentRequest) to avoid
+  // stacking two cards over the map.
+  const activeOrder = sheetOrders[0] ?? null;
+  const activeInfo = useMemo(() => {
+    if (!activeOrder) return null;
+    const distance = formatDistanceKm(activeOrder.distanceKm);
+    const eta = formatDurationMinutes(activeOrder.estimatedMinutes);
+    const readyAt = activeOrder.order?.estimatedReadyAt ?? null;
+    if (!distance && !eta && !readyAt) return null;
+    return { distance, eta, readyAt };
+  }, [activeOrder]);
 
   // Primary destination: the offer's store while an offer is showing, else the
   // first active target. The primitive key matters: assignment refetches
@@ -964,6 +980,52 @@ export default function OnMap() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* ── Active-order info overlay ── distance + ETA from the active
+              assignment's routing data, plus the merchant prep countdown ring
+              ticking down to estimatedReadyAt. Hidden while an offer card is on
+              screen so the two never stack. */}
+          {activeInfo && !currentRequest && (
+            <View style={styles.activeInfoCard} pointerEvents="none">
+              <View style={styles.activeInfoStats}>
+                {!!activeInfo.distance && (
+                  <View style={styles.activeInfoStat}>
+                    <Ionicons
+                      name="navigate-outline"
+                      size={scale(16)}
+                      color="#7900F3"
+                    />
+                    <Text style={styles.activeInfoValue}>
+                      {activeInfo.distance}
+                    </Text>
+                    <Text style={styles.activeInfoLabel}>
+                      {t("onmap.distance", "Distance")}
+                    </Text>
+                  </View>
+                )}
+                {!!activeInfo.eta && (
+                  <View style={styles.activeInfoStat}>
+                    <Ionicons
+                      name="time-outline"
+                      size={scale(16)}
+                      color="#7900F3"
+                    />
+                    <Text style={styles.activeInfoValue}>{activeInfo.eta}</Text>
+                    <Text style={styles.activeInfoLabel}>
+                      {t("onmap.eta", "ETA")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {!!activeInfo.readyAt && (
+                <PrepCountdownRing
+                  readyAt={activeInfo.readyAt}
+                  label={t("onmap.prepTime", "Prep time")}
+                  readyLabel={t("onmap.ready", "Ready")}
+                />
+              )}
+            </View>
+          )}
         </View>
 
         {/* ── Order Request Card — shown only when there is a pending order.
@@ -1038,6 +1100,41 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: scale(13),
     color: Colors.textSecondary,
+  },
+
+  // Active-order info overlay (distance + ETA + prep countdown ring)
+  activeInfoCard: {
+    position: "absolute",
+    top: verticalScale(60),
+    left: spacing.lg,
+    right: spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: Colors.background,
+    borderRadius: scale(20),
+    paddingVertical: scale(12),
+    paddingHorizontal: spacing.lg,
+    zIndex: 8,
+    ...Shadow.card,
+  },
+  activeInfoStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+  },
+  activeInfoStat: {
+    alignItems: "center",
+    gap: scale(2),
+  },
+  activeInfoValue: {
+    fontSize: scale(15),
+    fontWeight: "700",
+    color: "#1A1A2E",
+  },
+  activeInfoLabel: {
+    fontSize: scale(10),
+    color: "#7C7890",
   },
 
   // Map

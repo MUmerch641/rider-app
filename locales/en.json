@@ -305,7 +305,11 @@
     "acquiringLocation": "Acquiring location…",
     "acceptFailedTitle": "Couldn't accept the order",
     "offerUnavailableMessage": "This offer has expired or was taken by another driver.",
-    "offerNetworkMessage": "Network problem — check your connection and try again."
+    "offerNetworkMessage": "Network problem — check your connection and try again.",
+    "distance": "Distance",
+    "eta": "ETA",
+    "prepTime": "Prep time",
+    "ready": "Ready"
   },
   "orderRadius": {
     "title": "Order Radius",

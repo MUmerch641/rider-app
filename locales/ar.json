@@ -312,7 +312,11 @@
     "acquiringLocation": "جارٍ تحديد الموقع…",
     "acceptFailedTitle": "تعذّر قبول الطلب",
     "offerUnavailableMessage": "انتهت صلاحية هذا العرض أو استلمه سائق آخر.",
-    "offerNetworkMessage": "مشكلة في الشبكة — تحقق من اتصالك وحاول مرة أخرى."
+    "offerNetworkMessage": "مشكلة في الشبكة — تحقق من اتصالك وحاول مرة أخرى.",
+    "distance": "المسافة",
+    "eta": "الوقت المقدّر",
+    "prepTime": "وقت التحضير",
+    "ready": "جاهز"
   },
   "delivery": {
     "activeDelivery": "توصيل نشط",
