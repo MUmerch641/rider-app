@@ -323,7 +323,7 @@ export default function ProfileScreen() {
           {/* Orders */}
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => router.push("./revenue_screen")}
+            onPress={() => router.push("/profile/revenue_screen")}
             activeOpacity={0.75}
           >
             <View style={styles.statIconWrapper}>
@@ -339,7 +339,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => router.push("./revenue_screen")}
+            onPress={() => router.push("/profile/revenue_screen")}
             activeOpacity={0.75}
           >
             <View style={styles.statIconWrapper}>
@@ -366,7 +366,7 @@ export default function ProfileScreen() {
           {/* Rating */}
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => router.push("./reviews_screen")}
+            onPress={() => router.push("/profile/reviews_screen")}
             activeOpacity={0.75}
           >
             <View style={styles.statIconWrapper}>

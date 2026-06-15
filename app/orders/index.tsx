@@ -179,7 +179,7 @@ export default function OrdersScreen() {
             screen (R8); this header only shows the rider identity. */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.push("./profile/profile_screen")}
+            onPress={() => router.push("/profile/profile_screen")}
             style={styles.profileRow}
           >
             <View style={styles.profileWrap}>
