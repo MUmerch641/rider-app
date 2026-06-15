@@ -64,17 +64,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     else await driverStorage.clear();
   }, []);
 
+  const endSession = useCallback(async () => {
+    // Revoked/expired session: drop auth AND stop GPS streaming so the
+    // background location task can't keep submitting points under a dead
+    // identity. Best-effort on the tracking teardown.
+    await clearAllAuth();
+    setDriver(null);
+    void stopDriverTracking()
+      .then(() => clearLocationQueue())
+      .catch(() => undefined);
+  }, []);
+
   const handleUnauthorized = useCallback(async () => {
-    // NEVER end the session from a background context. The background location
-    // task runs with the phone locked; a token read or refresh that fails then
-    // (e.g. the keychain is briefly unreadable while locked) must not log the
-    // rider out mid-shift. Defer the decision to when the app is foreground —
-    // if the session is genuinely dead, the next active request handles it.
-    if (AppState.currentState !== "active") return;
     const refresh = await tokenStorage.getRefreshToken();
     if (!refresh) {
-      await clearAllAuth();
-      setDriver(null);
+      // A NULL read is ambiguous: the keychain can be momentarily unreadable on
+      // a locked device (and pre-AFTER_FIRST_UNLOCK installs always are). Only
+      // treat a missing refresh token as a real logout when the app is
+      // foreground; in the background, defer — the next active request rechecks.
+      // This is what stopped riders being kicked mid-shift.
+      if (AppState.currentState === "active") await endSession();
       return;
     }
     try {
@@ -82,18 +91,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await tokenStorage.setAccessToken(res.accessToken);
       await tokenStorage.setRefreshToken(res.refreshToken);
     } catch (e) {
-      // Only END the session on a genuine auth rejection (refresh token
-      // invalid/expired → 401/403). A transient failure — no network, timeout,
-      // or a 5xx — must NOT log the rider out (that was kicking riders out on
-      // flaky data / on resume from background). Keep the session; the next
-      // request retries the refresh.
+      // An authoritative 401/403 from the SERVER is a genuine revocation (token
+      // invalid/expired, driver deactivated/banned) — end the session even in
+      // the background so we stop streaming GPS under a revoked identity. A
+      // transient failure (no network, timeout, 5xx) is NOT a revocation: keep
+      // the session; the next request retries the refresh.
       const status = (e as { status?: number })?.status;
       if (status === 401 || status === 403) {
-        await clearAllAuth();
-        setDriver(null);
+        await endSession();
       }
     }
-  }, []);
+  }, [endSession]);
 
   useEffect(() => {
     configurePushHandler();

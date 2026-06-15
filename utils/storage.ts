@@ -44,14 +44,16 @@ export const tokenStorage = {
   },
   async setAccessToken(token: string): Promise<void> {
     try {
-      // AFTER_FIRST_UNLOCK: the token must stay readable while the phone is
-      // LOCKED. The background location task keeps running with the screen off,
-      // and ~15 min in the access token expires; refreshing then reads the
-      // refresh token from the keychain. With the default WHEN_UNLOCKED that
-      // read returns null on a locked device, which the app mistook for "no
-      // token" and logged the rider out mid-shift (within ~an hour).
+      // AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: the token must stay readable while
+      // the phone is LOCKED. The background location task keeps running with
+      // the screen off, and ~15 min in the access token expires; refreshing
+      // then reads the refresh token from the keychain. With the default
+      // WHEN_UNLOCKED that read returns null on a locked device, which the app
+      // mistook for "no token" and logged the rider out mid-shift (within ~an
+      // hour). THIS_DEVICE_ONLY keeps it out of iCloud Keychain / encrypted
+      // backups so the token can't be exfiltrated to another device.
       await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token, {
-        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
       });
     } catch {
       await storage.set(ACCESS_TOKEN_KEY, token);
@@ -66,11 +68,12 @@ export const tokenStorage = {
   },
   async setRefreshToken(token: string): Promise<void> {
     try {
-      // AFTER_FIRST_UNLOCK — see setAccessToken. The refresh token MUST be
-      // readable while the device is locked or the background location task
-      // can't refresh an expired access token and the rider gets logged out.
+      // AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY — see setAccessToken. The refresh
+      // token MUST be readable while the device is locked or the background
+      // location task can't refresh an expired access token and the rider gets
+      // logged out. THIS_DEVICE_ONLY keeps it off iCloud Keychain/backups.
       await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token, {
-        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
       });
     } catch {
       await storage.set(REFRESH_TOKEN_KEY, token);
