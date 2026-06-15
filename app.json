@@ -91,11 +91,11 @@
           "color": "#3F1A96",
           "defaultChannel": "default",
           "sounds": [
-            "./assets/sounds/new-order.wav",
-            "./assets/sounds/alert-chime.wav",
-            "./assets/sounds/alert-bell.wav",
-            "./assets/sounds/alert-siren.wav",
-            "./assets/sounds/alert-beep.wav"
+            "./assets/sounds/new_order.wav",
+            "./assets/sounds/alert_chime.wav",
+            "./assets/sounds/alert_bell.wav",
+            "./assets/sounds/alert_siren.wav",
+            "./assets/sounds/alert_beep.wav"
           ]
         }
       ],

@@ -3,11 +3,11 @@
 // Unknown / missing keys fall back to "default". `require()` returns the bundled
 // asset module id, which createAudioPlayer (expo-audio) accepts directly.
 export const ALERT_SOUNDS = {
-  default: require("@/assets/sounds/new-order.wav"),
-  chime: require("@/assets/sounds/alert-chime.wav"),
-  bell: require("@/assets/sounds/alert-bell.wav"),
-  siren: require("@/assets/sounds/alert-siren.wav"),
-  beep: require("@/assets/sounds/alert-beep.wav"),
+  default: require("@/assets/sounds/new_order.wav"),
+  chime: require("@/assets/sounds/alert_chime.wav"),
+  bell: require("@/assets/sounds/alert_bell.wav"),
+  siren: require("@/assets/sounds/alert_siren.wav"),
+  beep: require("@/assets/sounds/alert_beep.wav"),
 } as const;
 
 export type AlertSoundKey = keyof typeof ALERT_SOUNDS;
