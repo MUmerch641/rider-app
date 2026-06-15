@@ -163,20 +163,36 @@ export default function OnMap() {
     [assignments],
   );
 
+  // Orders this rider has actively PASSED ON this session (declined or let the
+  // offer time out). They must not linger in "New Orders Nearby" — that was the
+  // bug where the top offer card hid on no-accept but the bottom card stayed.
+  // A genuine RE-offer still surfaces via the top offer card (driven by the
+  // socket newOrder, not this set), so the rider never loses a fresh chance.
+  const [declinedIds, setDeclinedIds] = useState<Set<string>>(() => new Set());
+  const markDeclined = useCallback((orderId: string) => {
+    setDeclinedIds((prev) => {
+      if (prev.has(orderId)) return prev;
+      const next = new Set(prev);
+      next.add(orderId);
+      return next;
+    });
+  }, []);
+
   // New-orders-nearby = offered-but-unaccepted assignments (status "assigned"),
-  // EXCLUDING the one already shown as the live offer card at the top
-  // (currentRequest, from the socket newOrder). Without this exclusion the same
-  // order rendered twice — once in the top offer card and once here — giving
-  // two Accept/Decline pairs for one order. The top card is canonical for the
-  // live offer; this list shows only OTHER pending offers (and still surfaces
-  // an "assigned" order on its own after the socket offer has cleared, e.g. on
-  // app reopen).
+  // EXCLUDING (a) the one already shown as the live offer card at the top
+  // (currentRequest, from the socket newOrder) — without this the same order
+  // rendered twice with two Accept/Decline pairs — and (b) any order this rider
+  // already declined/timed-out. The top card is canonical for the live offer;
+  // this list shows only OTHER pending offers the rider hasn't passed on.
   const nearbyOrders = useMemo(
     () =>
       assignments.filter(
-        (a) => a.status === "assigned" && a.orderId !== newOrder?.orderId,
+        (a) =>
+          a.status === "assigned" &&
+          a.orderId !== newOrder?.orderId &&
+          !declinedIds.has(a.orderId),
       ),
-    [assignments, newOrder],
+    [assignments, newOrder, declinedIds],
   );
 
   // ─── Map socket newOrder → component-shape currentRequest ────────────────
@@ -578,6 +594,7 @@ export default function OnMap() {
   const handleDecline = async () => {
     if (!newOrder) return;
     const orderId = newOrder.orderId;
+    markDeclined(orderId);
     clearNewOrder();
     try {
       await ordersApi.reject(orderId, { reason: "too_far" });
@@ -590,6 +607,7 @@ export default function OnMap() {
   const handleTimerEnd = async () => {
     if (!newOrder) return;
     const orderId = newOrder.orderId;
+    markDeclined(orderId);
     clearNewOrder();
     try {
       await ordersApi.reject(orderId, { reason: "timeout" });
@@ -656,6 +674,7 @@ export default function OnMap() {
         return { ...m, [orderId]: true };
       });
       if (alreadyActing) return;
+      markDeclined(orderId);
       try {
         await ordersApi.reject(orderId, { reason: "too_far" });
         stopAlarm();
@@ -667,7 +686,7 @@ export default function OnMap() {
         setActing((m) => ({ ...m, [orderId]: false }));
       }
     },
-    [newOrder, clearNewOrder, stopAlarm, refreshAssignments],
+    [newOrder, clearNewOrder, stopAlarm, refreshAssignments, markDeclined],
   );
 
   // ─── Advance button → next lifecycle status (GPS-gated server-side) ───────
