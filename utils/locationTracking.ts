@@ -202,26 +202,16 @@ export async function startDriverTracking(): Promise<void> {
     const foreground = await Location.requestForegroundPermissionsAsync();
     if (cancelled() || foreground.status !== "granted") return;
 
-    let backgroundGranted = false;
-    try {
-      // Check before prompting: on Android 11+ background location can't be
-      // granted from an in-app dialog, and after two denials the system
-      // silently auto-denies forever — so only request while the OS still
-      // allows asking; otherwise fall through to the foreground watcher.
-      const background = await Location.getBackgroundPermissionsAsync();
-      if (cancelled()) return;
-      if (background.granted) {
-        backgroundGranted = true;
-      } else if (background.canAskAgain) {
-        const asked = await Location.requestBackgroundPermissionsAsync();
-        backgroundGranted = asked.status === "granted";
-      }
-    } catch {
-      backgroundGranted = false;
-    }
+    // Path B: we no longer request ACCESS_BACKGROUND_LOCATION. The foreground
+    // service started below (the persistent "tracking your location"
+    // notification) keeps delivering location while the app is backgrounded
+    // WITHOUT the background-location permission — so we always take the
+    // foreground-service path and never prompt for background access. The catch
+    // falls back to the in-app watcher only on Expo Go / unsupported setups.
+    const useForegroundService = true;
     if (cancelled()) return;
 
-    if (backgroundGranted) {
+    if (useForegroundService) {
       try {
         const alreadyStarted =
           await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
