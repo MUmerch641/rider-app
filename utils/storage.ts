@@ -44,7 +44,15 @@ export const tokenStorage = {
   },
   async setAccessToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token);
+      // AFTER_FIRST_UNLOCK: the token must stay readable while the phone is
+      // LOCKED. The background location task keeps running with the screen off,
+      // and ~15 min in the access token expires; refreshing then reads the
+      // refresh token from the keychain. With the default WHEN_UNLOCKED that
+      // read returns null on a locked device, which the app mistook for "no
+      // token" and logged the rider out mid-shift (within ~an hour).
+      await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, token, {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+      });
     } catch {
       await storage.set(ACCESS_TOKEN_KEY, token);
     }
@@ -58,7 +66,12 @@ export const tokenStorage = {
   },
   async setRefreshToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token);
+      // AFTER_FIRST_UNLOCK — see setAccessToken. The refresh token MUST be
+      // readable while the device is locked or the background location task
+      // can't refresh an expired access token and the rider gets logged out.
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, token, {
+        keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+      });
     } catch {
       await storage.set(REFRESH_TOKEN_KEY, token);
     }

@@ -8,7 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import {
   authApi,
   setUnauthorizedHandler,
@@ -65,6 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleUnauthorized = useCallback(async () => {
+    // NEVER end the session from a background context. The background location
+    // task runs with the phone locked; a token read or refresh that fails then
+    // (e.g. the keychain is briefly unreadable while locked) must not log the
+    // rider out mid-shift. Defer the decision to when the app is foreground —
+    // if the session is genuinely dead, the next active request handles it.
+    if (AppState.currentState !== "active") return;
     const refresh = await tokenStorage.getRefreshToken();
     if (!refresh) {
       await clearAllAuth();
