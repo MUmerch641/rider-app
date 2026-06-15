@@ -163,12 +163,20 @@ export default function OnMap() {
     [assignments],
   );
 
-  // New-orders-nearby = offered-but-unaccepted assignments (status "assigned").
-  // Same derivation the old Orders tab used; relocated into the bottom sheet
-  // (R4) so removing that tab loses nothing.
+  // New-orders-nearby = offered-but-unaccepted assignments (status "assigned"),
+  // EXCLUDING the one already shown as the live offer card at the top
+  // (currentRequest, from the socket newOrder). Without this exclusion the same
+  // order rendered twice — once in the top offer card and once here — giving
+  // two Accept/Decline pairs for one order. The top card is canonical for the
+  // live offer; this list shows only OTHER pending offers (and still surfaces
+  // an "assigned" order on its own after the socket offer has cleared, e.g. on
+  // app reopen).
   const nearbyOrders = useMemo(
-    () => assignments.filter((a) => a.status === "assigned"),
-    [assignments],
+    () =>
+      assignments.filter(
+        (a) => a.status === "assigned" && a.orderId !== newOrder?.orderId,
+      ),
+    [assignments, newOrder],
   );
 
   // ─── Map socket newOrder → component-shape currentRequest ────────────────
