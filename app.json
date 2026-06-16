@@ -107,7 +107,8 @@
           "photosPermission": "OnWay Driver uses your photo library so you can set a profile photo.",
           "cameraPermission": "OnWay Driver uses the camera so you can take a profile photo."
         }
-      ]
+      ],
+      "./plugins/removeMediaPlaybackFgs"
     ],
     "experiments": {
       "typedRoutes": true
