@@ -356,8 +356,11 @@ const styles = StyleSheet.create({
     left: scale(20),
     right: scale(20),
     alignItems: "center",
-    zIndex: 50,
-    elevation: 50,
+    // Must sit ABOVE AcceptedOrdersSheet (zIndex 100) so the Accept/Decline
+    // buttons stay tappable even when the rider expands the sheet — we no longer
+    // force-collapse the sheet during an offer.
+    zIndex: 200,
+    elevation: 200,
   },
 
   card: {

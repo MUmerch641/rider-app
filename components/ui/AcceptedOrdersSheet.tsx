@@ -92,12 +92,6 @@ interface AcceptedOrdersSheetProps {
    * of leaving the rider on a bare header.
    */
   expandSignal?: number;
-  /**
-   * Keep the sheet collapsed and block expansion — used while a time-critical
-   * order OFFER card is showing, so the expanded list can never cover its
-   * Accept button. Clears automatically when the offer is gone.
-   */
-  forceCollapsed?: boolean;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -115,24 +109,18 @@ export function AcceptedOrdersSheet({
   maxHeight = verticalScale(460),
   defaultCollapsed = true,
   expandSignal,
-  forceCollapsed = false,
 }: AcceptedOrdersSheetProps) {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const langKey: LangKey = (i18n.language as LangKey) || "en";
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
-  // While an offer card is up, the sheet is pinned collapsed regardless of the
-  // user's own toggle so it never overlaps the offer's Accept button.
-  const effectiveCollapsed = forceCollapsed || collapsed;
-
   // Force the list open whenever the parent bumps expandSignal (screen focus).
   // The rider can still collapse it manually afterwards; the next focus reopens.
-  // Suppressed while forceCollapsed so a focus during an offer can't re-cover it.
   useEffect(() => {
-    if (expandSignal === undefined || forceCollapsed) return;
+    if (expandSignal === undefined) return;
     setCollapsed(false);
-  }, [expandSignal, forceCollapsed]);
+  }, [expandSignal]);
 
   return (
     <View style={[styles.container, style]}>
@@ -148,16 +136,13 @@ export function AcceptedOrdersSheet({
 
         {/* Trailing: collapse pill with chevron + count */}
         <TouchableOpacity
-          style={[styles.collapsePill, forceCollapsed && { opacity: 0.5 }]}
-          onPress={() => {
-            if (!forceCollapsed) setCollapsed((v) => !v);
-          }}
-          disabled={forceCollapsed}
+          style={styles.collapsePill}
+          onPress={() => setCollapsed((v) => !v)}
           activeOpacity={0.72}
           hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
         >
           <SvgXml
-            xml={effectiveCollapsed ? CHEVRON_UP_SVG : CHEVRON_DOWN_SVG}
+            xml={collapsed ? CHEVRON_UP_SVG : CHEVRON_DOWN_SVG}
             width={scale(24)}
             height={scale(24)}
           />
@@ -168,7 +153,7 @@ export function AcceptedOrdersSheet({
       </View>
 
       {/* ── Order Cards List ── */}
-      {!effectiveCollapsed && (
+      {!collapsed && (
         <ScrollView
           showsVerticalScrollIndicator={false}
           style={{ maxHeight }}

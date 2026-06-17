@@ -19,6 +19,7 @@ import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import {
   fetchDirections,
   generateStraightLine,
+  haversineMeters,
   nearestPointOnPolyline,
   remainingRoute,
   REROUTE_CONSECUTIVE_TICKS,
@@ -108,6 +109,11 @@ export default function OnMap() {
   // Per-order busy flags while an accept/decline request for a NEARBY offer is
   // in flight (mirrors the old Orders-tab "acting" map).
   const [acting, setActing] = useState<Record<string, boolean>>({});
+
+  // Distance + duration of the current primary route (rider→store for an offer,
+  // rider→target for an active order), captured from fetchDirections so the
+  // offer card + active overlay show real values instead of the backend's 0.
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
 
   // ─── Live data hooks ─────────────────────────────────────────────────────
   const { driver } = useAuth();
@@ -291,6 +297,21 @@ export default function OnMap() {
     ? `${routeDestination.latitude},${routeDestination.longitude}`
     : null;
 
+  // What the offer card + active overlay actually display: the fetched road
+  // route when available, else a straight-line estimate from the rider's GPS so
+  // distance/ETA are never 0 (the backend dispatch payload often omits them).
+  const liveRouteInfo = useMemo(() => {
+    if (routeInfo) return routeInfo;
+    if (userLocation && routeDestination) {
+      const m = haversineMeters(userLocation, routeDestination);
+      const km = m / 1000;
+      const distance = km < 1 ? `${Math.round(m)} m` : `${km.toFixed(1)} km`;
+      const mins = Math.max(1, Math.round((km / 22) * 60)); // ~22 km/h urban avg
+      return { distance, duration: `${mins} min` };
+    }
+    return null;
+  }, [routeInfo, userLocation, routeDestination]);
+
   // Ref syncs — declared BEFORE the fetch effect below so the refs are current
   // when it runs (effects fire in declaration order).
   useEffect(() => {
@@ -308,6 +329,7 @@ export default function OnMap() {
     loadingRouteRef.current = true;
     offRouteTicksRef.current = 0;
     let coords: Coordinate[];
+    let info: { distance: string; duration: string } | null = null;
     try {
       const result = await fetchDirections(origin, dest);
       // A degenerate (<2 point) polyline is treated as a failure so routeRef
@@ -317,6 +339,9 @@ export default function OnMap() {
         result && result.coordinates.length >= 2
           ? result.coordinates
           : generateStraightLine(origin, dest);
+      if (result?.distance && result?.duration) {
+        info = { distance: result.distance, duration: result.duration };
+      }
     } catch {
       coords = generateStraightLine(origin, dest);
     }
@@ -336,6 +361,7 @@ export default function OnMap() {
     routeRef.current = coords;
     setPrimaryRoute(coords);
     setTrimmedRoute(null);
+    setRouteInfo(info);
     lastRouteFetchAtRef.current = Date.now();
   }, []);
 
@@ -1005,10 +1031,10 @@ export default function OnMap() {
               assignment's routing data, plus the merchant prep countdown ring
               ticking down to estimatedReadyAt. Hidden while an offer card is on
               screen so the two never stack. */}
-          {activeInfo && !currentRequest && (
+          {activeOrder && !currentRequest && (liveRouteInfo || activeInfo?.readyAt) && (
             <View style={styles.activeInfoCard} pointerEvents="none">
               <View style={styles.activeInfoStats}>
-                {!!activeInfo.distance && (
+                {!!liveRouteInfo?.distance && (
                   <View style={styles.activeInfoStat}>
                     <Ionicons
                       name="navigate-outline"
@@ -1016,28 +1042,28 @@ export default function OnMap() {
                       color="#7900F3"
                     />
                     <Text style={styles.activeInfoValue}>
-                      {activeInfo.distance}
+                      {liveRouteInfo.distance}
                     </Text>
                     <Text style={styles.activeInfoLabel}>
                       {t("onmap.distance", "Distance")}
                     </Text>
                   </View>
                 )}
-                {!!activeInfo.eta && (
+                {!!liveRouteInfo?.duration && (
                   <View style={styles.activeInfoStat}>
                     <Ionicons
                       name="time-outline"
                       size={scale(16)}
                       color="#7900F3"
                     />
-                    <Text style={styles.activeInfoValue}>{activeInfo.eta}</Text>
+                    <Text style={styles.activeInfoValue}>{liveRouteInfo.duration}</Text>
                     <Text style={styles.activeInfoLabel}>
                       {t("onmap.eta", "ETA")}
                     </Text>
                   </View>
                 )}
               </View>
-              {!!activeInfo.readyAt && (
+              {!!activeInfo?.readyAt && (
                 <PrepCountdownRing
                   readyAt={activeInfo.readyAt}
                   label={t("onmap.prepTime", "Prep time")}
@@ -1058,8 +1084,8 @@ export default function OnMap() {
             restaurantName={currentRequest.restaurantName}
             restaurantLocation={currentRequest.restaurantLocation}
             restaurantLogo={currentRequest.restaurantLogo}
-            totalDistance={currentRequest.totalDistance}
-            totalDuration={currentRequest.totalDuration}
+            totalDistance={liveRouteInfo?.distance || currentRequest.totalDistance}
+            totalDuration={liveRouteInfo?.duration || currentRequest.totalDuration}
             timerSeconds={currentRequest.expiresInSeconds}
             currency="IQD"
             items={currentRequest.items}
@@ -1084,7 +1110,6 @@ export default function OnMap() {
             onOrderPress={handleOrderPress}
             onAdvance={handleAdvance}
             expandSignal={focusTick}
-            forceCollapsed={!!currentRequest}
           />
         )}
       </SafeAreaView>
