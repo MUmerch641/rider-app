@@ -131,15 +131,19 @@ export default function OnMap() {
     }
   }, []);
 
-  // Refetch on mount + every focus so deliveries advanced on other screens
-  // (active delivery / route) surface here immediately. The focusTick bump
-  // re-expands the accepted-orders sheet on return (see AcceptedOrdersSheet
-  // expandSignal) — the screen stays mounted under the pushed route, so its
-  // collapsed state would otherwise persist and hide the list.
+  // Refetch on mount + every focus, AND poll while the map is focused. The poll
+  // is what removes an order that LEFT the active list (cancelled, delivered,
+  // reassigned) — otherwise the sheet keeps showing a stale order until the
+  // next focus change, because the screen stays mounted and may get no socket
+  // event for that transition. The focusTick bump re-expands the sheet on focus.
   useFocusEffect(
     useCallback(() => {
       void refreshAssignments();
       setFocusTick((n) => n + 1);
+      const poll = setInterval(() => {
+        void refreshAssignments();
+      }, 12000);
+      return () => clearInterval(poll);
     }, [refreshAssignments]),
   );
 
