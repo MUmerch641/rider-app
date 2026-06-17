@@ -285,17 +285,30 @@ export default function OnMap() {
     return { latitude: loc.lat, longitude: loc.lng };
   }, [newOrder]);
 
-  const firstTarget = useMemo<Coordinate | null>(() => {
-    const first = sheetOrders[0];
-    return first ? assignmentTarget(first) : null;
-  }, [sheetOrders]);
+  // Which accepted order is in FOCUS — its route, ETA and prep ring drive the
+  // map polyline and the top pill. Tapping a card in the sheet selects it.
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  // Derived (not stored) so a selected order that finishes / leaves the list
+  // cleanly falls back to the first active one. Defaults to the first.
+  const activeOrder = useMemo(() => {
+    if (selectedOrderId) {
+      const found = sheetOrders.find((a) => a.orderId === selectedOrderId);
+      if (found) return found;
+    }
+    return sheetOrders[0] ?? null;
+  }, [sheetOrders, selectedOrderId]);
+
+  const firstTarget = useMemo<Coordinate | null>(
+    () => (activeOrder ? assignmentTarget(activeOrder) : null),
+    [activeOrder],
+  );
 
   // Active-order info overlay data: distance (km) + ETA from the assignment's
   // own routing fields, and the merchant prep deadline (estimatedReadyAt) for
-  // the countdown ring. Driven by the first active assignment; the overlay is
+  // the countdown ring. Driven by the FOCUSED assignment; the overlay is
   // hidden whenever an offer card is on screen (currentRequest) to avoid
   // stacking two cards over the map.
-  const activeOrder = sheetOrders[0] ?? null;
   const activeInfo = useMemo(() => {
     if (!activeOrder) return null;
     const distance = formatDistanceKm(activeOrder.distanceKm);
@@ -387,6 +400,10 @@ export default function OnMap() {
   // different first order, or an offer appearing/clearing). GPS ticks never
   // land here. If GPS isn't ready yet, the first tick fires the initial fetch.
   useEffect(() => {
+    // Destination just changed (offer/accepted swap, or a different focused
+    // order) — drop the previous fetched distance/ETA so the pill falls back to
+    // the new target's straight-line estimate instead of flashing stale data.
+    setRouteInfo(null);
     if (!routeDestKey) {
       // Invalidate any in-flight fetch so it can't resurrect the cleared route.
       fetchSeqRef.current += 1;
@@ -663,9 +680,10 @@ export default function OnMap() {
 
   // ─── Card tap ─────────────────────────────────────────────────────────────
   // The accepted-order card is self-contained on the map (status + Advance
-  // button live in the sheet), so a tap no longer opens a separate screen.
-  const handleOrderPress = useCallback((_assignment: OrderAssignment) => {
-    // no-op: everything happens inline in the AcceptedOrdersSheet.
+  // button live in the sheet), so a tap no longer opens a separate screen — it
+  // FOCUSES that order: the map route, ETA and prep ring swap to it.
+  const handleOrderPress = useCallback((assignment: OrderAssignment) => {
+    setSelectedOrderId(assignment.orderId);
   }, []);
 
   // ─── Nearby offer Accept / Decline ───────────────────────────────────────
@@ -1141,6 +1159,7 @@ export default function OnMap() {
               advancingIds={advancing}
               onOrderPress={handleOrderPress}
               onAdvance={handleAdvance}
+              activeOrderId={activeOrder?.orderId ?? null}
               expandSignal={focusTick}
               collapsed={currentRequest ? dockFocus !== "accepted" : undefined}
               onToggle={(next) => setDockFocus(next ? "accepted" : "offer")}

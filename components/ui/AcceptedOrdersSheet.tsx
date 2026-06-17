@@ -100,6 +100,8 @@ interface AcceptedOrdersSheetProps {
   collapsed?: boolean;
   /** Fired with the NEXT collapsed value when the chevron is tapped. */
   onToggle?: (next: boolean) => void;
+  /** orderId of the focused order — its card is highlighted as active. */
+  activeOrderId?: string | null;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -119,6 +121,7 @@ export function AcceptedOrdersSheet({
   expandSignal,
   collapsed: collapsedProp,
   onToggle,
+  activeOrderId,
 }: AcceptedOrdersSheetProps) {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
@@ -188,6 +191,9 @@ export function AcceptedOrdersSheet({
               t={t}
               isLast={idx === orders.length - 1}
               advancing={!!advancingIds?.[assignment.orderId]}
+              active={
+                orders.length > 1 && assignment.orderId === activeOrderId
+              }
               onPress={onOrderPress}
               onAdvance={onAdvance}
             />
@@ -242,6 +248,7 @@ function OrderCard({
   t,
   isLast,
   advancing,
+  active,
   onPress,
   onAdvance,
 }: {
@@ -251,6 +258,7 @@ function OrderCard({
   t: ReturnType<typeof useTranslation>["t"];
   isLast: boolean;
   advancing: boolean;
+  active?: boolean;
   onPress?: (assignment: OrderAssignment) => void;
   onAdvance?: (assignment: OrderAssignment) => void;
 }) {
@@ -275,7 +283,7 @@ function OrderCard({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => onPress?.(assignment)}
-      style={[styles.card, !isLast && styles.cardGap]}
+      style={[styles.card, !isLast && styles.cardGap, active && styles.cardActive]}
     >
       {/* ── Row 1: Avatar + Restaurant Name + Price ── */}
       <View style={styles.cardTopRow}>
@@ -605,6 +613,12 @@ const styles = StyleSheet.create({
   },
   cardGap: {
     marginBottom: verticalScale(12),
+  },
+  // Focused order — its route/ETA/prep ring are the ones shown on the map.
+  cardActive: {
+    borderWidth: 1.5,
+    borderColor: "#7900F3",
+    shadowOpacity: 0.16,
   },
 
   // ── Card Top Row ───────────────────────────────────────────────────────────
