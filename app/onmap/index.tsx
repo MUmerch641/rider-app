@@ -1080,6 +1080,7 @@ export default function OnMap() {
             onOrderPress={handleOrderPress}
             onAdvance={handleAdvance}
             expandSignal={focusTick}
+            forceCollapsed={!!currentRequest}
           />
         )}
       </SafeAreaView>
