@@ -240,8 +240,21 @@ export default function OnMap() {
   // it arrives (keyed on the offer id so a re-offer re-prioritises). When the
   // offer clears, hand the slot back to the accepted list. The rider can still
   // flip to the accepted list during the offer via the sheet's chevron.
+  const hadOfferRef = useRef(false);
   useEffect(() => {
-    setDockFocus(currentRequest ? "offer" : "accepted");
+    if (currentRequest) {
+      hadOfferRef.current = true;
+      setDockFocus("offer");
+    } else {
+      setDockFocus("accepted");
+      // The sheet was controlled while the offer showed; once the offer clears
+      // it goes uncontrolled again. Bump the expand signal so it re-opens to the
+      // (possibly newly-accepted) order instead of snapping to a stale collapse.
+      if (hadOfferRef.current) {
+        hadOfferRef.current = false;
+        setFocusTick((n) => n + 1);
+      }
+    }
   }, [currentRequest?.id]);
 
   // ─── Route preview polylines ──────────────────────────────────────────────
@@ -1162,7 +1175,7 @@ export default function OnMap() {
               activeOrderId={activeOrder?.orderId ?? null}
               expandSignal={focusTick}
               collapsed={currentRequest ? dockFocus !== "accepted" : undefined}
-              onToggle={(next) => setDockFocus(next ? "accepted" : "offer")}
+              onToggle={(next) => setDockFocus(next ? "offer" : "accepted")}
             />
           )}
         </View>
