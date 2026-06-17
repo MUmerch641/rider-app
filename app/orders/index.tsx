@@ -136,10 +136,8 @@ export default function OrdersScreen() {
       stopAlarm();
       if (newOrder?.orderId === orderId) clearNewOrder();
       await refreshAssignments();
-      router.push({
-        pathname: "/orders/delivery_route",
-        params: { id: orderId },
-      });
+      // delivery_route retired — the on-map sheet owns the active-order flow.
+      router.push("/(tabs)/onmap");
     } catch (err) {
       console.warn("Accept failed:", (err as ApiError)?.message);
     } finally {
@@ -346,12 +344,7 @@ export default function OrdersScreen() {
               <TouchableOpacity
                 style={styles.startBtnInner}
                 activeOpacity={0.85}
-                onPress={() =>
-                  router.push({
-                    pathname: "/orders/delivery_route",
-                    params: { id: activeOrder.orderId },
-                  })
-                }
+                onPress={() => router.push("/(tabs)/onmap")}
               >
                 <Text
                   style={[styles.startBtnText, { fontFamily: font.semibold }]}

@@ -55,23 +55,17 @@ export function resolveNotificationRoute(payload: NotificationPayload): Href {
     return "/(tabs)/onmap";
   }
 
-  // Order pushes carry the order id in `data` — deep-link straight to the
-  // live-navigation screen for that order (these are for an ALREADY-accepted
-  // order, e.g. an order_update).
+  // Order pushes (for an ALREADY-accepted order, e.g. order_update) → the map,
+  // where the accepted order lives in the AcceptedOrdersSheet. (The separate
+  // delivery_route screen was retired.)
   if (payload.orderId) {
-    return {
-      pathname: "/orders/delivery_route",
-      params: { id: payload.orderId },
-    };
+    return "/(tabs)/onmap";
   }
 
   // `/orders/<id>` — order id embedded in the actionUrl (generic notify path).
   const orderMatch = /^\/orders\/([\w-]+)$/.exec(action);
   if (orderMatch && orderMatch[1] !== "delivery_route") {
-    return {
-      pathname: "/orders/delivery_route",
-      params: { id: orderMatch[1] },
-    };
+    return "/(tabs)/onmap";
   }
 
   // Order links without a usable id (e.g. backend's `/(tabs)/orders` or a bare

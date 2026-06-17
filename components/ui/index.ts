@@ -2,7 +2,6 @@ export { Badge, CounterBadge } from "./Badge";
 export { Button } from "./Button";
 export { Card } from "./Card";
 export { CloseRestaurantModal } from "./CloseRestaurantModal";
-export { DeliveryBottomSheet } from "./DeliveryBottomSheet";
 export { DriverBalanceCard } from "./DriverBalanceCard";
 export { EditableField } from "./EditableField";
 export { Input, PhoneInput } from "./Input";

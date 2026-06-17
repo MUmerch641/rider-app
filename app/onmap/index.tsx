@@ -52,8 +52,8 @@ const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
 // header — availability is toggled from the Orders tab header (OpenStatusToggle
 // wired to AuthContext.updateStatus). The map is a pure delivery surface.
 
-// Turn-by-turn NAVIGATION (chase-cam, deviation reroute, GPS-gated CTAs) lives
-// in /orders/delivery_route — tapping an accepted-order card navigates there.
+// Accepted orders are managed entirely inline on this map (AcceptedOrdersSheet
+// owns status advancement) — the separate delivery_route screen was retired.
 // This map only PREVIEWS direction: a route polyline from the rider to the
 // offer's store (plus a lighter store→customer leg) while an offer is showing,
 // or to the first active assignment's current target otherwise, alongside one
@@ -581,14 +581,10 @@ export default function OnMap() {
     // clearNewOrder() also silences the incoming-order alarm (sound + haptics)
     // — see SocketContext.clearNewOrder.
     clearNewOrder();
+    // Stay on the map — the accepted order now appears in the AcceptedOrdersSheet
+    // with its Advance button (Picked Up → … → Delivered). The separate
+    // delivery_route screen was retired as redundant.
     await refreshAssignments();
-    // Open live navigation for the accepted order — same destination the Orders
-    // tab's accept routes to. Without this the rider was left on the passive map
-    // with no clear next step after accepting.
-    router.push({
-      pathname: "/orders/delivery_route",
-      params: { id: orderId },
-    });
   };
 
   const handleDecline = async () => {
@@ -617,17 +613,12 @@ export default function OnMap() {
     void refreshAssignments();
   };
 
-  // ─── Card tap → live navigation ───────────────────────────────────────────
-  // delivery_route derives pickup vs dropoff from the order's live status.
-  const handleOrderPress = useCallback(
-    (assignment: OrderAssignment) => {
-      router.push({
-        pathname: "/orders/delivery_route",
-        params: { id: assignment.orderId },
-      });
-    },
-    [router],
-  );
+  // ─── Card tap ─────────────────────────────────────────────────────────────
+  // The accepted-order card is self-contained on the map (status + Advance
+  // button live in the sheet), so a tap no longer opens a separate screen.
+  const handleOrderPress = useCallback((_assignment: OrderAssignment) => {
+    // no-op: everything happens inline in the AcceptedOrdersSheet.
+  }, []);
 
   // ─── Nearby offer Accept / Decline ───────────────────────────────────────
   // Reuses the same ordersApi endpoints the old Orders tab called. Accepting
@@ -648,11 +639,9 @@ export default function OnMap() {
         await ordersApi.accept(orderId);
         stopAlarm();
         if (newOrder?.orderId === orderId) clearNewOrder();
+        // Stay on the map; the accepted order surfaces in the sheet with its
+        // Advance button. (delivery_route screen retired.)
         await refreshAssignments();
-        router.push({
-          pathname: "/orders/delivery_route",
-          params: { id: orderId },
-        });
       } catch (err) {
         console.warn("Accept failed:", (err as ApiError)?.message);
         void refreshAssignments();

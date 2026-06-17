@@ -7,7 +7,7 @@
  *
  * Each card offers exactly two interactions:
  *  - tapping the CARD opens the live navigation screen
- *    (/orders/delivery_route) which derives pickup/dropoff routing from
+ *    inline on the map, advancing the order one step per tap.
  *    the order's live status;
  *  - the ADVANCE button moves the order one step along the lifecycle
  *    chain (utils/orderLifecycle.ts) with a per-order busy spinner.
