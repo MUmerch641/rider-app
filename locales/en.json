@@ -443,7 +443,8 @@
   "orderRequestCard": {
     "orderItems": "ORDER ITEMS",
     "acceptOrder": "Accept Order",
-    "declineRequest": "Decline Request"
+    "declineRequest": "Decline Request",
+    "newOrder": "New order"
   },
   "cancelRequest": {
     "title": "Request Cancellation",

@@ -92,6 +92,14 @@ interface AcceptedOrdersSheetProps {
    * of leaving the rider on a bare header.
    */
   expandSignal?: number;
+  /**
+   * Controlled collapse. When provided, the open/closed state is owned by the
+   * parent — the map dock uses this to run the offer⇄accepted accordion so the
+   * two panels never overlap. When omitted, the sheet manages collapse itself.
+   */
+  collapsed?: boolean;
+  /** Fired with the NEXT collapsed value when the chevron is tapped. */
+  onToggle?: (next: boolean) => void;
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -109,18 +117,29 @@ export function AcceptedOrdersSheet({
   maxHeight = verticalScale(460),
   defaultCollapsed = true,
   expandSignal,
+  collapsed: collapsedProp,
+  onToggle,
 }: AcceptedOrdersSheetProps) {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
   const langKey: LangKey = (i18n.language as LangKey) || "en";
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const isControlled = collapsedProp !== undefined;
+  const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
+  const collapsed = isControlled ? collapsedProp : internalCollapsed;
+
+  const handleToggle = () => {
+    const next = !collapsed;
+    if (isControlled) onToggle?.(next);
+    else setInternalCollapsed(next);
+  };
 
   // Force the list open whenever the parent bumps expandSignal (screen focus).
-  // The rider can still collapse it manually afterwards; the next focus reopens.
+  // Skipped when controlled — the parent owns collapse and bumping it here would
+  // fight the offer⇄accepted accordion. The rider can still collapse manually.
   useEffect(() => {
-    if (expandSignal === undefined) return;
-    setCollapsed(false);
-  }, [expandSignal]);
+    if (isControlled || expandSignal === undefined) return;
+    setInternalCollapsed(false);
+  }, [expandSignal, isControlled]);
 
   return (
     <View style={[styles.container, style]}>
@@ -137,7 +156,7 @@ export function AcceptedOrdersSheet({
         {/* Trailing: collapse pill with chevron + count */}
         <TouchableOpacity
           style={styles.collapsePill}
-          onPress={() => setCollapsed((v) => !v)}
+          onPress={handleToggle}
           activeOpacity={0.72}
           hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
         >
@@ -518,13 +537,9 @@ function NearbyOrderCard({
 const styles = StyleSheet.create({
   // ── Container ──────────────────────────────────────────────────────────────
   container: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 100,
-    elevation: 100,
-
+    // Flow child of the map dock (parent absolute-positions the dock); the dock
+    // stacks this below the offer card so the two can never overlap.
+    width: "100%",
     backgroundColor: Colors.background ?? "#F0EEF8",
     borderTopLeftRadius: scale(28),
     borderTopRightRadius: scale(28),

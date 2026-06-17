@@ -67,7 +67,15 @@ export interface OrderRequestCardProps {
   onAccept: () => void;
   onDecline: () => void;
   onTimerEnd?: () => void;
-  bottomOffset?: number;
+  /**
+   * "full" renders the whole offer card; "banner" renders a compact one-line
+   * strip (logo + name + countdown + mini Accept/Decline) used inside the map
+   * dock when the rider has expanded the accepted-orders sheet instead. The
+   * countdown keeps running in both modes. Default "full".
+   */
+  mode?: "full" | "banner";
+  /** Tapping the banner body re-expands the offer to full. */
+  onExpand?: () => void;
   // i18n
   translations?: {
     orderItems?: string;
@@ -94,7 +102,8 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
   onDecline,
   onTimerEnd,
   currency = "IQD",
-  bottomOffset = verticalScale(180),
+  mode = "full",
+  onExpand,
 }) => {
   const { t, i18n } = useTranslation();
   const font = useAppFont();
@@ -205,11 +214,70 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
 
   if (!visible) return null;
 
+  // ── Compact banner mode ── shown when the rider has the accepted-orders sheet
+  // expanded; keeps the offer (and its live countdown) glanceable + actionable
+  // without stealing the whole bottom from the accepted list.
+  if (mode === "banner") {
+    return (
+      <View pointerEvents="box-none" style={styles.bannerWrapper}>
+        <Animated.View
+          pointerEvents="auto"
+          style={[styles.banner, { opacity: cardOpacity }]}
+        >
+          <TouchableOpacity
+            style={styles.bannerMain}
+            activeOpacity={0.85}
+            onPress={onExpand}
+          >
+            <View style={styles.bannerLogo}>
+              {restaurantLogo ? (
+                <Image
+                  source={{ uri: restaurantLogo }}
+                  style={styles.bannerLogoImg}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.bannerLogoPlaceholder}>
+                  <Text style={styles.logoPlaceholderText}>
+                    {(restaurantName ?? "").charAt(0) || "?"}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.bannerTextCol}>
+              <Text style={styles.bannerTitle} numberOfLines={1}>
+                {restaurantName}
+              </Text>
+              <Text style={styles.bannerSub} numberOfLines={1}>
+                {t("orderRequestCard.newOrder", "New order")}
+                {totalDistance ? ` · ${totalDistance}` : ""}
+              </Text>
+            </View>
+            <View style={styles.bannerTimer}>
+              <Text style={styles.bannerTimerText}>{timeLeft}s</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.bannerAccept}
+            onPress={onAccept}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.bannerAcceptIcon}>✓</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.bannerDecline}
+            onPress={onDecline}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.bannerDeclineIcon}>✕</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    );
+  }
+
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.wrapper, { bottom: bottomOffset }]}
-    >
+    <View pointerEvents="box-none" style={styles.wrapper}>
       <Animated.View
         pointerEvents="auto"
         style={[
@@ -351,17 +419,84 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  // Flow child of the map dock (no longer absolutely positioned) — the dock
+  // stacks this above the accepted-orders sheet so they can never overlap.
   wrapper: {
-    position: "absolute",
-    left: scale(20),
-    right: scale(20),
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(10),
     alignItems: "center",
-    // Must sit ABOVE AcceptedOrdersSheet (zIndex 100) so the Accept/Decline
-    // buttons stay tappable even when the rider expands the sheet — we no longer
-    // force-collapse the sheet during an offer.
-    zIndex: 200,
-    elevation: 200,
   },
+
+  // ── Banner (compact) mode ──
+  bannerWrapper: {
+    marginHorizontal: scale(20),
+    marginBottom: verticalScale(10),
+  },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: scale(28),
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: scale(10),
+    borderWidth: 1,
+    borderColor: "#DAC7FF",
+    ...Shadow.card,
+  },
+  bannerMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(10),
+  },
+  bannerLogo: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    overflow: "hidden",
+  },
+  bannerLogoImg: { width: "100%", height: "100%" },
+  bannerLogoPlaceholder: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EDE3FF",
+  },
+  bannerTextCol: { flex: 1 },
+  bannerTitle: { fontSize: fontSize.base, color: "#1A1A1A", fontWeight: "700" },
+  bannerSub: { fontSize: fontSize.xs, color: "#7C7890", marginTop: 1 },
+  bannerTimer: {
+    minWidth: scale(38),
+    height: scale(28),
+    borderRadius: scale(14),
+    borderWidth: 1.5,
+    borderColor: "#7900F3",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: scale(6),
+  },
+  bannerTimerText: { fontSize: fontSize.sm, color: "#7900F3", fontWeight: "700" },
+  bannerAccept: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    backgroundColor: "#8140FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: scale(8),
+  },
+  bannerAcceptIcon: { color: "#FFFFFF", fontSize: fontSize.xl, fontWeight: "700" },
+  bannerDecline: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(20),
+    backgroundColor: "#F4F0FA",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: scale(6),
+  },
+  bannerDeclineIcon: { color: "#7C7890", fontSize: fontSize.lg, fontWeight: "700" },
 
   card: {
     width: "100%",

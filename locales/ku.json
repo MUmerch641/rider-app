@@ -443,7 +443,8 @@
   "orderRequestCard": {
     "orderItems": "بەشەکانی داواکاری",
     "acceptOrder": "قبوڵکردنی داواکاری",
-    "declineRequest": "ڕەتکردنەوەی داواکاری"
+    "declineRequest": "ڕەتکردنەوەی داواکاری",
+    "newOrder": "داواکاریی نوێ"
   },
   "cancelRequest": {
     "title": "داواکردنی هەڵوەشاندنەوە",

@@ -443,7 +443,8 @@
   "orderRequestCard": {
     "orderItems": "عناصر الطلب",
     "acceptOrder": "قبول الطلب",
-    "declineRequest": "رفض الطلب"
+    "declineRequest": "رفض الطلب",
+    "newOrder": "طلب جديد"
   },
   "cancelRequest": {
     "title": "طلب إلغاء",

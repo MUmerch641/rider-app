@@ -91,7 +91,17 @@ export default function OnMap() {
   const [assignments, setAssignments] = useState<OrderAssignment[]>([]);
   // Per-order busy flags while a status-advance request is in flight.
   const [advancing, setAdvancing] = useState<Record<string, boolean>>({});
-  const [sheetHeight] = useState(verticalScale(160));
+  // Measured height of the bottom dock (offer card + accepted sheet, stacked in
+  // flow). Drives the floating map buttons so they always sit just above the
+  // dock regardless of which panel is expanded. Seeded so buttons aren't flush
+  // on first paint before onLayout fires.
+  const [dockHeight, setDockHeight] = useState(verticalScale(160));
+  // Accordion focus for the bottom dock: which of the two panels owns the
+  // expanded body. The other shrinks to its handle (offer → compact banner,
+  // accepted → header-only) so they never overlap. Only meaningful when BOTH an
+  // offer and accepted orders are present; otherwise the visible panel just
+  // shows fully.
+  const [dockFocus, setDockFocus] = useState<"offer" | "accepted">("accepted");
   const [locating, setLocating] = useState(false);
   const [gpsReady, setGpsReady] = useState(false); // true once first fix arrives
   // Bumped on every screen focus. Drives the AcceptedOrdersSheet to re-expand
@@ -225,6 +235,14 @@ export default function OnMap() {
       expiresInSeconds: newOrder.expiresInSeconds ?? 30,
     };
   }, [newOrder, langKey]);
+
+  // A fresh offer is time-critical → give it the dock's expanded slot the moment
+  // it arrives (keyed on the offer id so a re-offer re-prioritises). When the
+  // offer clears, hand the slot back to the accepted list. The rider can still
+  // flip to the accepted list during the offer via the sheet's chevron.
+  useEffect(() => {
+    setDockFocus(currentRequest ? "offer" : "accepted");
+  }, [currentRequest?.id]);
 
   // ─── Route preview polylines ──────────────────────────────────────────────
   // Two modes:
@@ -986,7 +1004,7 @@ export default function OnMap() {
           <View
             style={[
               styles.floatingButtons,
-              { bottom: sheetHeight + verticalScale(80) },
+              { bottom: Math.max(dockHeight, verticalScale(40)) + verticalScale(20) },
             ]}
           >
             {/* Location Button */}
@@ -1074,44 +1092,61 @@ export default function OnMap() {
           )}
         </View>
 
-        {/* ── Order Request Card — shown only when there is a pending order.
-            Distance/duration come straight from the dispatch socket payload. ── */}
-        {currentRequest && (
-          <OrderRequestCard
-            key={currentRequest.id}
-            visible
-            bottomOffset={sheetHeight - verticalScale(40)}
-            restaurantName={currentRequest.restaurantName}
-            restaurantLocation={currentRequest.restaurantLocation}
-            restaurantLogo={currentRequest.restaurantLogo}
-            totalDistance={liveRouteInfo?.distance || currentRequest.totalDistance}
-            totalDuration={liveRouteInfo?.duration || currentRequest.totalDuration}
-            timerSeconds={currentRequest.expiresInSeconds}
-            currency="IQD"
-            items={currentRequest.items}
-            onAccept={handleAcceptOrder}
-            onDecline={handleDecline}
-            onTimerEnd={handleTimerEnd}
-          />
-        )}
+        {/* ── Bottom dock ── the offer card and the accepted-orders sheet are
+            FLOW children of this one bottom-anchored container, so RN's layout
+            engine stacks them (offer on top, sheet below) and they can never
+            overlap. An accordion (dockFocus) keeps exactly one expanded while
+            the other shrinks to its handle. Always mounted (even empty) so its
+            onLayout keeps dockHeight — and the floating buttons — accurate. */}
+        <View
+          style={styles.dock}
+          pointerEvents="box-none"
+          onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}
+        >
+          {currentRequest && (
+            <OrderRequestCard
+              key={currentRequest.id}
+              visible
+              mode={dockFocus === "offer" ? "full" : "banner"}
+              onExpand={() => setDockFocus("offer")}
+              restaurantName={currentRequest.restaurantName}
+              restaurantLocation={currentRequest.restaurantLocation}
+              restaurantLogo={currentRequest.restaurantLogo}
+              totalDistance={
+                liveRouteInfo?.distance || currentRequest.totalDistance
+              }
+              totalDuration={
+                liveRouteInfo?.duration || currentRequest.totalDuration
+              }
+              timerSeconds={currentRequest.expiresInSeconds}
+              currency="IQD"
+              items={currentRequest.items}
+              onAccept={handleAcceptOrder}
+              onDecline={handleDecline}
+              onTimerEnd={handleTimerEnd}
+            />
+          )}
 
-        {/* Mount the sheet when the rider holds active orders OR has new
-            nearby offers (R4) — an empty "0" sheet was previously always
-            pinned to the map. The expandSignal (bumped on focus) re-opens it
-            whenever the rider returns from the live-navigation screen. */}
-        {(sheetOrders.length > 0 || nearbyOrders.length > 0) && (
-          <AcceptedOrdersSheet
-            orders={sheetOrders}
-            nearbyOrders={nearbyOrders}
-            actingIds={acting}
-            onAcceptNearby={handleAcceptNearby}
-            onDeclineNearby={handleDeclineNearby}
-            advancingIds={advancing}
-            onOrderPress={handleOrderPress}
-            onAdvance={handleAdvance}
-            expandSignal={focusTick}
-          />
-        )}
+          {/* Mount the sheet when the rider holds active orders OR has new
+              nearby offers (R4). While an offer is live its collapse is
+              controlled by the accordion (collapsed prop); otherwise the sheet
+              toggles itself and re-opens on focus via expandSignal. */}
+          {(sheetOrders.length > 0 || nearbyOrders.length > 0) && (
+            <AcceptedOrdersSheet
+              orders={sheetOrders}
+              nearbyOrders={nearbyOrders}
+              actingIds={acting}
+              onAcceptNearby={handleAcceptNearby}
+              onDeclineNearby={handleDeclineNearby}
+              advancingIds={advancing}
+              onOrderPress={handleOrderPress}
+              onAdvance={handleAdvance}
+              expandSignal={focusTick}
+              collapsed={currentRequest ? dockFocus !== "accepted" : undefined}
+              onToggle={(next) => setDockFocus(next ? "accepted" : "offer")}
+            />
+          )}
+        </View>
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -1231,6 +1266,16 @@ const styles = StyleSheet.create({
   },
   markerPointerCustomer: {
     borderTopColor: "#22C55E",
+  },
+
+  // Bottom dock — single absolute container that stacks the offer card above
+  // the accepted-orders sheet in normal flow (column) so they never overlap.
+  dock: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
   },
 
   // Floating Buttons
