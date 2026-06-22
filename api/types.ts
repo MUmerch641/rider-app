@@ -218,6 +218,9 @@ export type Order = {
   // Returned by the driver order list + getById endpoints; drives the prep
   // countdown ring on the map's active-order overlay.
   estimatedReadyAt?: string | null;
+  // Set when the merchant marks the order ready — drives the "Ready" badge on
+  // the prep countdown ring even if estimatedReadyAt is still in the future.
+  readyAt?: string | null;
   deliveryAddress?: {
     street?: string;
     building?: string;
@@ -416,6 +419,16 @@ export type SocketOrderCancelledPayload = {
   reason?: string;
 };
 
+export type SocketOrderUpdatePayload = {
+  orderId: string;
+  status?: string;
+  orderNumber?: string;
+  estimatedReadyAt?: string | null;
+  readyAt?: string | null;
+  pendingCustomerReview?: boolean;
+  updatedAt?: string;
+};
+
 export type SocketNotificationNewPayload = DriverNotification;
 
 export type SocketLocationUpdatePayload = {
@@ -423,5 +436,6 @@ export type SocketLocationUpdatePayload = {
   orderNumber: string;
   location: GeoPoint;
   heading?: number;
+  distanceMeters?: number | null;
   updatedAt: string;
 };

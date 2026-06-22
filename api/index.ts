@@ -63,6 +63,7 @@ export type {
   // socket payloads
   SocketNewOrderPayload,
   SocketOrderCancelledPayload,
+  SocketOrderUpdatePayload,
   SocketNotificationNewPayload,
   SocketLocationUpdatePayload,
 } from "./types";

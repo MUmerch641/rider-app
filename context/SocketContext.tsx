@@ -25,6 +25,7 @@ import {
   type SocketNewOrderPayload,
   type SocketNotificationNewPayload,
   type SocketOrderCancelledPayload,
+  type SocketOrderUpdatePayload,
 } from "@/api";
 import { useAuth } from "./AuthContext";
 import { resolveAlertSound } from "@/utils/alertSounds";
@@ -38,9 +39,11 @@ type SocketContextValue = {
   isConnected: boolean;
   newOrder: SocketNewOrderPayload | null;
   cancelledOrder: SocketOrderCancelledPayload | null;
+  orderUpdate: SocketOrderUpdatePayload | null;
   pushedNotification: SocketNotificationNewPayload | null;
   clearNewOrder: () => void;
   clearCancelledOrder: () => void;
+  clearOrderUpdate: () => void;
   clearPushedNotification: () => void;
   /** Silence the incoming-order alarm (sound + vibration). */
   stopAlarm: () => void;
@@ -58,6 +61,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [newOrder, setNewOrder] = useState<SocketNewOrderPayload | null>(null);
   const [cancelledOrder, setCancelledOrder] = useState<SocketOrderCancelledPayload | null>(null);
+  const [orderUpdate, setOrderUpdate] = useState<SocketOrderUpdatePayload | null>(null);
   const [pushedNotification, setPushedNotification] =
     useState<SocketNotificationNewPayload | null>(null);
 
@@ -154,7 +158,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       const buzz = () =>
         Haptics.notificationAsync(
           Haptics.NotificationFeedbackType.Warning,
-        ).catch(() => {});
+        ).catch(() => { });
       buzz();
       if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
       vibrateTimerRef.current = setInterval(buzz, 1500);
@@ -191,7 +195,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           // Reset to the start each tick so a previously played/paused alarm
           // restarts; harmless to repeat and only effective once loaded.
           // seekTo is async and rejects on an unloaded source — swallow it.
-          void p.seekTo(0)?.catch(() => {});
+          void p.seekTo(0)?.catch(() => { });
           p.play();
         } catch (e) {
           console.warn("alarm: play() threw", e);
@@ -210,7 +214,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
             const fbPump = () => {
               if (alarmPlayerRef.current !== fallback) return;
               try {
-                void fallback.seekTo(0)?.catch(() => {});
+                void fallback.seekTo(0)?.catch(() => { });
                 fallback.play();
               } catch (e2) {
                 console.warn("alarm: fallback play failed", e2);
@@ -319,6 +323,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         }
         return curr;
       });
+    });
+
+    s.on("order:update", (payload: SocketOrderUpdatePayload) => {
+      setOrderUpdate(payload);
     });
 
     s.on("notification:new", (payload: SocketNotificationNewPayload) => {
@@ -443,6 +451,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     setNewOrder(null);
   }, [stopAlarm]);
   const clearCancelledOrder = useCallback(() => setCancelledOrder(null), []);
+  const clearOrderUpdate = useCallback(() => setOrderUpdate(null), []);
   const clearPushedNotification = useCallback(() => setPushedNotification(null), []);
 
   const value = useMemo<SocketContextValue>(
@@ -451,9 +460,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       isConnected,
       newOrder,
       cancelledOrder,
+      orderUpdate,
       pushedNotification,
       clearNewOrder,
       clearCancelledOrder,
+      clearOrderUpdate,
       clearPushedNotification,
       stopAlarm,
     }),
@@ -462,9 +473,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       isConnected,
       newOrder,
       cancelledOrder,
+      orderUpdate,
       pushedNotification,
       clearNewOrder,
       clearCancelledOrder,
+      clearOrderUpdate,
       clearPushedNotification,
       stopAlarm,
     ],

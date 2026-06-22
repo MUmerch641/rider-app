@@ -130,8 +130,10 @@ export default function OnMap() {
   const {
     newOrder,
     cancelledOrder,
+    orderUpdate,
     clearNewOrder,
     clearCancelledOrder,
+    clearOrderUpdate,
     stopAlarm,
   } = useSocket();
 
@@ -176,6 +178,17 @@ export default function OnMap() {
     void refreshAssignments();
     clearCancelledOrder();
   }, [cancelledOrder, clearCancelledOrder, refreshAssignments]);
+
+  // Merchant marked the order ready — refresh so the prep ring flips to "Ready".
+  useEffect(() => {
+    if (!orderUpdate) return;
+    const isReady =
+      orderUpdate.status === "ready_for_pickup" || !!orderUpdate.readyAt;
+    if (isReady) {
+      void refreshAssignments();
+    }
+    clearOrderUpdate();
+  }, [orderUpdate, clearOrderUpdate, refreshAssignments]);
 
   // Sheet items = in-progress deliveries only (shared ACTIVE_STATUSES set).
   const sheetOrders = useMemo(
@@ -326,9 +339,15 @@ export default function OnMap() {
     if (!activeOrder) return null;
     const distance = formatDistanceKm(activeOrder.distanceKm);
     const eta = formatDurationMinutes(activeOrder.estimatedMinutes);
-    const readyAt = activeOrder.order?.estimatedReadyAt ?? null;
-    if (!distance && !eta && !readyAt) return null;
-    return { distance, eta, readyAt };
+    const isFoodReady =
+      activeOrder.order?.status === "ready_for_pickup" ||
+      !!activeOrder.order?.readyAt;
+    const readyAt =
+      activeOrder.order?.readyAt ??
+      activeOrder.order?.estimatedReadyAt ??
+      null;
+    if (!distance && !eta && !readyAt && !isFoodReady) return null;
+    return { distance, eta, readyAt, forceReady: isFoodReady };
   }, [activeOrder]);
 
   // Primary destination: the offer's store while an offer is showing, else the
@@ -636,18 +655,18 @@ export default function OnMap() {
         message:
           apiErr?.status == null
             ? t(
-                "onmap.offerNetworkMessage",
-                "Network problem — check your connection and try again.",
-              )
+              "onmap.offerNetworkMessage",
+              "Network problem — check your connection and try again.",
+            )
             : apiErr.status >= 400 && apiErr.status < 500
               ? t(
-                  "onmap.offerUnavailableMessage",
-                  "This offer has expired or was taken by another driver.",
-                )
+                "onmap.offerUnavailableMessage",
+                "This offer has expired or was taken by another driver.",
+              )
               : t(
-                  "orderStatusErrors.updateFailed",
-                  "Couldn't update the order status. Please try again.",
-                ),
+                "orderStatusErrors.updateFailed",
+                "Couldn't update the order status. Please try again.",
+              ),
         tone: "error",
       });
       // Even a failed accept warrants a refetch — the offer may have expired
@@ -1080,7 +1099,7 @@ export default function OnMap() {
               assignment's routing data, plus the merchant prep countdown ring
               ticking down to estimatedReadyAt. Hidden while an offer card is on
               screen so the two never stack. */}
-          {activeOrder && !currentRequest && (liveRouteInfo || activeInfo?.readyAt) && (
+          {activeOrder && !currentRequest && (liveRouteInfo || activeInfo?.readyAt || activeInfo?.forceReady) && (
             <View style={styles.activeInfoCard} pointerEvents="none">
               <View style={styles.activeInfoStats}>
                 {!!liveRouteInfo?.distance && (
@@ -1112,11 +1131,12 @@ export default function OnMap() {
                   </View>
                 )}
               </View>
-              {!!activeInfo?.readyAt && (
+              {(!!activeInfo?.readyAt || activeInfo?.forceReady) && (
                 <PrepCountdownRing
-                  readyAt={activeInfo.readyAt}
+                  readyAt={activeInfo.readyAt ?? new Date().toISOString()}
                   label={t("onmap.prepTime", "Prep time")}
                   readyLabel={t("onmap.ready", "Ready")}
+                  forceReady={activeInfo.forceReady}
                 />
               )}
             </View>

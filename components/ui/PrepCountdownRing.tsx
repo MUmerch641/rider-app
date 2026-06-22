@@ -20,6 +20,8 @@ type PrepCountdownRingProps = {
   label: string;
   // "Ready" text shown in the center once the deadline passes.
   readyLabel: string;
+  // When true, show the green "Ready" badge regardless of the countdown clock.
+  forceReady?: boolean;
 };
 
 const SIZE = scale(54);
@@ -38,6 +40,7 @@ export default function PrepCountdownRing({
   readyAt,
   label,
   readyLabel,
+  forceReady = false,
 }: PrepCountdownRingProps) {
   const font = useAppFont();
 
@@ -58,7 +61,7 @@ export default function PrepCountdownRing({
   }, []);
 
   const remainingMs = readyTime - now;
-  const isReady = remainingMs <= 0;
+  const isReady = forceReady || remainingMs <= 0;
   // Fraction of the window still remaining (1 → full ring, 0 → empty).
   const fraction = Math.max(0, Math.min(1, remainingMs / windowRef.current));
   const dashOffset = CIRCUMFERENCE * (1 - fraction);
