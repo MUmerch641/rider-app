@@ -23,7 +23,9 @@ import {
 } from "@/utils/locationTracking";
 import {
   configurePushHandler,
+  handleColdStartNotification,
   registerForPushNotifications,
+  setPushNavigationReady,
   setupNotificationTapHandling,
 } from "@/utils/pushToken";
 import { clearAllAuth, driverStorage, tokenStorage } from "@/utils/storage";
@@ -105,8 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     configurePushHandler();
-    // Tapping a push must deep-link straight to its target (order → live route,
-    // support → chat) instead of dumping the rider on the inbox list.
     setupNotificationTapHandling();
     let cancelled = false;
     (async () => {
@@ -124,6 +124,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUnauthorizedHandler(null);
     };
   }, [handleUnauthorized]);
+
+  // Cold-start push navigation only after auth + router are ready.
+  useEffect(() => {
+    if (isLoading) return;
+    setPushNavigationReady(true);
+    handleColdStartNotification();
+  }, [isLoading]);
 
   // After authentication, register for FCM push and persist the token on the driver.
   useEffect(() => {

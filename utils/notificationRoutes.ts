@@ -23,20 +23,17 @@ export type NotificationPayload = {
 };
 
 /**
- * Resolve a driver notification to a navigable route.
- * - Order notifications → the order's live navigation screen
- *   (/orders/delivery_route?id=…), or the Orders tab when there's no id.
- * - Support notifications → the support chat thread (or the inbox support list).
- * - Everything else → the notifications inbox (the only acceptable fallback,
- *   for truly unrouteable notifications).
+ * Resolve a driver notification to a navigable route, or null when nothing in
+ * the payload is routable (cold start must NOT fall back to the inbox).
  */
-export function resolveNotificationRoute(payload: NotificationPayload): Href {
+export function resolveNotificationRoute(
+  payload: NotificationPayload,
+): Href | null {
   const action = (payload.actionUrl ?? "").trim();
   const type = payload.type ?? "";
 
   // Support FIRST: a support push may also carry an orderId (the ticket's
   // order), but it should open the chat, not the delivery screen.
-  // `/support/<threadId>` → the support chat thread.
   const supportMatch = /^\/support\/([\w-]+)$/.exec(action);
   if (supportMatch || payload.threadId || type === "support") {
     const threadId = payload.threadId ?? supportMatch?.[1];
@@ -45,41 +42,29 @@ export function resolveNotificationRoute(payload: NotificationPayload): Href {
       : "/inbox";
   }
 
-  // A NEW dispatch is just an OFFER the rider hasn't accepted yet — it must open
-  // the MAP, where the offer shows in the bottom sheet with Accept/Decline. The
-  // delivery_route (live navigation, "Picked Up") screen is ONLY for an order
-  // the rider has already accepted, so we must NOT deep-link there for an offer
-  // — even though the payload carries the orderId. This takes priority over the
-  // orderId → delivery_route deep-link below.
+  // A NEW dispatch is just an OFFER the rider hasn't accepted yet — open the map.
   if (type === "new_order") {
     return "/(tabs)/onmap";
   }
 
-  // Order pushes (for an ALREADY-accepted order, e.g. order_update) → the map,
-  // where the accepted order lives in the AcceptedOrdersSheet. (The separate
-  // delivery_route screen was retired.)
+  // Order pushes → the map where accepted / offered orders live.
   if (payload.orderId) {
     return "/(tabs)/onmap";
   }
 
-  // `/orders/<id>` — order id embedded in the actionUrl (generic notify path).
   const orderMatch = /^\/orders\/([\w-]+)$/.exec(action);
   if (orderMatch && orderMatch[1] !== "delivery_route") {
     return "/(tabs)/onmap";
   }
 
-  // Order links without a usable id (e.g. backend's `/(tabs)/orders` or a bare
-  // order_update) → the Orders tab.
   if (
     action === "/(tabs)/orders" ||
     action === "/orders" ||
-    type === "new_order" ||
     type === "order_cancelled" ||
     type === "order_update"
   ) {
     return "/(tabs)/onmap";
   }
 
-  // Generic / unknown → the notifications inbox (acceptable fallback only).
-  return "/inbox";
+  return null;
 }

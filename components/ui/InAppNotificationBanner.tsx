@@ -151,9 +151,9 @@ export function InAppNotificationBanner() {
 
   const onPress = () => {
     const route = resolveNotificationRoute(banner.payload);
-    // Hide the banner first, then deep-link — same resolver as the push-tap and
-    // inbox-list paths, so an order notif opens the delivery screen directly.
-    dismiss(() => router.push(route));
+    dismiss(() => {
+      if (route) router.push(route);
+    });
   };
 
   return (

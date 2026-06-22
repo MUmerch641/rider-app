@@ -1,19 +1,19 @@
 import {
-    notificationsApi,
-    supportApi,
-    type ApiError,
-    type DriverNotification,
-    type SupportThread,
+  notificationsApi,
+  supportApi,
+  type ApiError,
+  type DriverNotification,
+  type SupportThread,
 } from "@/api";
 import { Colors, Radius, Shadow } from "@/constants/theme";
 import { useNotifications, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
-    fontSize,
-    radius,
-    scale,
-    spacing,
-    verticalScale,
+  fontSize,
+  radius,
+  scale,
+  spacing,
+  verticalScale,
 } from "@/utils/responsive";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavGuard } from "@/hooks/useNavGuard";
@@ -21,14 +21,14 @@ import { useDialog } from "@/components/ui/AppDialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    I18nManager,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  I18nManager,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -253,7 +253,7 @@ export default function InboxScreen() {
       threadId: typeof data.threadId === "string" ? data.threadId : undefined,
       actionUrl: item.actionUrl ?? undefined,
     });
-    router.push(route);
+    if (route) router.push(route);
 
     try {
       await notificationsApi.markRead(id);
@@ -389,8 +389,8 @@ export default function InboxScreen() {
                     group.id === "today"
                       ? "Today"
                       : group.id === "yesterday"
-                      ? "Yesterday"
-                      : "Earlier",
+                        ? "Yesterday"
+                        : "Earlier",
                 })}
               </Text>
               <View style={styles.group}>
