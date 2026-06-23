@@ -84,6 +84,9 @@ export default function OnMap() {
   const dialog = useDialog();
   const { i18n } = useTranslation();
   const mapRef = useRef<MapView>(null);
+  // Monotonic id for GET /driver/orders — only the latest fetch may commit so
+  // a poll started before a status PATCH can't overwrite the post-advance list.
+  const assignmentsFetchSeqRef = useRef(0);
 
   // ─── State ──────────────────────────────────────────────────────────────
   // Server-truth assignments (GET /driver/orders) — replaces the old local
@@ -141,10 +144,13 @@ export default function OnMap() {
 
   // ─── Server-truth order list ──────────────────────────────────────────────
   const refreshAssignments = useCallback(async () => {
+    const seq = ++assignmentsFetchSeqRef.current;
     try {
       const list = await ordersApi.list();
+      if (seq !== assignmentsFetchSeqRef.current) return;
       setAssignments(list);
     } catch (err) {
+      if (seq !== assignmentsFetchSeqRef.current) return;
       console.warn("Fetch orders failed:", (err as ApiError)?.message);
     }
   }, []);
@@ -794,6 +800,13 @@ export default function OnMap() {
 
       try {
         await updateOrderStatusWithGps(orderId, next);
+        // Reflect the new status immediately so a stale in-flight list fetch
+        // (12s poll or a pre-PATCH GET) can't drop the row from sheetOrders.
+        setAssignments((prev) =>
+          prev.map((a) =>
+            a.orderId === orderId ? { ...a, status: next } : a,
+          ),
+        );
         // Server truth: on 'delivered' the assignment simply drops out of
         // ACTIVE_STATUSES; intermediate steps re-render with the new status.
         await refreshAssignments();

@@ -1,16 +1,16 @@
 import {
-    ordersApi,
-    walletApi,
-    type ApiError,
-    type OrderAssignment,
+  ordersApi,
+  walletApi,
+  type ApiError,
+  type OrderAssignment,
 } from "@/api";
 import { Colors, FontSize, Radius, Shadow } from "@/constants/theme";
 import { useAuth, useSocket } from "@/context";
 import { useAppFont } from "@/hooks/useAppFont";
 import {
-    formatCurrency,
-    formatDurationMinutes,
-    formatNumber,
+  formatCurrency,
+  formatDurationMinutes,
+  formatNumber,
 } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { ACTIVE_STATUSES } from "@/utils/orderLifecycle";
@@ -20,17 +20,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavGuard } from "@/hooks/useNavGuard";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-    I18nManager,
-    Image,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  I18nManager,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -51,12 +51,16 @@ export default function OrdersScreen() {
   const [todayCount, setTodayCount] = useState<number>(0);
   const [acting, setActing] = useState<Record<string, boolean>>({});
   const [refreshing, setRefreshing] = useState(false);
+  const assignmentsFetchSeqRef = useRef(0);
 
   const refreshAssignments = useCallback(async () => {
+    const seq = ++assignmentsFetchSeqRef.current;
     try {
       const list = await ordersApi.list();
+      if (seq !== assignmentsFetchSeqRef.current) return;
       setAssignments(list);
     } catch (err) {
+      if (seq !== assignmentsFetchSeqRef.current) return;
       console.warn("Fetch orders failed:", (err as ApiError)?.message);
     }
   }, []);
