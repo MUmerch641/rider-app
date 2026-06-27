@@ -333,6 +333,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     s.on("notification:new", (payload: SocketNotificationNewPayload) => {
       setPushedNotification(payload);
+      if (payload.type === "new_order" && driver?.isOnline) {
+        void startAlarmRef.current();
+      }
     });
 
     setSocket(s);
@@ -342,7 +345,47 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       s.disconnect();
       stopAlarmRef.current();
     };
-  }, [isAuthenticated, driver?.id]);
+  }, [isAuthenticated, driver?.id, driver?.isOnline]);
+
+  // Foreground push fallback: socket can be down while FCM still delivers.
+  useEffect(() => {
+    if (!isAuthenticated || !driver?.isOnline) return;
+    let sub: { remove: () => void } | undefined;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const Notifications = await import("expo-notifications");
+        if (cancelled) return;
+        sub = Notifications.addNotificationReceivedListener((notif) => {
+          if (AppState.currentState !== "active") return;
+          const content = notif?.request?.content;
+          const data = (content?.data ?? {}) as Record<string, unknown>;
+          const type =
+            typeof data.type === "string" ? data.type : undefined;
+          if (type !== "new_order") return;
+          setPushedNotification({
+            id:
+              typeof data.notificationId === "string"
+                ? data.notificationId
+                : String(Date.now()),
+            type: "new_order",
+            title: content?.title ?? "",
+            body: content?.body ?? "",
+            data,
+            actionUrl:
+              typeof data.actionUrl === "string" ? data.actionUrl : null,
+          });
+          void startAlarmRef.current();
+        });
+      } catch {
+        // expo-notifications unavailable — poll/socket covers it.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  }, [isAuthenticated, driver?.isOnline]);
 
   // Release the audio player + timers on unmount.
   useEffect(
@@ -437,15 +480,17 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     };
   }, [isAuthenticated, driver?.isOnline, stopAlarm]);
 
-  // Backgrounding the app must not leave the siren looping — the FCM push is
-  // the background alerting channel. Foreground return re-rings via poll/socket
-  // only if a fresh offer arrives.
+  // Backgrounding stops the in-app loop; resume re-rings if an offer is still live.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (st) => {
-      if (st !== "active") stopAlarm();
+      if (st !== "active") {
+        stopAlarm();
+      } else if (newOrderRef.current && driver?.isOnline) {
+        void startAlarmRef.current();
+      }
     });
     return () => sub.remove();
-  }, [stopAlarm]);
+  }, [stopAlarm, driver?.isOnline]);
 
   // Acknowledging an order (accept/decline) clears it and silences the alarm.
   const clearNewOrder = useCallback(() => {
