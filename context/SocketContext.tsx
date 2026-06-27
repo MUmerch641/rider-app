@@ -45,6 +45,8 @@ type SocketContextValue = {
   clearCancelledOrder: () => void;
   clearOrderUpdate: () => void;
   clearPushedNotification: () => void;
+  joinSupportTicket: (ticketId: string) => void;
+  leaveSupportTicket: (ticketId: string) => void;
   /** Silence the incoming-order alarm (sound + vibration). */
   stopAlarm: () => void;
 };
@@ -454,6 +456,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const clearOrderUpdate = useCallback(() => setOrderUpdate(null), []);
   const clearPushedNotification = useCallback(() => setPushedNotification(null), []);
 
+  const joinSupportTicket = useCallback(
+    (ticketId: string) => {
+      socket?.emit("support:join_ticket", { ticketId });
+    },
+    [socket],
+  );
+
+  const leaveSupportTicket = useCallback(
+    (ticketId: string) => {
+      socket?.emit("support:leave_ticket", { ticketId });
+    },
+    [socket],
+  );
+
   const value = useMemo<SocketContextValue>(
     () => ({
       socket,
@@ -466,6 +482,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       clearCancelledOrder,
       clearOrderUpdate,
       clearPushedNotification,
+      joinSupportTicket,
+      leaveSupportTicket,
       stopAlarm,
     }),
     [
@@ -479,6 +497,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       clearCancelledOrder,
       clearOrderUpdate,
       clearPushedNotification,
+      joinSupportTicket,
+      leaveSupportTicket,
       stopAlarm,
     ],
   );

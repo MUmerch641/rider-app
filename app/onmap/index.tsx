@@ -4,7 +4,7 @@ import { LocationDotIcon } from "@/components/ui/icons/LocationDotIcon";
 import OrderRequestCard from "@/components/ui/OrderRequestCard";
 import PrepCountdownRing from "@/components/ui/PrepCountdownRing";
 import { Colors, Shadow } from "@/constants/theme";
-import { useAuth, useSocket } from "@/context";
+import { useAuth, useSocket, useActiveAssignments } from "@/context";
 import { formatDistanceKm, formatDurationMinutes } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import {
@@ -13,6 +13,7 @@ import {
   POST_PICKUP_STATUSES,
 } from "@/utils/orderLifecycle";
 import { translateOrderStatusError } from "@/utils/orderStatusErrors";
+import { socketItemsToSummary } from "@/utils/assignmentSummary";
 import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
 import { storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
@@ -46,8 +47,6 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const RIDER_IMAGE = require("@/assets/images/driver/setPointRoute.png");
 
 // NOTE: this screen deliberately has NO online/offline toggle and no driver
 // header — availability is toggled from the Orders tab header (OpenStatusToggle
@@ -105,6 +104,8 @@ export default function OnMap() {
   // offer and accepted orders are present; otherwise the visible panel just
   // shows fully.
   const [dockFocus, setDockFocus] = useState<"offer" | "accepted">("accepted");
+  const { showOrderSummary, showAssignmentSummary, refresh: refreshGlobalAssignments } =
+    useActiveAssignments();
   const [locating, setLocating] = useState(false);
   const [gpsReady, setGpsReady] = useState(false); // true once first fix arrives
   // Bumped on every screen focus. Drives the AcceptedOrdersSheet to re-expand
@@ -143,17 +144,20 @@ export default function OnMap() {
   const langKey: LangKey = (i18n.language as LangKey) || "en";
 
   // ─── Server-truth order list ──────────────────────────────────────────────
-  const refreshAssignments = useCallback(async () => {
+  const refreshAssignments = useCallback(async (): Promise<OrderAssignment[]> => {
     const seq = ++assignmentsFetchSeqRef.current;
     try {
       const list = await ordersApi.list();
-      if (seq !== assignmentsFetchSeqRef.current) return;
+      if (seq !== assignmentsFetchSeqRef.current) return list;
       setAssignments(list);
+      void refreshGlobalAssignments();
+      return list;
     } catch (err) {
-      if (seq !== assignmentsFetchSeqRef.current) return;
+      if (seq !== assignmentsFetchSeqRef.current) return [];
       console.warn("Fetch orders failed:", (err as ApiError)?.message);
+      return [];
     }
-  }, []);
+  }, [refreshGlobalAssignments]);
 
   // Refetch on mount + every focus, AND poll while the map is focused. The poll
   // is what removes an order that LEFT the active list (cancelled, delivered,
@@ -684,9 +688,22 @@ export default function OnMap() {
     // clearNewOrder() also silences the incoming-order alarm (sound + haptics)
     // — see SocketContext.clearNewOrder.
     clearNewOrder();
-    // Stay on the map — the accepted order now appears in the AcceptedOrdersSheet
-    // with its Advance button (Picked Up → … → Delivered). The separate
-    // delivery_route screen was retired as redundant.
+    showOrderSummary({
+      orderNumber: newOrder.orderNumber,
+      store: {
+        name: newOrder.store?.name,
+        phone: newOrder.store?.phone ?? undefined,
+        address: newOrder.store?.address,
+      },
+      customer: {
+        name: newOrder.customer?.name,
+        phone: newOrder.customer?.phone ?? undefined,
+        address: newOrder.customer?.address,
+      },
+      items: socketItemsToSummary(newOrder.items),
+      total: newOrder.total,
+      currency: newOrder.currency,
+    });
     await refreshAssignments();
   };
 
@@ -743,9 +760,9 @@ export default function OnMap() {
         await ordersApi.accept(orderId);
         stopAlarm();
         if (newOrder?.orderId === orderId) clearNewOrder();
-        // Stay on the map; the accepted order surfaces in the sheet with its
-        // Advance button. (delivery_route screen retired.)
-        await refreshAssignments();
+        const list = await refreshAssignments();
+        const row = list.find((a) => a.orderId === orderId);
+        if (row) showAssignmentSummary(row);
       } catch (err) {
         console.warn("Accept failed:", (err as ApiError)?.message);
         void refreshAssignments();
@@ -753,7 +770,7 @@ export default function OnMap() {
         setActing((m) => ({ ...m, [orderId]: false }));
       }
     },
-    [newOrder, clearNewOrder, stopAlarm, refreshAssignments, router],
+    [newOrder, clearNewOrder, stopAlarm, refreshAssignments, showAssignmentSummary],
   );
 
   const handleDeclineNearby = useCallback(
@@ -1051,13 +1068,14 @@ export default function OnMap() {
                 </Marker>
               )}
 
-              {/* Rider Marker — only when GPS has a real fix */}
-              <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                <Image
-                  source={RIDER_IMAGE}
-                  style={{ width: 80, height: 80 }}
-                  resizeMode="contain"
-                />
+              {/* Rider location — GPS pointer (not motor icon) */}
+              <Marker coordinate={userLocation} anchor={{ x: 0.5, y: 1 }}>
+                <View style={styles.riderPointerWrap}>
+                  <View style={styles.riderPointerHead}>
+                    <Ionicons name="navigate" size={scale(16)} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.markerPointer} />
+                </View>
               </Marker>
             </MapView>
           )}
@@ -1205,6 +1223,7 @@ export default function OnMap() {
               advancingIds={advancing}
               onOrderPress={handleOrderPress}
               onAdvance={handleAdvance}
+              onViewDetails={showAssignmentSummary}
               activeOrderId={activeOrder?.orderId ?? null}
               expandSignal={focusTick}
               collapsed={currentRequest ? dockFocus !== "accepted" : undefined}
@@ -1315,6 +1334,19 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     borderRadius: scale(17),
+  },
+  riderPointerWrap: {
+    alignItems: "center",
+  },
+  riderPointerHead: {
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(17),
+    backgroundColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
   markerPointer: {
     width: 0,

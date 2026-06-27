@@ -29,7 +29,7 @@ import {
 } from "@/utils/notificationRoutes";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Pressable,
@@ -65,9 +65,31 @@ function iconForType(type?: string): keyof typeof Ionicons.glyphMap {
   }
 }
 
+function toBannerData(n: {
+  id: string;
+  type?: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown> | null;
+  actionUrl?: string | null;
+}): BannerData {
+  const data = (n.data ?? {}) as Record<string, unknown>;
+  return {
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    payload: {
+      type: n.type,
+      orderId: typeof data.orderId === "string" ? data.orderId : undefined,
+      threadId: typeof data.threadId === "string" ? data.threadId : undefined,
+      actionUrl: n.actionUrl ?? undefined,
+    },
+  };
+}
+
 export function InAppNotificationBanner() {
   // SocketBridges (app/_layout) owns mirroring `pushedNotification` into the
-  // inbox list and clearing it; this banner only READS it to present the toast.
+  // inbox list and clearing it; this banner enqueues then presents each toast.
   const { pushedNotification } = useSocket();
   const router = useNavGuard();
   const font = useAppFont();
@@ -76,47 +98,52 @@ export function InAppNotificationBanner() {
   const [banner, setBanner] = useState<BannerData | null>(null);
   const translateY = useRef(new Animated.Value(-200)).current;
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastShownIdRef = useRef<string | null>(null);
+  const queueRef = useRef<BannerData[]>([]);
+  const showingRef = useRef(false);
+  const currentIdRef = useRef<string | null>(null);
 
-  const dismiss = (then?: () => void) => {
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
-    Animated.timing(translateY, {
-      toValue: -200,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => {
-      setBanner(null);
-      then?.();
-    });
-  };
+  const tryShowNext = useCallback(() => {
+    if (showingRef.current) return;
+    const next = queueRef.current.shift();
+    if (!next) return;
+    showingRef.current = true;
+    currentIdRef.current = next.id;
+    setBanner(next);
+  }, []);
 
-  // A socket notification arrived while foregrounded — show the banner.
+  const dismiss = useCallback(
+    (then?: () => void) => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      Animated.timing(translateY, {
+        toValue: -200,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => {
+        setBanner(null);
+        showingRef.current = false;
+        currentIdRef.current = null;
+        then?.();
+        tryShowNext();
+      });
+    },
+    [translateY, tryShowNext],
+  );
+
+  // A socket notification arrived while foregrounded — enqueue for FIFO display.
   useEffect(() => {
     if (!pushedNotification) return;
-    // The SocketBridges component owns clearing pushedNotification + mirroring
-    // it into the inbox list; we only read it to present the banner. Dedupe by
-    // id so a re-render can't re-trigger the same banner.
-    const n = pushedNotification;
-    if (lastShownIdRef.current === n.id) return;
-    lastShownIdRef.current = n.id;
-
-    const data = (n.data ?? {}) as Record<string, unknown>;
-    setBanner({
-      id: n.id,
-      title: n.title,
-      body: n.body,
-      payload: {
-        type: n.type,
-        orderId: typeof data.orderId === "string" ? data.orderId : undefined,
-        threadId: typeof data.threadId === "string" ? data.threadId : undefined,
-        actionUrl: n.actionUrl ?? undefined,
-      },
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pushedNotification]);
+    const item = toBannerData(pushedNotification);
+    const queued =
+      currentIdRef.current === item.id ||
+      queueRef.current.some((q) => q.id === item.id);
+    if (!queued) {
+      queueRef.current.push(item);
+    }
+    tryShowNext();
+  }, [pushedNotification, tryShowNext]);
 
   // Animate in + arm the auto-dismiss whenever a banner is set.
   useEffect(() => {
@@ -136,8 +163,7 @@ export function InAppNotificationBanner() {
         hideTimerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [banner?.id]);
+  }, [banner?.id, dismiss, translateY]);
 
   // Clear the pending timer on unmount.
   useEffect(

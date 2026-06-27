@@ -8,6 +8,7 @@ import i18n, { isRTL, LANGUAGE_STORAGE_KEY } from "@/constants/i18n";
 import { localizeName, type LangKey } from "@/utils/localize";
 import {
   AuthProvider,
+  ActiveAssignmentsProvider,
   NotificationProvider,
   SocketProvider,
   useAuth,
@@ -183,6 +184,7 @@ export default function RootLayout() {
         <AuthProvider>
           <NotificationProvider>
             <SocketProvider>
+              <ActiveAssignmentsProvider>
               <SocketBridges />
               <DriverLocationBroadcaster />
               <RouteGuard>
@@ -197,6 +199,7 @@ export default function RootLayout() {
                   floats over every screen. */}
               <InAppNotificationBanner />
               <LanguageOnboarding />
+              </ActiveAssignmentsProvider>
             </SocketProvider>
           </NotificationProvider>
         </AuthProvider>

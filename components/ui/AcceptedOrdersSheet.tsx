@@ -29,6 +29,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
+  I18nManager,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +38,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { SafeImage } from "@/components/SafeImage";
+import { Ionicons } from "@expo/vector-icons";
 import { SvgXml } from "react-native-svg";
 
 // ── SVG Icons ──────────────────────────────────────────────────────────────────
@@ -80,6 +82,8 @@ interface AcceptedOrdersSheetProps {
   onOrderPress?: (assignment: OrderAssignment) => void;
   /** Tap the advance CTA → move the order one lifecycle step forward. */
   onAdvance?: (assignment: OrderAssignment) => void;
+  /** Open the full order summary (items, customer, total) again. */
+  onViewDetails?: (assignment: OrderAssignment) => void;
   /** Override container styles (background, border-radius, padding…) */
   style?: ViewStyle;
   /** Max scrollable height of the order list. Default: 460 */
@@ -115,6 +119,7 @@ export function AcceptedOrdersSheet({
   advancingIds,
   onOrderPress,
   onAdvance,
+  onViewDetails,
   style,
   maxHeight = verticalScale(460),
   defaultCollapsed = true,
@@ -196,6 +201,7 @@ export function AcceptedOrdersSheet({
               }
               onPress={onOrderPress}
               onAdvance={onAdvance}
+              onViewDetails={onViewDetails}
             />
           ))}
 
@@ -251,6 +257,7 @@ function OrderCard({
   active,
   onPress,
   onAdvance,
+  onViewDetails,
 }: {
   assignment: OrderAssignment;
   langKey: LangKey;
@@ -261,6 +268,7 @@ function OrderCard({
   active?: boolean;
   onPress?: (assignment: OrderAssignment) => void;
   onAdvance?: (assignment: OrderAssignment) => void;
+  onViewDetails?: (assignment: OrderAssignment) => void;
 }) {
   const order = assignment.order;
   const storeName = localizeName(order?.store?.name, langKey);
@@ -363,6 +371,39 @@ function OrderCard({
           </>
         ) : null}
       </View>
+
+      {/* ── Row 2b: Order details — full-width tappable pill ── */}
+      {onViewDetails ? (
+        <TouchableOpacity
+          activeOpacity={0.82}
+          onPress={() => onViewDetails(assignment)}
+          style={styles.detailsBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t("activeOrders.viewDetailsA11y", {
+            orderNumber: order?.orderNumber ?? "",
+          })}
+        >
+          <View style={styles.detailsBtnLeft}>
+            <View style={styles.detailsIconWrap}>
+              <Ionicons
+                name="document-text-outline"
+                size={scale(16)}
+                color={Colors.primary}
+              />
+            </View>
+            <Text
+              style={[styles.detailsBtnText, { fontFamily: font.semibold }]}
+            >
+              {t("activeOrders.viewDetails")}
+            </Text>
+          </View>
+          <Ionicons
+            name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+            size={scale(18)}
+            color={Colors.primary}
+          />
+        </TouchableOpacity>
+      ) : null}
 
       {/* ── Row 3: Status chip + Advance CTA ── */}
       <View style={[styles.actionRow, { marginTop: verticalScale(16) }]}>
@@ -660,6 +701,40 @@ const styles = StyleSheet.create({
     fontSize: scale(17),
     color: "#1A1A2E",
     flexShrink: 0,
+  },
+  detailsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: verticalScale(12),
+    paddingVertical: verticalScale(11),
+    paddingHorizontal: scale(14),
+    borderRadius: scale(12),
+    backgroundColor: "#F3EDFF",
+    borderWidth: 1.5,
+    borderColor: "#D4C0FF",
+  },
+  detailsBtnLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(10),
+    flex: 1,
+    minWidth: 0,
+  },
+  detailsIconWrap: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(8),
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#E4D6FF",
+  },
+  detailsBtnText: {
+    fontSize: scale(14),
+    color: Colors.primary,
+    flexShrink: 1,
   },
 
   // ── Route Row ──────────────────────────────────────────────────────────────

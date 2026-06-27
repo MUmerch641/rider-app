@@ -316,7 +316,24 @@
     "distance": "المسافة",
     "eta": "الوقت المقدّر",
     "prepTime": "وقت التحضير",
-    "ready": "جاهز"
+    "ready": "جاهز",
+    "acceptSummaryTitle": "تم قبول الطلب",
+    "restaurant": "المطعم",
+    "customer": "العميل",
+    "items": "العناصر",
+    "total": "الإجمالي",
+    "callCustomer": "اتصال",
+    "whatsappCustomer": "واتساب",
+    "viewRoute": "عرض المسار",
+    "itemCount": "{{count}} عناصر",
+    "itemsUnavailable": "ستظهر العناصر قريباً"
+  },
+  "activeOrders": {
+    "openMap": "الخريطة",
+    "viewDetails": "تفاصيل الطلب",
+    "viewDetailsA11y": "عرض تفاصيل الطلب {{orderNumber}}",
+    "multiple": "{{count}} طلبات · {{status}}",
+    "barA11y": "توصيل نشط من {{store}}، {{status}}"
   },
   "delivery": {
     "activeDelivery": "توصيل نشط",

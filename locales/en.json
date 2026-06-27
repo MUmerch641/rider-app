@@ -309,7 +309,24 @@
     "distance": "Distance",
     "eta": "ETA",
     "prepTime": "Prep time",
-    "ready": "Ready"
+    "ready": "Ready",
+    "acceptSummaryTitle": "Order accepted",
+    "restaurant": "Restaurant",
+    "customer": "Customer",
+    "items": "Items",
+    "total": "Total",
+    "callCustomer": "Call",
+    "whatsappCustomer": "WhatsApp",
+    "viewRoute": "View route",
+    "itemCount": "{{count}} items",
+    "itemsUnavailable": "Items will appear shortly"
+  },
+  "activeOrders": {
+    "openMap": "On Map",
+    "viewDetails": "Order details",
+    "viewDetailsA11y": "View details for order {{orderNumber}}",
+    "multiple": "{{count}} orders · {{status}}",
+    "barA11y": "Active delivery from {{store}}, {{status}}"
   },
   "orderRadius": {
     "title": "Order Radius",

@@ -4,3 +4,7 @@ export {
   NotificationProvider,
   useNotifications,
 } from "./NotificationContext";
+export {
+  ActiveAssignmentsProvider,
+  useActiveAssignments,
+} from "./ActiveAssignmentsContext";

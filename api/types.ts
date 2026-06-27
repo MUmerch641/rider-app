@@ -404,7 +404,7 @@ export type SocketNewOrderPayload = {
     address?: string;
     location: GeoPoint;
   };
-  customer?: { name?: string; address?: string; location?: GeoPoint };
+  customer?: { name?: string; phone?: string; address?: string; location?: GeoPoint };
   items: { id: string; quantity: number; name: Translatable; price: string | number }[];
   total: string | number;
   currency: string;

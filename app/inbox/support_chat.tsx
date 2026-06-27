@@ -110,7 +110,7 @@ export default function SupportChatScreen() {
     };
   }, []);
 
-  const { socket } = useSocket();
+  const { socket, joinSupportTicket, leaveSupportTicket } = useSocket();
 
   // Resolve a thread id: use param if present, else create a new one.
   useEffect(() => {
@@ -151,6 +151,7 @@ export default function SupportChatScreen() {
   // Socket: append new messages addressed to this thread.
   useEffect(() => {
     if (!socket || !threadId) return;
+    joinSupportTicket(threadId);
     const handler = (msg: SupportMessage) => {
       if (msg.threadId !== threadId) return;
       setMessages((prev) => {
@@ -161,8 +162,9 @@ export default function SupportChatScreen() {
     socket.on("support:message:new", handler);
     return () => {
       socket.off("support:message:new", handler);
+      leaveSupportTicket(threadId);
     };
-  }, [socket, threadId]);
+  }, [socket, threadId, joinSupportTicket, leaveSupportTicket]);
 
   // Native RTL swaps left/right border radii automatically.
   const getBubbleRadius = (fromSupport: boolean) =>

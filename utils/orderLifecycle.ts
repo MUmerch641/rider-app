@@ -37,11 +37,6 @@ const FORWARD_STEPS: Record<string, LifecycleStep> = {
     defaultLabel: "Picked Up",
     next: "picked_up",
   },
-  picked_up: {
-    labelKey: "delivery.onTheWay",
-    defaultLabel: "On the Way",
-    next: "on_the_way",
-  },
   on_the_way: {
     labelKey: "delivery.arrivedAtCustomer",
     defaultLabel: "Arrived at Customer",
@@ -95,7 +90,6 @@ export const ACTIVE_STATUSES: ReadonlySet<string> = new Set([
 
 /** Statuses where the rider's current target is the customer, not the store. */
 export const POST_PICKUP_STATUSES: ReadonlySet<string> = new Set([
-  "picked_up",
   "on_the_way",
   "arrived",
 ]);

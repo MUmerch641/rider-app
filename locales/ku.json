@@ -287,7 +287,24 @@
     "distance": "دووری",
     "eta": "کاتی خەمڵێنراو",
     "prepTime": "کاتی ئامادەکردن",
-    "ready": "ئامادەیە"
+    "ready": "ئامادەیە",
+    "acceptSummaryTitle": "ئۆردەر وەرگیرا",
+    "restaurant": "چێشتخانە",
+    "customer": "کڕیار",
+    "items": "بابەتەکان",
+    "total": "کۆی گشتی",
+    "callCustomer": "پەیوەندی",
+    "whatsappCustomer": "واتساپ",
+    "viewRoute": "بینینی ڕێگا",
+    "itemCount": "{{count}} بابەت",
+    "itemsUnavailable": "بابەتەکان بەم زووانە دەردەکەون"
+  },
+  "activeOrders": {
+    "openMap": "لەسەر نەخشە",
+    "viewDetails": "وردەکاری ئۆردەر",
+    "viewDetailsA11y": "وردەکاری ئۆردەر {{orderNumber}}",
+    "multiple": "{{count}} ئۆردەر · {{status}}",
+    "barA11y": "گەیاندنی چالاک لە {{store}}، {{status}}"
   },
   "orders": {
     "todaySummary": "کورتەی ئەمڕۆ",
