@@ -209,8 +209,13 @@ export default function SupportChatScreen() {
       const real = await supportApi.sendMessage(threadId, { body: trimmed });
       if (!mountedRef.current) return;
       // Replace the temp message with the server-issued one.
+      // If the socket echo ('support:message:new') already inserted the real
+      // message, just drop the optimistic temp — otherwise we'd render the
+      // server message twice. Otherwise swap the temp for the real one.
       setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
+        prev.some((m) => m.id === real.id)
+          ? prev.filter((m) => m.id !== tempId)
+          : prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
       );
     } catch (err) {
       console.warn("Send message failed:", (err as ApiError)?.message);
@@ -245,8 +250,13 @@ export default function SupportChatScreen() {
         attachmentUrl: upload.url,
       });
       if (!mountedRef.current) return;
+      // If the socket echo ('support:message:new') already inserted the real
+      // message, just drop the optimistic temp — otherwise we'd render the
+      // server message twice. Otherwise swap the temp for the real one.
       setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
+        prev.some((m) => m.id === real.id)
+          ? prev.filter((m) => m.id !== tempId)
+          : prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
       );
     } catch (err) {
       console.warn("Send image failed:", (err as ApiError)?.message);
