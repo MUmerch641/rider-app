@@ -26,12 +26,9 @@ export default function ReviewsScreen() {
 
   const fetchReviews = useCallback(async () => {
     try {
-      const [summary, list] = await Promise.all([
-        reviewsApi.summary(),
-        reviewsApi.list({ page: 1, limit: 50 }),
-      ]);
-      setTotalReviews(summary?.totalReviews ?? 0);
-      setReviewsList(list);
+      const listRes = await reviewsApi.list({ page: 1, limit: 50 });
+      setTotalReviews(listRes.meta.total);
+      setReviewsList(listRes.items);
     } catch (err) {
       console.warn("Reviews fetch failed:", (err as ApiError)?.message);
     }

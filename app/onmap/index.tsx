@@ -13,7 +13,10 @@ import {
   POST_PICKUP_STATUSES,
 } from "@/utils/orderLifecycle";
 import { translateOrderStatusError } from "@/utils/orderStatusErrors";
-import { socketItemsToSummary } from "@/utils/assignmentSummary";
+import {
+  assignmentToSummaryPayload,
+  socketItemsToSummary,
+} from "@/utils/assignmentSummary";
 import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
 import { storeSource } from "@/utils/placeholders";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
@@ -688,23 +691,27 @@ export default function OnMap() {
     // clearNewOrder() also silences the incoming-order alarm (sound + haptics)
     // — see SocketContext.clearNewOrder.
     clearNewOrder();
-    showOrderSummary({
-      orderNumber: newOrder.orderNumber,
-      store: {
-        name: newOrder.store?.name,
-        phone: newOrder.store?.phone ?? undefined,
-        address: newOrder.store?.address,
-      },
-      customer: {
-        name: newOrder.customer?.name,
-        phone: newOrder.customer?.phone ?? undefined,
-        address: newOrder.customer?.address,
-      },
-      items: socketItemsToSummary(newOrder.items),
-      total: newOrder.total,
-      currency: newOrder.currency,
-    });
-    await refreshAssignments();
+    const refreshed = await refreshAssignments();
+    const accepted = refreshed.find((a) => a.orderId === orderId);
+    const summaryPayload = accepted
+      ? assignmentToSummaryPayload(accepted, (i18n.language?.split("-")[0] || "en") as any)
+      : {
+          orderNumber: newOrder.orderNumber,
+          store: {
+            name: newOrder.store?.name,
+            phone: newOrder.store?.phone ?? undefined,
+            address: newOrder.store?.address,
+          },
+          customer: {
+            name: newOrder.customer?.name,
+            phone: newOrder.customer?.phone ?? undefined,
+            address: newOrder.customer?.address,
+          },
+          items: socketItemsToSummary(newOrder.items),
+          total: newOrder.total,
+          currency: newOrder.currency,
+        };
+    showOrderSummary(summaryPayload);
   };
 
   const handleDecline = async () => {
@@ -1223,7 +1230,6 @@ export default function OnMap() {
               advancingIds={advancing}
               onOrderPress={handleOrderPress}
               onAdvance={handleAdvance}
-              onViewDetails={showAssignmentSummary}
               activeOrderId={activeOrder?.orderId ?? null}
               expandSignal={focusTick}
               collapsed={currentRequest ? dockFocus !== "accepted" : undefined}

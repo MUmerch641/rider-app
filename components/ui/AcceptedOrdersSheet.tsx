@@ -24,6 +24,10 @@ import { useAppFont } from "@/hooks/useAppFont";
 import { formatCurrency } from "@/utils/format";
 import { localizeName, type LangKey } from "@/utils/localize";
 import { nextStep } from "@/utils/orderLifecycle";
+import {
+  assignmentToSummaryPayload,
+  itemDisplayName,
+} from "@/utils/assignmentSummary";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -82,8 +86,6 @@ interface AcceptedOrdersSheetProps {
   onOrderPress?: (assignment: OrderAssignment) => void;
   /** Tap the advance CTA → move the order one lifecycle step forward. */
   onAdvance?: (assignment: OrderAssignment) => void;
-  /** Open the full order summary (items, customer, total) again. */
-  onViewDetails?: (assignment: OrderAssignment) => void;
   /** Override container styles (background, border-radius, padding…) */
   style?: ViewStyle;
   /** Max scrollable height of the order list. Default: 460 */
@@ -119,7 +121,6 @@ export function AcceptedOrdersSheet({
   advancingIds,
   onOrderPress,
   onAdvance,
-  onViewDetails,
   style,
   maxHeight = verticalScale(460),
   defaultCollapsed = true,
@@ -134,6 +135,7 @@ export function AcceptedOrdersSheet({
   const isControlled = collapsedProp !== undefined;
   const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
   const collapsed = isControlled ? collapsedProp : internalCollapsed;
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
 
   const handleToggle = () => {
     const next = !collapsed;
@@ -201,7 +203,12 @@ export function AcceptedOrdersSheet({
               }
               onPress={onOrderPress}
               onAdvance={onAdvance}
-              onViewDetails={onViewDetails}
+              expanded={expandedOrderId === assignment.orderId}
+              onToggleExpand={() =>
+                setExpandedOrderId((cur) =>
+                  cur === assignment.orderId ? null : assignment.orderId,
+                )
+              }
             />
           ))}
 
@@ -257,7 +264,8 @@ function OrderCard({
   active,
   onPress,
   onAdvance,
-  onViewDetails,
+  expanded,
+  onToggleExpand,
 }: {
   assignment: OrderAssignment;
   langKey: LangKey;
@@ -268,9 +276,14 @@ function OrderCard({
   active?: boolean;
   onPress?: (assignment: OrderAssignment) => void;
   onAdvance?: (assignment: OrderAssignment) => void;
-  onViewDetails?: (assignment: OrderAssignment) => void;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }) {
   const order = assignment.order;
+  const summary = assignmentToSummaryPayload(assignment, langKey);
+  const summaryItems = (summary.items ?? []).filter(
+    (it) => itemDisplayName(it.name, langKey).length > 0,
+  );
   const storeName = localizeName(order?.store?.name, langKey);
   const storeAvatar = order?.store?.avatar ?? undefined;
   const price = formatCurrency(order?.total, order?.currency ?? "IQD");
@@ -372,47 +385,65 @@ function OrderCard({
         ) : null}
       </View>
 
-      {/* ── Row 2b: Order details — full-width tappable pill ── */}
-      {onViewDetails ? (
-        <TouchableOpacity
-          activeOpacity={0.82}
-          onPress={() => onViewDetails(assignment)}
-          style={styles.detailsBtn}
-          accessibilityRole="button"
-          accessibilityLabel={t("activeOrders.viewDetailsA11y", {
-            orderNumber: order?.orderNumber ?? "",
-          })}
-        >
-          <View style={styles.detailsBtnLeft}>
-            <View style={styles.detailsIconWrap}>
-              <Ionicons
-                name="document-text-outline"
-                size={scale(16)}
-                color={Colors.primary}
-              />
-            </View>
-            <Text
-              style={[styles.detailsBtnText, { fontFamily: font.semibold }]}
-            >
-              {t("activeOrders.viewDetails")}
+      {/* ── Row 2b: Inline order details (toggle on status chip) ── */}
+      {expanded ? (
+        <View style={styles.inlineDetails}>
+          {summaryItems.length > 0 ? (
+            summaryItems.map((it, idx) => (
+              <View
+                key={`${itemDisplayName(it.name, langKey)}-${idx}`}
+                style={styles.inlineDetailRow}
+              >
+                {it.image ? (
+                  <SafeImage
+                    uri={it.image}
+                    variant="item"
+                    style={styles.inlineItemThumb}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <View style={[styles.inlineItemThumb, styles.avatarFallback]} />
+                )}
+                <Text
+                  style={[styles.inlineDetailText, { fontFamily: font.regular }]}
+                  numberOfLines={2}
+                >
+                  {it.quantity ?? 1}× {itemDisplayName(it.name, langKey)}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <Text style={[styles.inlineDetailText, { fontFamily: font.regular }]}>
+              {t("activeOrders.noItems", "No item details")}
             </Text>
-          </View>
-          <Ionicons
-            name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-            size={scale(18)}
-            color={Colors.primary}
-          />
-        </TouchableOpacity>
+          )}
+          {summary.customer?.name ? (
+            <Text style={[styles.inlineMeta, { fontFamily: font.medium }]}>
+              {t("onmap.customer", "Customer")}: {summary.customer.name}
+            </Text>
+          ) : null}
+        </View>
       ) : null}
 
-      {/* ── Row 3: Status chip + Advance CTA ── */}
+      {/* ── Row 3: Status chip (toggle) + Advance CTA ── */}
       <View style={[styles.actionRow, { marginTop: verticalScale(16) }]}>
-        {/* Status chip — translated live status */}
-        <View style={styles.statusChip}>
+        <TouchableOpacity
+          onPress={onToggleExpand}
+          activeOpacity={0.82}
+          style={styles.statusChip}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: !!expanded }}
+        >
           <Text style={[styles.statusChipText, { fontFamily: font.medium }]}>
             {statusLabel}
           </Text>
-        </View>
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={scale(14)}
+            color={Colors.primary}
+            style={{ marginLeft: 4 }}
+          />
+        </TouchableOpacity>
 
         {/* Advance button — single tap moves the order one step forward.
             Hidden only when the chain has no next step for this status. */}
@@ -800,8 +831,10 @@ const styles = StyleSheet.create({
     gap: scale(8),
   },
 
-  // Status chip — live order status
+  // Status chip — live order status (tap to expand details inline)
   statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#F3EFFC",
     borderRadius: scale(20),
     paddingVertical: verticalScale(8),
@@ -811,6 +844,33 @@ const styles = StyleSheet.create({
   statusChipText: {
     fontSize: scale(13),
     color: "#6B21E8",
+  },
+  inlineDetails: {
+    marginTop: verticalScale(12),
+    padding: scale(12),
+    borderRadius: scale(14),
+    backgroundColor: "#F8F7FC",
+    gap: verticalScale(8),
+  },
+  inlineDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(8),
+  },
+  inlineItemThumb: {
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(8),
+  },
+  inlineDetailText: {
+    flex: 1,
+    fontSize: scale(13),
+    color: "#1A1A2E",
+  },
+  inlineMeta: {
+    fontSize: scale(12),
+    color: "#6B7280",
+    marginTop: verticalScale(4),
   },
 
   // Primary action – flex to fill remaining space

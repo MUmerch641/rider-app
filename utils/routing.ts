@@ -83,12 +83,14 @@ export async function fetchDirections(
     return null;
   }
 
-  const url =
-    `https://maps.googleapis.com/maps/api/directions/json` +
-    `?origin=${origin.latitude},${origin.longitude}` +
-    `&destination=${destination.latitude},${destination.longitude}` +
-    `&mode=driving` +
-    `&key=${GOOGLE_DIRECTIONS_API_KEY}`;
+    const url =
+        `https://maps.googleapis.com/maps/api/directions/json` +
+        `?origin=${origin.latitude},${origin.longitude}` +
+        `&destination=${destination.latitude},${destination.longitude}` +
+        `&mode=driving` +
+        `&alternatives=true` +
+        `&departure_time=now` +
+        `&key=${GOOGLE_DIRECTIONS_API_KEY}`;
 
   try {
     const response = await fetch(url);
@@ -106,7 +108,12 @@ export async function fetchDirections(
       return null;
     }
 
-    const route = data.routes[0];
+    // Pick the shortest driving duration — routes[0] is not always optimal.
+    const route = [...data.routes].sort((a: { legs?: { duration?: { value?: number } }[] }, b: { legs?: { duration?: { value?: number } }[] }) => {
+      const aSec = a.legs?.[0]?.duration?.value ?? Number.MAX_SAFE_INTEGER;
+      const bSec = b.legs?.[0]?.duration?.value ?? Number.MAX_SAFE_INTEGER;
+      return aSec - bSec;
+    })[0];
     const leg = route.legs[0];
 
     return {

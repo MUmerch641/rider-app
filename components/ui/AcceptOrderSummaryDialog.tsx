@@ -1,3 +1,4 @@
+import { SafeImage } from "@/components/SafeImage";
 import { Button } from "@/components/ui";
 import { Colors, FontSize, Radius } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
@@ -44,6 +45,7 @@ export function AcceptOrderSummaryDialog({
   if (!data) return null;
 
   const storeName = localizeName(data.store?.name, langKey);
+  const storePhone = data.store?.phone?.trim();
   const customerName =
     data.customer?.name?.trim() || t("onmap.customer", "Customer");
   const customerPhone = data.customer?.phone?.trim();
@@ -170,6 +172,16 @@ export function AcceptOrderSummaryDialog({
                         idx < items.length - 1 && styles.itemRowBorder,
                       ]}
                     >
+                      {item.image ? (
+                        <SafeImage
+                          uri={item.image}
+                          variant="food"
+                          style={styles.itemThumb}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View style={[styles.itemThumb, styles.itemThumbPlaceholder]} />
+                      )}
                       <View style={styles.qtyPill}>
                         <Text
                           style={[styles.qtyText, { fontFamily: font.bold }]}
@@ -211,22 +223,44 @@ export function AcceptOrderSummaryDialog({
               </Text>
             </View>
 
-            {customerPhone ? (
+            {storePhone || customerPhone ? (
               <View style={styles.callRow}>
-                <Button
-                  label={t("onmap.callCustomer", "Call")}
-                  onPress={() => dial(customerPhone)}
-                  variant="outline"
-                  style={styles.callBtn}
-                  size="sm"
-                />
-                <Button
-                  label={t("onmap.whatsappCustomer", "WhatsApp")}
-                  onPress={() => whatsapp(customerPhone)}
-                  variant="success"
-                  style={[styles.callBtn, styles.whatsappBtn]}
-                  size="sm"
-                />
+                {storePhone ? (
+                  <>
+                    <Button
+                      label={t("onmap.callMerchant", "Call store")}
+                      onPress={() => dial(storePhone)}
+                      variant="outline"
+                      style={styles.callBtn}
+                      size="sm"
+                    />
+                    <Button
+                      label={t("onmap.whatsappMerchant", "WhatsApp store")}
+                      onPress={() => whatsapp(storePhone)}
+                      variant="success"
+                      style={[styles.callBtn, styles.whatsappBtn]}
+                      size="sm"
+                    />
+                  </>
+                ) : null}
+                {customerPhone ? (
+                  <>
+                    <Button
+                      label={t("onmap.callCustomer", "Call")}
+                      onPress={() => dial(customerPhone)}
+                      variant="outline"
+                      style={styles.callBtn}
+                      size="sm"
+                    />
+                    <Button
+                      label={t("onmap.whatsappCustomer", "WhatsApp")}
+                      onPress={() => whatsapp(customerPhone)}
+                      variant="success"
+                      style={[styles.callBtn, styles.whatsappBtn]}
+                      size="sm"
+                    />
+                  </>
+                ) : null}
               </View>
             ) : null}
           </ScrollView>
@@ -414,6 +448,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: scale(10),
     paddingVertical: verticalScale(8),
+  },
+  itemThumb: {
+    width: scale(40),
+    height: scale(40),
+    borderRadius: scale(8),
+  },
+  itemThumbPlaceholder: {
+    backgroundColor: "#EFEFEF",
   },
   itemRowBorder: {
     borderBottomWidth: 1,

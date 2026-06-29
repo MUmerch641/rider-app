@@ -1,4 +1,4 @@
-import { supportApi, type ApiError, type SupportMessage } from "@/api";
+import { supportApi, uploadApi, type ApiError, type SupportMessage } from "@/api";
 import { Button } from "@/components/ui";
 import { SendIcon, SupportIcon } from "@/components/ui/icons";
 import { Colors, FontSize, Radius } from "@/constants/theme";
@@ -10,9 +10,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useNavGuard } from "@/hooks/useNavGuard";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import * as ImagePicker from "expo-image-picker";
 import {
+    Alert,
     FlatList,
     I18nManager,
+    Image,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -57,6 +60,7 @@ type Message = {
   time: string;
   fromSupport: boolean;
   seen: boolean;
+  mediaUrl?: string | null;
 };
 
 function formatTime(iso: string): string {
@@ -66,12 +70,17 @@ function formatTime(iso: string): string {
 }
 
 function toUiMessage(m: SupportMessage): Message {
+  const mediaUrl =
+    (m as { mediaUrl?: string | null }).mediaUrl ??
+    (m as { attachmentUrl?: string | null }).attachmentUrl ??
+    null;
   return {
     id: m.id,
     text: m.body,
     time: formatTime(m.createdAt),
     fromSupport: m.senderType === "support",
     seen: !!m.seen,
+    mediaUrl,
   };
 }
 
@@ -213,6 +222,63 @@ export default function SupportChatScreen() {
     }
   };
 
+  const uploadAndSendImage = async (uri: string) => {
+    if (!threadId || sending) return;
+    setSending(true);
+    const tempId = `local-img-${Date.now()}`;
+    const optimistic: Message = {
+      id: tempId,
+      text: "",
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      fromSupport: false,
+      seen: false,
+      mediaUrl: uri,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    try {
+      const upload = await uploadApi.uploadFile(uri, "support");
+      const real = await supportApi.sendMessage(threadId, {
+        body: "[Image]",
+        attachmentUrl: upload.url,
+      });
+      if (!mountedRef.current) return;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? toUiMessage(real) : m)),
+      );
+    } catch (err) {
+      console.warn("Send image failed:", (err as ApiError)?.message);
+      if (!mountedRef.current) return;
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      Alert.alert(
+        t("personalInfo.uploadFailedTitle", "Upload failed"),
+        t("personalInfo.uploadFailedBody", "Couldn't upload the image. Please try again."),
+      );
+    } finally {
+      if (mountedRef.current) setSending(false);
+    }
+  };
+
+  const handleAttachImage = async () => {
+    if (sending) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const asset = result.assets[0];
+    if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+      Alert.alert(
+        t("support.fileTooLarge", "File too large"),
+        t("support.imageSizeLimit", "Images must be under 10 MB."),
+      );
+      return;
+    }
+    void uploadAndSendImage(asset.uri);
+  };
+
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Header ── */}
@@ -291,8 +357,15 @@ export default function SupportChatScreen() {
                       : styles.bubbleTextUser,
                   ]}
                 >
-                  {item.text}
+                  {item.text && item.text !== "[Image]" ? item.text : null}
                 </Text>
+                {item.mediaUrl ? (
+                  <Image
+                    source={{ uri: item.mediaUrl }}
+                    style={styles.bubbleImage}
+                    resizeMode="cover"
+                  />
+                ) : null}
               </View>
 
               {/* Seen + time */}
@@ -317,6 +390,14 @@ export default function SupportChatScreen() {
         {/* ── Input Bar ── */}
         <View style={styles.inputBarWrapper}>
           <View style={styles.inputBar}>
+            <TouchableOpacity
+              style={styles.attachButton}
+              onPress={() => void handleAttachImage()}
+              disabled={sending}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="image-outline" size={scale(22)} color={Colors.primary} />
+            </TouchableOpacity>
             <TextInput
               value={input}
               onChangeText={setInput}
@@ -478,11 +559,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + verticalScale(2),
   },
-  bubbleSupport: { backgroundColor: Colors.card },
-  bubbleUser: { backgroundColor: Colors.card },
+  bubbleSupport: { backgroundColor: "#F0EBFF" },
+  bubbleUser: { backgroundColor: "#FFFFFF" },
   bubbleText: { fontSize: FontSize.md, lineHeight: verticalScale(22) },
   bubbleTextSupport: { color: Colors.textSecondary },
   bubbleTextUser: { color: Colors.textSecondary },
+  bubbleImage: {
+    width: scale(180),
+    height: scale(140),
+    borderRadius: Radius.md,
+    marginTop: verticalScale(6),
+  },
 
   // Meta row (seen + time)
   metaRow: {
@@ -504,11 +591,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: Colors.card,
     borderRadius: Radius.full,
-    paddingLeft: spacing.md,
+    paddingLeft: spacing.xs,
     paddingRight: spacing.xs,
     marginBottom: spacing.lg,
     paddingVertical: spacing.sm,
-    gap: spacing.sm,
+    gap: spacing.xs,
+  },
+  attachButton: {
+    width: scale(40),
+    height: scale(40),
+    alignItems: "center",
+    justifyContent: "center",
   },
   input: {
     flex: 1,

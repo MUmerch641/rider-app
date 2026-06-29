@@ -13,14 +13,29 @@ export type ReviewsQuery = {
   rating?: 1 | 2 | 3 | 4 | 5;
 };
 
+export type ReviewsListResult = {
+  items: Review[];
+  meta: { total: number; page?: number; limit?: number };
+};
+
 export const reviewsApi = {
   async summary(): Promise<ReviewSummary> {
     const env = (await apiClient.get(ENDPOINTS.reviews.summary)) as Envelope<ReviewSummary>;
     return unwrap(env);
   },
 
-  async list(query: ReviewsQuery = {}): Promise<Review[]> {
-    const env = (await apiClient.get(ENDPOINTS.reviews.list, { params: query })) as Envelope<Review[]>;
-    return unwrap(env);
+  async list(query: ReviewsQuery = {}): Promise<ReviewsListResult> {
+    const env = (await apiClient.get(ENDPOINTS.reviews.list, { params: query })) as Envelope<
+      Review[]
+    > & { meta?: { total?: number; page?: number; limit?: number } };
+    const items = unwrap(env);
+    return {
+      items,
+      meta: {
+        total: Number(env.meta?.total ?? items.length),
+        page: env.meta?.page,
+        limit: env.meta?.limit,
+      },
+    };
   },
 };

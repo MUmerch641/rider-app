@@ -5,7 +5,7 @@ export type AcceptSummaryPayload = {
   orderNumber?: string;
   store?: { name?: unknown; phone?: string | null; address?: unknown };
   customer?: { name?: string; phone?: string | null; address?: string };
-  items?: { name?: unknown; quantity?: number; price?: number }[];
+  items?: { name?: unknown; quantity?: number; price?: number; image?: string | null }[];
   total?: number;
   currency?: string;
 };
@@ -47,6 +47,10 @@ export function assignmentToSummaryPayload(
         name: rawName,
         quantity: it.quantity,
         price: Number(it.unitPrice ?? it.storeItem?.price ?? 0),
+        image:
+          (it.itemSnapshot as { photo?: string } | undefined)?.photo ??
+          (it.storeItem?.photos as string[] | undefined)?.[0] ??
+          null,
       };
     })
     .filter((it) => itemDisplayName(it.name, langKey).length > 0);
@@ -71,11 +75,12 @@ export function assignmentToSummaryPayload(
 
 /** Normalize socket-offer items into summary rows. */
 export function socketItemsToSummary(
-  items: { quantity?: number; name?: unknown; price?: string | number }[] = [],
+  items: { quantity?: number; name?: unknown; price?: string | number; image?: string | null }[] = [],
 ): AcceptSummaryPayload["items"] {
   return items.map((it) => ({
     name: it.name,
     quantity: it.quantity ?? 1,
     price: Number(it.price ?? 0),
+    image: it.image ?? null,
   }));
 }
