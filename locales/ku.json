@@ -294,7 +294,11 @@
     "items": "بابەتەکان",
     "total": "کۆی گشتی",
     "callCustomer": "پەیوەندی",
+    "callMerchant": "پەیوەندی فرۆشگا",
     "whatsappCustomer": "واتساپ",
+    "whatsappMerchant": "واتساپی فرۆشگا",
+    "storePhoneUnavailable": "ژمارەی فرۆشگا بەردەست نییە",
+    "customerPhoneUnavailable": "ژمارەی کڕیار بەردەست نییە",
     "viewRoute": "بینینی ڕێگا",
     "itemCount": "{{count}} بابەت",
     "itemsUnavailable": "بابەتەکان بەم زووانە دەردەکەون"
@@ -387,7 +391,16 @@
     "title": "پشتگیری",
     "online": "ئونلاین",
     "saySomething": "شتێک بنووسە...",
-    "orderNumber": "داواکاری #{{id}}"
+    "orderNumber": "داواکاری #{{id}}",
+    "sendImage": "ناردن",
+    "sendImageConfirmBody": "پێش ناردن وێنەکە پێداچوونەوە بکە.",
+    "fileTooLarge": "فایلەکە زۆر گەورەیە",
+    "imageSizeLimit": "وێنەکان دەبێت لە ١٠ مێگابایت کەمتر بن.",
+    "photoPermTitle": "مۆڵەت پێویستە",
+    "photoPermBody": "تکایە ڕێگە بدە بە دەستڕاگەیشتن بە وێنەکان بۆ ناردنی وێنە لە چاتی پشتگیری.",
+    "imagePickerFailed": "نەتوانرا کتێبخانەی وێنەکان بکرێتەوە. تکایە دووبارە هەوڵ بدەرەوە.",
+    "notReadyTitle": "تکایە چاوەڕوان بە",
+    "notReadyBody": "چات هێشتا پەیوەندیدە. دواتر دووبارە هەوڵ بدەرەوە."
   },
   "openStatus": {
     "closeTitle": "بۆچی رێستۆرانەکەت دادەخەیت؟",

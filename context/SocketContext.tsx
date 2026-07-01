@@ -33,6 +33,7 @@ import {
   getCachedNotificationSoundUri,
   syncNotificationSound,
 } from "@/utils/notificationSound";
+import { cacheStorePhone } from "@/utils/storeContactCache";
 
 type SocketContextValue = {
   socket: Socket | null;
@@ -312,6 +313,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     s.on("disconnect", () => setIsConnected(false));
 
     s.on("new-order", (payload: SocketNewOrderPayload) => {
+      cacheStorePhone(payload.orderId, payload.store?.phone);
       setNewOrder(payload);
       void startAlarmRef.current();
     });

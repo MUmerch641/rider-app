@@ -323,7 +323,11 @@
     "items": "العناصر",
     "total": "الإجمالي",
     "callCustomer": "اتصال",
+    "callMerchant": "اتصال المتجر",
     "whatsappCustomer": "واتساب",
+    "whatsappMerchant": "واتساب المتجر",
+    "storePhoneUnavailable": "رقم المتجر غير متوفر",
+    "customerPhoneUnavailable": "رقم الزبون غير متوفر",
     "viewRoute": "عرض المسار",
     "itemCount": "{{count}} عناصر",
     "itemsUnavailable": "ستظهر العناصر قريباً"
@@ -387,7 +391,16 @@
     "title": "الدعم",
     "online": "متصل",
     "saySomething": "اكتب شيئاً...",
-    "orderNumber": "الطلب #{{id}}"
+    "orderNumber": "الطلب #{{id}}",
+    "sendImage": "إرسال",
+    "sendImageConfirmBody": "راجع الصورة قبل الإرسال.",
+    "fileTooLarge": "الملف كبير جداً",
+    "imageSizeLimit": "يجب أن تكون الصور أقل من 10 ميغابايت.",
+    "photoPermTitle": "الإذن مطلوب",
+    "photoPermBody": "يرجى السماح بالوصول إلى مكتبة الصور لإرسال الصور في محادثة الدعم.",
+    "imagePickerFailed": "تعذر فتح مكتبة الصور. يرجى المحاولة مرة أخرى.",
+    "notReadyTitle": "يرجى الانتظار",
+    "notReadyBody": "المحادثة لا تزال قيد الاتصال. حاول مرة أخرى بعد لحظة."
   },
   "openStatus": {
     "closeTitle": "لماذا تغلق مطعمك؟",

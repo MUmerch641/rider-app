@@ -8,6 +8,7 @@ import {
   type AcceptSummaryPayload,
 } from "@/utils/assignmentSummary";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { openWhatsAppChat } from "@/utils/whatsapp";
 import { scale, spacing, verticalScale } from "@/utils/responsive";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
@@ -60,9 +61,20 @@ export function AcceptOrderSummaryDialog({
     Linking.openURL(`tel:${normalized}`).catch(() => undefined);
   };
 
-  const whatsapp = (phone: string) => {
-    const digits = phone.replace(/\D/g, "");
-    Linking.openURL(`https://wa.me/${digits}`).catch(() => undefined);
+  const whatsappMessage = data.orderNumber
+    ? t("onmap.whatsappOrderMessage", {
+        orderNumber: data.orderNumber,
+        defaultValue: "Hi, this is your OnWay driver — about order #{{orderNumber}}.",
+      })
+    : undefined;
+
+  const whatsapp = async (phone: string) => {
+    const ok = await openWhatsAppChat(phone, whatsappMessage);
+    if (!ok) {
+      Linking.openURL(`https://wa.me/${phone.replace(/\D/g, "")}`).catch(
+        () => undefined,
+      );
+    }
   };
 
   return (
@@ -189,12 +201,22 @@ export function AcceptOrderSummaryDialog({
                           {item.quantity ?? 1}×
                         </Text>
                       </View>
-                      <Text
-                        style={[styles.itemName, { fontFamily: font.regular }]}
-                        numberOfLines={3}
-                      >
-                        {label}
-                      </Text>
+                      <View style={styles.itemTextCol}>
+                        <Text
+                          style={[styles.itemName, { fontFamily: font.regular }]}
+                          numberOfLines={3}
+                        >
+                          {label}
+                        </Text>
+                        {item.variants ? (
+                          <Text
+                            style={[styles.itemVariants, { fontFamily: font.regular }]}
+                            numberOfLines={2}
+                          >
+                            {item.variants}
+                          </Text>
+                        ) : null}
+                      </View>
                       {lineTotal ? (
                         <Text
                           style={[styles.itemPrice, { fontFamily: font.medium }]}
@@ -223,10 +245,13 @@ export function AcceptOrderSummaryDialog({
               </Text>
             </View>
 
-            {storePhone || customerPhone ? (
-              <View style={styles.callRow}>
+            <View style={styles.callSection}>
+              <View style={styles.contactGroup}>
+                <Text style={[styles.contactGroupLabel, { fontFamily: font.medium }]}>
+                  {t("onmap.restaurant", "Restaurant")} · {storeName}
+                </Text>
                 {storePhone ? (
-                  <>
+                  <View style={styles.callRow}>
                     <Button
                       label={t("onmap.callMerchant", "Call store")}
                       onPress={() => dial(storePhone)}
@@ -236,15 +261,24 @@ export function AcceptOrderSummaryDialog({
                     />
                     <Button
                       label={t("onmap.whatsappMerchant", "WhatsApp store")}
-                      onPress={() => whatsapp(storePhone)}
+                      onPress={() => void whatsapp(storePhone)}
                       variant="success"
                       style={[styles.callBtn, styles.whatsappBtn]}
                       size="sm"
                     />
-                  </>
-                ) : null}
+                  </View>
+                ) : (
+                  <Text style={[styles.contactUnavailable, { fontFamily: font.regular }]}>
+                    {t("onmap.storePhoneUnavailable", "Store phone unavailable")}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.contactGroup}>
+                <Text style={[styles.contactGroupLabel, { fontFamily: font.medium }]}>
+                  {t("onmap.customer", "Customer")} · {customerName}
+                </Text>
                 {customerPhone ? (
-                  <>
+                  <View style={styles.callRow}>
                     <Button
                       label={t("onmap.callCustomer", "Call")}
                       onPress={() => dial(customerPhone)}
@@ -254,15 +288,19 @@ export function AcceptOrderSummaryDialog({
                     />
                     <Button
                       label={t("onmap.whatsappCustomer", "WhatsApp")}
-                      onPress={() => whatsapp(customerPhone)}
+                      onPress={() => void whatsapp(customerPhone)}
                       variant="success"
                       style={[styles.callBtn, styles.whatsappBtn]}
                       size="sm"
                     />
-                  </>
-                ) : null}
+                  </View>
+                ) : (
+                  <Text style={[styles.contactUnavailable, { fontFamily: font.regular }]}>
+                    {t("onmap.customerPhoneUnavailable", "Customer phone unavailable")}
+                  </Text>
+                )}
               </View>
-            ) : null}
+            </View>
           </ScrollView>
 
           <View
@@ -473,10 +511,18 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.primary,
   },
-  itemName: {
+  itemTextCol: {
     flex: 1,
+    minWidth: 0,
+    gap: verticalScale(2),
+  },
+  itemName: {
     fontSize: FontSize.sm,
     color: Colors.textPrimary,
+  },
+  itemVariants: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
   },
   itemPrice: {
     fontSize: FontSize.sm,
@@ -501,6 +547,23 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontSize: FontSize.md, color: Colors.textPrimary },
   totalValue: { fontSize: FontSize.lg, color: Colors.primary },
+  callSection: {
+    gap: verticalScale(12),
+  },
+  contactGroup: {
+    gap: verticalScale(8),
+  },
+  contactGroupLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  contactUnavailable: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    fontStyle: "italic",
+  },
   callRow: {
     flexDirection: "row",
     gap: scale(10),

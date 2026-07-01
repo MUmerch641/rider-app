@@ -7,7 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import {
   assignmentToSummaryPayload,
-  summaryHasItems,
+  enrichAssignmentsWithOrderItems,
+  summaryNeedsDetailFetch,
 } from "@/utils/assignmentSummary";
 import { ACTIVE_STATUSES } from "@/utils/orderLifecycle";
 import { type LangKey } from "@/utils/localize";
@@ -60,8 +61,9 @@ export function ActiveAssignmentsProvider({
     fetchingRef.current = true;
     try {
       const list = await ordersApi.list();
-      setAssignments(list);
-      return list;
+      const enriched = await enrichAssignmentsWithOrderItems(list, ordersApi.getById);
+      setAssignments(enriched);
+      return enriched;
     } catch {
       return [];
     } finally {
@@ -128,7 +130,7 @@ export function ActiveAssignmentsProvider({
   const showAssignmentSummary = useCallback(
     async (assignment: OrderAssignment) => {
       let payload = assignmentToSummaryPayload(assignment, langKey);
-      if (!summaryHasItems(payload)) {
+      if (summaryNeedsDetailFetch(payload)) {
         try {
           const full = await ordersApi.getById(assignment.orderId);
           payload = assignmentToSummaryPayload(full, langKey);

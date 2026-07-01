@@ -19,6 +19,7 @@
  */
 
 import type { OrderAssignment } from "@/api";
+import { ordersApi } from "@/api";
 import { Colors, FontSize } from "@/constants/theme";
 import { useAppFont } from "@/hooks/useAppFont";
 import { formatCurrency } from "@/utils/format";
@@ -29,11 +30,14 @@ import {
   itemDisplayName,
 } from "@/utils/assignmentSummary";
 import { fontSize, scale, spacing, verticalScale } from "@/utils/responsive";
+import { openWhatsAppChat } from "@/utils/whatsapp";
+import { cacheStorePhone } from "@/utils/storeContactCache";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   I18nManager,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -280,13 +284,46 @@ function OrderCard({
   onToggleExpand?: () => void;
 }) {
   const order = assignment.order;
-  const summary = assignmentToSummaryPayload(assignment, langKey);
+  const [detailAssignment, setDetailAssignment] = useState(assignment);
+
+  useEffect(() => {
+    setDetailAssignment(assignment);
+  }, [assignment]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const snapshot = assignmentToSummaryPayload(assignment, langKey);
+    const needsStorePhone = !snapshot.store?.phone?.trim();
+    const needsCustomerPhone = !snapshot.customer?.phone?.trim();
+    if (!needsStorePhone && !needsCustomerPhone) return;
+
+    let cancelled = false;
+    void ordersApi
+      .getById(assignment.orderId)
+      .then((full) => {
+        if (cancelled) return;
+        cacheStorePhone(full.orderId, full.order?.store?.phone);
+        setDetailAssignment(full);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [expanded, assignment, langKey]);
+
+  const summary = assignmentToSummaryPayload(detailAssignment, langKey);
   const summaryItems = (summary.items ?? []).filter(
     (it) => itemDisplayName(it.name, langKey).length > 0,
   );
   const storeName = localizeName(order?.store?.name, langKey);
   const storeAvatar = order?.store?.avatar ?? undefined;
   const price = formatCurrency(order?.total, order?.currency ?? "IQD");
+  const currency = order?.currency ?? "IQD";
+  const customerName =
+    summary.customer?.name?.trim() || t("onmap.customer", "Customer");
+  const storePhone = summary.store?.phone?.trim();
+  const customerPhone = summary.customer?.phone?.trim();
   const pickup = order?.store?.address ?? "";
   const dropoff = (() => {
     const da = order?.deliveryAddress;
@@ -299,6 +336,21 @@ function OrderCard({
   const statusLabel = t(`orders.status.${assignment.status}`, {
     defaultValue: assignment.status,
   });
+
+  const whatsappMessage = order?.orderNumber
+    ? t("onmap.whatsappOrderMessage", {
+        orderNumber: order.orderNumber,
+        defaultValue: "Hi, this is your OnWay driver — about order #{{orderNumber}}.",
+      })
+    : undefined;
+
+  const dial = (phone: string) => {
+    Linking.openURL(`tel:${phone.replace(/\s+/g, "")}`).catch(() => undefined);
+  };
+
+  const whatsapp = (phone: string) => {
+    void openWhatsAppChat(phone, whatsappMessage);
+  };
 
   return (
     <TouchableOpacity
@@ -389,29 +441,64 @@ function OrderCard({
       {expanded ? (
         <View style={styles.inlineDetails}>
           {summaryItems.length > 0 ? (
-            summaryItems.map((it, idx) => (
-              <View
-                key={`${itemDisplayName(it.name, langKey)}-${idx}`}
-                style={styles.inlineDetailRow}
-              >
-                {it.image ? (
-                  <SafeImage
-                    uri={it.image}
-                    variant="item"
-                    style={styles.inlineItemThumb}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={[styles.inlineItemThumb, styles.avatarFallback]} />
-                )}
-                <Text
-                  style={[styles.inlineDetailText, { fontFamily: font.regular }]}
-                  numberOfLines={2}
+            summaryItems.map((it, idx) => {
+              const label = itemDisplayName(it.name, langKey);
+              const lineTotal =
+                it.price && it.price > 0
+                  ? formatCurrency(
+                      it.price * (it.quantity ?? 1),
+                      currency,
+                    )
+                  : null;
+              return (
+                <View
+                  key={`${label}-${idx}`}
+                  style={styles.inlineDetailRow}
                 >
-                  {it.quantity ?? 1}× {itemDisplayName(it.name, langKey)}
-                </Text>
-              </View>
-            ))
+                  {it.image ? (
+                    <SafeImage
+                      uri={it.image}
+                      variant="food"
+                      style={styles.inlineItemThumb}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.inlineItemThumb, styles.avatarFallback]} />
+                  )}
+                  <View style={styles.inlineDetailBody}>
+                    <Text
+                      style={[styles.inlineDetailText, { fontFamily: font.regular }]}
+                      numberOfLines={2}
+                    >
+                      {it.quantity ?? 1}× {label}
+                    </Text>
+                    {it.variants ? (
+                      <Text
+                        style={[styles.inlineVariantText, { fontFamily: font.regular }]}
+                        numberOfLines={2}
+                      >
+                        {it.variants}
+                      </Text>
+                    ) : null}
+                    {it.notes ? (
+                      <Text
+                        style={[styles.inlineNotesText, { fontFamily: font.regular }]}
+                        numberOfLines={2}
+                      >
+                        {it.notes}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {lineTotal ? (
+                    <Text
+                      style={[styles.inlineItemPrice, { fontFamily: font.medium }]}
+                    >
+                      {lineTotal}
+                    </Text>
+                  ) : null}
+                </View>
+              );
+            })
           ) : (
             <Text style={[styles.inlineDetailText, { fontFamily: font.regular }]}>
               {t("activeOrders.noItems", "No item details")}
@@ -422,6 +509,86 @@ function OrderCard({
               {t("onmap.customer", "Customer")}: {summary.customer.name}
             </Text>
           ) : null}
+
+          <View style={styles.contactSection}>
+            <Text style={[styles.contactSectionLabel, { fontFamily: font.semibold }]}>
+              {t("onmap.restaurant", "Restaurant")} · {storeName}
+            </Text>
+            {storePhone ? (
+              <View style={styles.contactRow}>
+                <TouchableOpacity
+                  style={styles.contactChip}
+                  activeOpacity={0.82}
+                  onPress={() => dial(storePhone)}
+                >
+                  <Ionicons name="call-outline" size={scale(14)} color="#1A1A2E" />
+                  <Text style={[styles.contactChipText, { fontFamily: font.medium }]}>
+                    {t("onmap.callMerchant", "Call store")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.contactChip, styles.contactChipWhatsApp]}
+                  activeOpacity={0.82}
+                  onPress={() => whatsapp(storePhone)}
+                >
+                  <Ionicons name="logo-whatsapp" size={scale(14)} color="#FFFFFF" />
+                  <Text
+                    style={[
+                      styles.contactChipText,
+                      styles.contactChipTextLight,
+                      { fontFamily: font.medium },
+                    ]}
+                  >
+                    {t("onmap.whatsappMerchant", "WhatsApp store")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={[styles.contactUnavailable, { fontFamily: font.regular }]}>
+                {t("onmap.storePhoneUnavailable", "Store phone unavailable")}
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.contactSection}>
+            <Text style={[styles.contactSectionLabel, { fontFamily: font.semibold }]}>
+              {t("onmap.customer", "Customer")} · {customerName}
+            </Text>
+            {customerPhone ? (
+              <View style={styles.contactRow}>
+                <TouchableOpacity
+                  style={styles.contactChip}
+                  activeOpacity={0.82}
+                  onPress={() => dial(customerPhone)}
+                >
+                  <Ionicons name="call-outline" size={scale(14)} color="#1A1A2E" />
+                  <Text style={[styles.contactChipText, { fontFamily: font.medium }]}>
+                    {t("onmap.callCustomer", "Call")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.contactChip, styles.contactChipWhatsApp]}
+                  activeOpacity={0.82}
+                  onPress={() => whatsapp(customerPhone)}
+                >
+                  <Ionicons name="logo-whatsapp" size={scale(14)} color="#FFFFFF" />
+                  <Text
+                    style={[
+                      styles.contactChipText,
+                      styles.contactChipTextLight,
+                      { fontFamily: font.medium },
+                    ]}
+                  >
+                    {t("onmap.whatsappCustomer", "WhatsApp")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={[styles.contactUnavailable, { fontFamily: font.regular }]}>
+                {t("onmap.customerPhoneUnavailable", "Customer phone unavailable")}
+              </Text>
+            )}
+          </View>
         </View>
       ) : null}
 
@@ -854,8 +1021,13 @@ const styles = StyleSheet.create({
   },
   inlineDetailRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: scale(8),
+  },
+  inlineDetailBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: verticalScale(2),
   },
   inlineItemThumb: {
     width: scale(36),
@@ -863,14 +1035,68 @@ const styles = StyleSheet.create({
     borderRadius: scale(8),
   },
   inlineDetailText: {
-    flex: 1,
     fontSize: scale(13),
     color: "#1A1A2E",
+  },
+  inlineVariantText: {
+    fontSize: scale(11),
+    color: "#6B7280",
+  },
+  inlineNotesText: {
+    fontSize: scale(11),
+    color: "#9A9AAF",
+    fontStyle: "italic",
+  },
+  inlineItemPrice: {
+    fontSize: scale(12),
+    color: "#1A1A2E",
+    flexShrink: 0,
   },
   inlineMeta: {
     fontSize: scale(12),
     color: "#6B7280",
     marginTop: verticalScale(4),
+  },
+  contactSection: {
+    marginTop: verticalScale(12),
+    gap: verticalScale(8),
+  },
+  contactSectionLabel: {
+    fontSize: scale(12),
+    color: "#4B5563",
+  },
+  contactUnavailable: {
+    fontSize: scale(12),
+    color: "#9A9AAF",
+    fontStyle: "italic",
+  },
+  contactRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: scale(8),
+    marginTop: verticalScale(10),
+  },
+  contactChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: scale(6),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
+    borderRadius: scale(20),
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E4D6FF",
+  },
+  contactChipWhatsApp: {
+    backgroundColor: "#25D366",
+    borderColor: "#25D366",
+  },
+  contactChipText: {
+    fontSize: scale(12),
+    color: "#1A1A2E",
+  },
+  contactChipTextLight: {
+    color: "#FFFFFF",
   },
 
   // Primary action – flex to fill remaining space

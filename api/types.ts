@@ -172,10 +172,31 @@ export type DriverNextStatus =
   | "arrived"
   | "delivered";
 
+export type SelectedAddonOption = {
+  optionId?: string;
+  optionName?: Translatable;
+  price?: number;
+};
+
+export type SelectedAddon = {
+  addonId?: string;
+  addonName?: Translatable;
+  selectedOptions?: SelectedAddonOption[];
+};
+
+export type OrderItemSnapshot = {
+  name: Translatable;
+  price?: number;
+  photo?: string | null;
+};
+
 export type OrderItem = {
   id: string;
   quantity: number;
   unitPrice: string | number;
+  notes?: string | null;
+  itemSnapshot?: OrderItemSnapshot;
+  selectedAddons?: SelectedAddon[] | null;
   specialInstructions?: string | null;
   storeItem?: {
     id: string;
@@ -183,6 +204,7 @@ export type OrderItem = {
     description?: Translatable;
     price?: string | number;
     image?: string | null;
+    photos?: string[] | null;
   } | null;
 };
 
@@ -403,6 +425,7 @@ export type SocketNewOrderPayload = {
     logoUrl?: string | null;
     address?: string;
     location: GeoPoint;
+    phone?: string | null;
   };
   customer?: { name?: string; phone?: string; address?: string; location?: GeoPoint };
   items: { id: string; quantity: number; name: Translatable; price: string | number }[];

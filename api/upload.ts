@@ -12,9 +12,31 @@ const mimeFromName = (filename: string): string => {
   const match = /\.(\w+)$/.exec(filename);
   if (!match) return "image/jpeg";
   const ext = match[1].toLowerCase();
-  if (ext === "jpg") return "image/jpeg";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "heic" || ext === "heif") return "image/jpeg";
   return `image/${ext}`;
 };
+
+export type UploadAssetMeta = {
+  fileName?: string | null;
+  mimeType?: string | null;
+};
+
+function buildUploadPart(
+  fileUri: string,
+  asset?: UploadAssetMeta,
+): { uri: string; name: string; type: string } {
+  const rawName = asset?.fileName?.trim() || fileUri.split("/").pop() || "upload.jpg";
+  const name = rawName.includes(".") ? rawName : `${rawName}.jpg`;
+  const type = asset?.mimeType?.startsWith("image/")
+    ? asset.mimeType === "image/heic" || asset.mimeType === "image/heif"
+      ? "image/jpeg"
+      : asset.mimeType
+    : mimeFromName(name);
+  return { uri: fileUri, name, type };
+}
 
 export const uploadApi = {
   /**
@@ -27,17 +49,14 @@ export const uploadApi = {
   async uploadFile(
     fileUri: string,
     type: "avatars" | "general" | "support" = "general",
+    asset?: UploadAssetMeta,
   ): Promise<UploadResponse> {
     const token = await tokenStorage.getAccessToken();
-    const filename = fileUri.split("/").pop() || "upload.jpg";
+    const part = buildUploadPart(fileUri, asset);
 
     const formData = new FormData();
     // React Native FormData file part — not a web File, hence the cast.
-    formData.append("file", {
-      uri: fileUri,
-      name: filename,
-      type: mimeFromName(filename),
-    } as unknown as Blob);
+    formData.append("file", part as unknown as Blob);
     formData.append("type", type);
 
     const res = await axios.post<Envelope<UploadResponse>>(

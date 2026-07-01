@@ -316,7 +316,11 @@
     "items": "Items",
     "total": "Total",
     "callCustomer": "Call",
+    "callMerchant": "Call store",
     "whatsappCustomer": "WhatsApp",
+    "whatsappMerchant": "WhatsApp store",
+    "storePhoneUnavailable": "Store phone unavailable",
+    "customerPhoneUnavailable": "Customer phone unavailable",
     "viewRoute": "View route",
     "itemCount": "{{count}} items",
     "itemsUnavailable": "Items will appear shortly"
@@ -387,7 +391,16 @@
     "title": "Support",
     "online": "Online",
     "saySomething": "Say something...",
-    "orderNumber": "Order #{{id}}"
+    "orderNumber": "Order #{{id}}",
+    "sendImage": "Send",
+    "sendImageConfirmBody": "Review the image before sending.",
+    "fileTooLarge": "File too large",
+    "imageSizeLimit": "Images must be under 10 MB.",
+    "photoPermTitle": "Permission needed",
+    "photoPermBody": "Please allow photo library access to send images in support chat.",
+    "imagePickerFailed": "Couldn't open your photo library. Please try again.",
+    "notReadyTitle": "Please wait",
+    "notReadyBody": "Chat is still connecting. Try again in a moment."
   },
   "openStatus": {
     "closeTitle": "Why are you closing your restaurant?",

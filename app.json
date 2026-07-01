@@ -2,7 +2,7 @@
   "expo": {
     "name": "OnWay Driver",
     "slug": "driver_app",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "driverapp",
@@ -104,7 +104,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "OnWay Driver uses your photo library so you can set a profile photo.",
+          "photosPermission": "OnWay Driver uses your photo library so you can set a profile photo and send images in support chat.",
           "cameraPermission": "OnWay Driver uses the camera so you can take a profile photo."
         }
       ],

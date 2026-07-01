@@ -6,6 +6,7 @@ import PrepCountdownRing from "@/components/ui/PrepCountdownRing";
 import { Colors, Shadow } from "@/constants/theme";
 import { useAuth, useSocket, useActiveAssignments } from "@/context";
 import { formatDistanceKm, formatDurationMinutes } from "@/utils/format";
+import { storeSource } from "@/utils/placeholders";
 import { localizeName, type LangKey } from "@/utils/localize";
 import {
   ACTIVE_STATUSES,
@@ -14,11 +15,11 @@ import {
 } from "@/utils/orderLifecycle";
 import { translateOrderStatusError } from "@/utils/orderStatusErrors";
 import {
-  assignmentToSummaryPayload,
+  enrichAssignmentsWithOrderItems,
   socketItemsToSummary,
 } from "@/utils/assignmentSummary";
 import { updateOrderStatusWithGps } from "@/utils/orderStatusGps";
-import { storeSource } from "@/utils/placeholders";
+import { cacheStorePhone } from "@/utils/storeContactCache";
 import { radius, scale, spacing, verticalScale } from "@/utils/responsive";
 import {
   fetchDirections,
@@ -151,10 +152,11 @@ export default function OnMap() {
     const seq = ++assignmentsFetchSeqRef.current;
     try {
       const list = await ordersApi.list();
-      if (seq !== assignmentsFetchSeqRef.current) return list;
-      setAssignments(list);
+      const enriched = await enrichAssignmentsWithOrderItems(list, ordersApi.getById);
+      if (seq !== assignmentsFetchSeqRef.current) return enriched;
+      setAssignments(enriched);
       void refreshGlobalAssignments();
-      return list;
+      return enriched;
     } catch (err) {
       if (seq !== assignmentsFetchSeqRef.current) return [];
       console.warn("Fetch orders failed:", (err as ApiError)?.message);
@@ -691,27 +693,28 @@ export default function OnMap() {
     // clearNewOrder() also silences the incoming-order alarm (sound + haptics)
     // — see SocketContext.clearNewOrder.
     clearNewOrder();
+    cacheStorePhone(orderId, newOrder.store?.phone);
     const refreshed = await refreshAssignments();
     const accepted = refreshed.find((a) => a.orderId === orderId);
-    const summaryPayload = accepted
-      ? assignmentToSummaryPayload(accepted, (i18n.language?.split("-")[0] || "en") as any)
-      : {
-          orderNumber: newOrder.orderNumber,
-          store: {
-            name: newOrder.store?.name,
-            phone: newOrder.store?.phone ?? undefined,
-            address: newOrder.store?.address,
-          },
-          customer: {
-            name: newOrder.customer?.name,
-            phone: newOrder.customer?.phone ?? undefined,
-            address: newOrder.customer?.address,
-          },
-          items: socketItemsToSummary(newOrder.items),
-          total: newOrder.total,
-          currency: newOrder.currency,
-        };
-    showOrderSummary(summaryPayload);
+    if (accepted) {
+      await showAssignmentSummary(accepted);
+    } else {
+      showOrderSummary({
+        orderNumber: newOrder.orderNumber,
+        store: {
+          name: newOrder.store?.name,
+          phone: newOrder.store?.phone ?? undefined,
+          address: newOrder.store?.address,
+        },
+        customer: {
+          name: newOrder.customer?.name,
+          address: newOrder.customer?.address,
+        },
+        items: socketItemsToSummary(newOrder.items),
+        total: Number(newOrder.total ?? 0),
+        currency: newOrder.currency,
+      });
+    }
   };
 
   const handleDecline = async () => {
@@ -766,7 +769,10 @@ export default function OnMap() {
       try {
         await ordersApi.accept(orderId);
         stopAlarm();
-        if (newOrder?.orderId === orderId) clearNewOrder();
+        if (newOrder?.orderId === orderId) {
+          cacheStorePhone(orderId, newOrder.store?.phone);
+          clearNewOrder();
+        }
         const list = await refreshAssignments();
         const row = list.find((a) => a.orderId === orderId);
         if (row) showAssignmentSummary(row);

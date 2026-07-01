@@ -103,6 +103,12 @@ export default function SupportChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [pendingAttachmentUri, setPendingAttachmentUri] = useState<string | null>(
+    null,
+  );
+  const pendingAttachmentAssetRef = useRef<ImagePicker.ImagePickerAsset | null>(
+    null,
+  );
 
   // Unmount guard + tracked scroll timer so a send that resolves (or its
   // deferred scrollToEnd) after the screen pops can't setState/throw.
@@ -227,7 +233,10 @@ export default function SupportChatScreen() {
     }
   };
 
-  const uploadAndSendImage = async (uri: string) => {
+  const uploadAndSendImage = async (
+    uri: string,
+    asset?: ImagePicker.ImagePickerAsset | null,
+  ) => {
     if (!threadId || sending) return;
     setSending(true);
     const tempId = `local-img-${Date.now()}`;
@@ -244,7 +253,10 @@ export default function SupportChatScreen() {
     };
     setMessages((prev) => [...prev, optimistic]);
     try {
-      const upload = await uploadApi.uploadFile(uri, "support");
+      const upload = await uploadApi.uploadFile(uri, "support", {
+        fileName: asset?.fileName,
+        mimeType: asset?.mimeType,
+      });
       const real = await supportApi.sendMessage(threadId, {
         body: "[Image]",
         attachmentUrl: upload.url,
@@ -273,20 +285,70 @@ export default function SupportChatScreen() {
 
   const handleAttachImage = async () => {
     if (sending) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets?.length) return;
-    const asset = result.assets[0];
-    if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+    if (!threadId) {
       Alert.alert(
-        t("support.fileTooLarge", "File too large"),
-        t("support.imageSizeLimit", "Images must be under 10 MB."),
+        t("support.notReadyTitle", "Please wait"),
+        t(
+          "support.notReadyBody",
+          "Chat is still connecting. Try again in a moment.",
+        ),
       );
       return;
     }
-    void uploadAndSendImage(asset.uri);
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          t("support.photoPermTitle", "Permission needed"),
+          t(
+            "support.photoPermBody",
+            "Please allow photo library access to send images in support chat.",
+          ),
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        quality: 0.8,
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      });
+      if (result.canceled || !result.assets?.length) return;
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+        Alert.alert(
+          t("support.fileTooLarge", "File too large"),
+          t("support.imageSizeLimit", "Images must be under 10 MB."),
+        );
+        return;
+      }
+      setPendingAttachmentUri(asset.uri);
+      pendingAttachmentAssetRef.current = asset;
+    } catch (err) {
+      console.warn("Image picker failed:", err);
+      Alert.alert(
+        t("personalInfo.uploadFailedTitle", "Upload failed"),
+        t(
+          "support.imagePickerFailed",
+          "Couldn't open your photo library. Please try again.",
+        ),
+      );
+    }
+  };
+
+  const cancelPendingAttachment = () => {
+    setPendingAttachmentUri(null);
+    pendingAttachmentAssetRef.current = null;
+  };
+
+  const confirmSendAttachment = () => {
+    if (!pendingAttachmentUri || sending) return;
+    const uri = pendingAttachmentUri;
+    const asset = pendingAttachmentAssetRef.current;
+    setPendingAttachmentUri(null);
+    pendingAttachmentAssetRef.current = null;
+    void uploadAndSendImage(uri, asset);
   };
 
   return (
@@ -399,6 +461,68 @@ export default function SupportChatScreen() {
 
         {/* ── Input Bar ── */}
         <View style={styles.inputBarWrapper}>
+          {pendingAttachmentUri ? (
+            <View style={styles.pendingAttachment}>
+              <Image
+                source={{ uri: pendingAttachmentUri }}
+                style={styles.pendingPreview}
+                resizeMode="cover"
+              />
+              <View style={styles.pendingMeta}>
+                <Text
+                  style={[styles.pendingHint, { fontFamily: font.regular }]}
+                >
+                  {t(
+                    "support.sendImageConfirmBody",
+                    "Review the image before sending.",
+                  )}
+                </Text>
+                <View style={styles.pendingActions}>
+                  <TouchableOpacity
+                    style={styles.pendingCancelBtn}
+                    onPress={cancelPendingAttachment}
+                    disabled={sending}
+                    activeOpacity={0.75}
+                  >
+                    <Text
+                      style={[
+                        styles.pendingCancelText,
+                        { fontFamily: font.medium },
+                      ]}
+                    >
+                      {t("common.cancel")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.pendingSendBtn,
+                      sending && styles.pendingSendBtnDisabled,
+                    ]}
+                    onPress={confirmSendAttachment}
+                    disabled={sending}
+                    activeOpacity={0.85}
+                  >
+                    <Text
+                      style={[
+                        styles.pendingSendText,
+                        { fontFamily: font.semibold },
+                      ]}
+                    >
+                      {t("support.sendImage", "Send")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.pendingRemoveBtn}
+                onPress={cancelPendingAttachment}
+                disabled={sending}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={scale(18)} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          ) : null}
           <View style={styles.inputBar}>
             <TouchableOpacity
               style={styles.attachButton}
@@ -595,6 +719,67 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomEndRadius: spacing.lg,
     borderBottomStartRadius: spacing.lg,
+  },
+  pendingAttachment: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: Colors.card,
+    borderRadius: Radius.lg,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  pendingPreview: {
+    width: scale(72),
+    height: scale(72),
+    borderRadius: Radius.md,
+    backgroundColor: Colors.inputBg,
+  },
+  pendingMeta: {
+    flex: 1,
+    gap: verticalScale(8),
+  },
+  pendingHint: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  pendingActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  pendingCancelBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: verticalScale(8),
+    borderRadius: Radius.full,
+    backgroundColor: Colors.inputBg,
+  },
+  pendingCancelText: {
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  pendingSendBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: verticalScale(8),
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+  },
+  pendingSendBtnDisabled: {
+    opacity: 0.6,
+  },
+  pendingSendText: {
+    fontSize: FontSize.sm,
+    color: "#fff",
+  },
+  pendingRemoveBtn: {
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.inputBg,
   },
   inputBar: {
     flexDirection: "row",
