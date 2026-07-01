@@ -6,11 +6,22 @@
 // Declaring it on Play would require a (false) demo video, so we strip it at
 // manifest-merge time via tools:node="remove". The location foreground service
 // (FOREGROUND_SERVICE_LOCATION) is kept — that's the real, declared use.
-const { withAndroidManifest } = require("@expo/config-plugins");
+const { withAndroidManifest, withInfoPlist } = require("@expo/config-plugins");
 
 const PERM = "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK";
 
 module.exports = function removeMediaPlaybackFgs(config) {
+  // iOS (App Store Guideline 2.5.4): expo-audio can add "audio" to
+  // UIBackgroundModes, but OnWay's alarm is foreground-only (no persistent
+  // background audio — see below), so Apple rejects the unused "audio" mode.
+  // Strip it here; keep location/fetch/remote-notification.
+  config = withInfoPlist(config, (cfg) => {
+    const modes = cfg.modResults.UIBackgroundModes;
+    if (Array.isArray(modes)) {
+      cfg.modResults.UIBackgroundModes = modes.filter((m) => m !== "audio");
+    }
+    return cfg;
+  });
   return withAndroidManifest(config, (cfg) => {
     const manifest = cfg.modResults.manifest;
 
