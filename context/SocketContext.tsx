@@ -15,7 +15,7 @@ import {
   type AudioPlayer,
 } from "expo-audio";
 import * as Haptics from "expo-haptics";
-import { AppState } from "react-native";
+import { AppState, Platform, Vibration } from "react-native";
 import {
   SOCKET_URL,
   apiClient,
@@ -34,6 +34,28 @@ import {
   syncNotificationSound,
 } from "@/utils/notificationSound";
 import { cacheStorePhone } from "@/utils/storeContactCache";
+
+/**
+ * Map the admin-configured 0-100 vibration strength to one buzz. iOS has no
+ * public amplitude API → Light/Medium/Heavy haptics; Android approximates
+ * strength via vibration duration (no public amplitude API in RN/Expo — a true
+ * 0-255 amplitude would need a small native module). 0 = no vibration.
+ */
+function buzzOnce(level: number): void {
+  if (!level || level <= 0) return;
+  const clamped = Math.max(1, Math.min(100, level));
+  if (Platform.OS === "android") {
+    Vibration.vibrate(Math.round(80 + (clamped / 100) * 320)); // ~80–400ms
+    return;
+  }
+  const style =
+    clamped < 40
+      ? Haptics.ImpactFeedbackStyle.Light
+      : clamped < 75
+        ? Haptics.ImpactFeedbackStyle.Medium
+        : Haptics.ImpactFeedbackStyle.Heavy;
+  void Haptics.impactAsync(style).catch(() => {});
+}
 
 type SocketContextValue = {
   socket: Socket | null;
@@ -85,15 +107,24 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   // Local file URI of the dashboard-managed alarm sound (downloaded + cached by
   // utils/notificationSound). null → use the bundled preset for alarmSoundKey.
   const remoteSoundUriRef = useRef<string | null>(null);
+  // Admin-configured (dashboard) alarm volume 0-100 and vibration strength 0-100.
+  const alertVolumeRef = useRef<number>(100);
+  const alertVibrationRef = useRef<number>(60);
 
   // Build the looping player once; rebuild only when the admin changes the sound.
   const ensureAlarmPlayer = useCallback((): AudioPlayer | null => {
     const remoteUri = remoteSoundUriRef.current;
     const key = alarmSoundKeyRef.current;
+    // Admin-configured volume (0-100 → 0-1), applied on reuse + create so a
+    // dashboard change takes effect on the next ring.
+    const vol = Math.max(0, Math.min(1, (alertVolumeRef.current ?? 100) / 100));
     const buildKey = remoteUri
       ? `remote:${remoteUri}`
       : `preset:${key ?? "default"}`;
     if (alarmPlayerRef.current && builtSoundKeyRef.current === buildKey) {
+      try {
+        alarmPlayerRef.current.volume = vol;
+      } catch {}
       return alarmPlayerRef.current;
     }
     try {
@@ -106,6 +137,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         remoteUri ? { uri: remoteUri } : resolveAlertSound(key),
       );
       p.loop = true;
+      try {
+        p.volume = vol;
+      } catch {}
       alarmPlayerRef.current = p;
       builtSoundKeyRef.current = buildKey;
       return p;
@@ -117,6 +151,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         try {
           const p = createAudioPlayer(resolveAlertSound(key));
           p.loop = true;
+          try {
+            p.volume = vol;
+          } catch {}
           alarmPlayerRef.current = p;
           builtSoundKeyRef.current = `preset:${key ?? "default"}`;
           return p;
@@ -158,13 +195,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const startAlarm = useCallback(async () => {
     // ── Haptics + safety timer FIRST, isolated so an audio error can't skip them.
     try {
-      const buzz = () =>
-        Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning,
-        ).catch(() => { });
-      buzz();
-      if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
-      vibrateTimerRef.current = setInterval(buzz, 1500);
+      const level = alertVibrationRef.current;
+      if (level > 0) {
+        buzzOnce(level);
+        if (vibrateTimerRef.current) clearInterval(vibrateTimerRef.current);
+        vibrateTimerRef.current = setInterval(() => buzzOnce(level), 1500);
+      }
       // Safety auto-stop so it never rings forever if the driver ignores it.
       if (alarmStopRef.current) clearTimeout(alarmStopRef.current);
       alarmStopRef.current = setTimeout(() => stopAlarm(), ALARM_MAX_MS);
@@ -250,10 +286,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     const fetchAlertSound = async () => {
       try {
         const env = (await apiClient.get(ENDPOINTS.auth.profile)) as {
-          data?: { alertSound?: string };
+          data?: { alertSound?: string; alertVolume?: number; vibration?: number };
         };
-        if (!cancelled && env?.data?.alertSound) {
-          alarmSoundKeyRef.current = env.data.alertSound;
+        if (!cancelled && env?.data) {
+          if (env.data.alertSound) alarmSoundKeyRef.current = env.data.alertSound;
+          if (typeof env.data.alertVolume === "number")
+            alertVolumeRef.current = env.data.alertVolume;
+          if (typeof env.data.vibration === "number")
+            alertVibrationRef.current = env.data.vibration;
         }
       } catch {
         // keep the default sound

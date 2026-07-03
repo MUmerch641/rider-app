@@ -964,11 +964,13 @@ export default function OnMap() {
               {/* Primary route (rider→offer store while an offer shows, else
                   rider→first active target) — same stacked shadow+main style
                   as the delivery-route screen. */}
+              {/* #18: slimmer route so it traces the road instead of covering
+                  it — softer 8px halo + a 3.5px core line. */}
               {displayedRoute.length > 0 && (
                 <Polyline
                   coordinates={displayedRoute}
-                  strokeColor="rgba(121, 0, 243, 0.15)"
-                  strokeWidth={12}
+                  strokeColor="rgba(121, 0, 243, 0.12)"
+                  strokeWidth={8}
                   lineCap="round"
                   lineJoin="round"
                 />
@@ -977,7 +979,7 @@ export default function OnMap() {
                 <Polyline
                   coordinates={displayedRoute}
                   strokeColor="#B894FF"
-                  strokeWidth={5}
+                  strokeWidth={3.5}
                   lineCap="round"
                   lineJoin="round"
                 />

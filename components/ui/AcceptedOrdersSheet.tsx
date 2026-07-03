@@ -328,7 +328,12 @@ function OrderCard({
   const dropoff = (() => {
     const da = order?.deliveryAddress;
     if (!da) return "";
-    return ([da.building, da.street].filter(Boolean) as string[]).join(", ");
+    const parts = [da.building, da.street].filter(Boolean) as string[];
+    // #17: show the delivery CITY (not the governorate baked into `street`).
+    const cityName = localizeName(order?.city?.name, langKey);
+    if (cityName && !parts.some((p) => p.includes(cityName)))
+      parts.push(cityName);
+    return parts.join(", ");
   })();
 
   // Single source of truth for the advance CTA (accepted → picked_up → …).
@@ -355,7 +360,12 @@ function OrderCard({
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={() => onPress?.(assignment)}
+      // #16: the whole card is the expand affordance (not just the status chip),
+      // while still selecting/centering the order on the map as before.
+      onPress={() => {
+        onToggleExpand?.();
+        onPress?.(assignment);
+      }}
       style={[styles.card, !isLast && styles.cardGap, active && styles.cardActive]}
     >
       {/* ── Row 1: Avatar + Restaurant Name + Price ── */}
@@ -395,6 +405,30 @@ function OrderCard({
             >
               #{order.orderNumber}
             </Text>
+          ) : null}
+
+          {/* #16: merchant call / WhatsApp beside the store name — always
+              visible, no need to expand first. Nested Touchables capture the
+              tap so they don't also toggle the card. */}
+          {storePhone ? (
+            <View style={[styles.headerContactRow, { flexDirection: "row" }]}>
+              <TouchableOpacity
+                style={styles.headerContactBtn}
+                activeOpacity={0.82}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                onPress={() => dial(storePhone)}
+              >
+                <Ionicons name="call" size={scale(13)} color="#1A1A2E" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.headerContactBtn, styles.headerContactBtnWa]}
+                activeOpacity={0.82}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                onPress={() => whatsapp(storePhone)}
+              >
+                <Ionicons name="logo-whatsapp" size={scale(13)} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           ) : null}
         </View>
 
@@ -510,45 +544,7 @@ function OrderCard({
             </Text>
           ) : null}
 
-          <View style={styles.contactSection}>
-            <Text style={[styles.contactSectionLabel, { fontFamily: font.semibold }]}>
-              {t("onmap.restaurant", "Restaurant")} · {storeName}
-            </Text>
-            {storePhone ? (
-              <View style={styles.contactRow}>
-                <TouchableOpacity
-                  style={styles.contactChip}
-                  activeOpacity={0.82}
-                  onPress={() => dial(storePhone)}
-                >
-                  <Ionicons name="call-outline" size={scale(14)} color="#1A1A2E" />
-                  <Text style={[styles.contactChipText, { fontFamily: font.medium }]}>
-                    {t("onmap.callMerchant", "Call store")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.contactChip, styles.contactChipWhatsApp]}
-                  activeOpacity={0.82}
-                  onPress={() => whatsapp(storePhone)}
-                >
-                  <Ionicons name="logo-whatsapp" size={scale(14)} color="#FFFFFF" />
-                  <Text
-                    style={[
-                      styles.contactChipText,
-                      styles.contactChipTextLight,
-                      { fontFamily: font.medium },
-                    ]}
-                  >
-                    {t("onmap.whatsappMerchant", "WhatsApp store")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={[styles.contactUnavailable, { fontFamily: font.regular }]}>
-                {t("onmap.storePhoneUnavailable", "Store phone unavailable")}
-              </Text>
-            )}
-          </View>
+          {/* #16: store call / WhatsApp moved up beside the store name (header). */}
 
           <View style={styles.contactSection}>
             <Text style={[styles.contactSectionLabel, { fontFamily: font.semibold }]}>
@@ -668,7 +664,12 @@ function NearbyOrderCard({
   const dropoff = (() => {
     const da = order?.deliveryAddress;
     if (!da) return "";
-    return ([da.building, da.street].filter(Boolean) as string[]).join(", ");
+    const parts = [da.building, da.street].filter(Boolean) as string[];
+    // #17: show the delivery CITY (not the governorate baked into `street`).
+    const cityName = localizeName(order?.city?.name, langKey);
+    if (cityName && !parts.some((p) => p.includes(cityName)))
+      parts.push(cityName);
+    return parts.join(", ");
   })();
 
   return (
@@ -892,6 +893,23 @@ const styles = StyleSheet.create({
     fontSize: scale(12),
     color: "#9A9AAF",
     marginTop: scale(2),
+  },
+  // #16: compact merchant call / WhatsApp beside the store name.
+  headerContactRow: {
+    marginTop: scale(6),
+    gap: scale(8),
+    alignItems: "center",
+  },
+  headerContactBtn: {
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(15),
+    backgroundColor: "#EFEFF4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerContactBtnWa: {
+    backgroundColor: "#25D366",
   },
 
   // Price

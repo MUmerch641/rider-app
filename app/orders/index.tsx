@@ -388,6 +388,11 @@ export default function OrdersScreen() {
               const parts = [da.building, da.street].filter(
                 Boolean,
               ) as string[];
+              // #17: show the delivery CITY (not the governorate that leaks
+              // into `street`), deduped if the street already names it.
+              const cityName = localizeName(a.order?.city?.name, langKey);
+              if (cityName && !parts.some((p) => p.includes(cityName)))
+                parts.push(cityName);
               return parts.join(", ");
             })();
             const isActing = !!acting[a.orderId];

@@ -251,6 +251,9 @@ export type Order = {
     instructions?: string;
     geoLocation?: GeoPoint;
   };
+  // #17: the order's delivery CITY (multilingual). Shown in the rider drop-off
+  // so the driver sees the city name, not the governorate baked into `street`.
+  city?: { name?: string | Record<string, string> | null } | null;
   store?: Store;
   customer?: Customer;
   orderItems?: OrderItem[];
