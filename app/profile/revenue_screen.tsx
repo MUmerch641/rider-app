@@ -147,7 +147,7 @@ export default function RevenueScreen() {
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Top Nav ── */}
       <View
-        style={[styles.topNav, { backgroundColor: Colors.background }]}
+        style={[styles.topNav, { backgroundColor: Colors.background, flexDirection: font.rtl ? "row-reverse" : "row" }]}
       >
         <TouchableOpacity
           style={styles.backBtn}
@@ -167,6 +167,8 @@ export default function RevenueScreen() {
             {
               fontFamily: font.regular,
               textAlign: "center",
+              left: font.rtl ? undefined : -scale(25),
+              right: font.rtl ? -scale(25) : undefined,
             },
           ]}
         >
@@ -205,7 +207,7 @@ export default function RevenueScreen() {
         >
           {/* Orders */}
           <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>
-            <View style={styles.statIconWrapper}>
+            <View style={[styles.statIconWrapper, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <CartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.orders")}
@@ -217,13 +219,13 @@ export default function RevenueScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>
-            <View style={styles.statIconWrapper}>
+            <View style={[styles.statIconWrapper, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <ChartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.onTime")}
               </Text>
             </View>
-            <View style={styles.profitRow}>
+            <View style={[styles.profitRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <Text style={[styles.statValue, { fontFamily: font.medium }]}>
                 {Math.round(onTimeRate)}%
               </Text>
@@ -245,10 +247,10 @@ export default function RevenueScreen() {
         />
 
         {/* ── Reports ── */}
-        <Text style={[styles.reportsTitle, { fontFamily: font.regular }]}>
+        <Text style={[styles.reportsTitle, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
           {t("stats.efficiencyStat")}
         </Text>
-        <View style={styles.reportsGrid}>
+        <View style={[styles.reportsGrid, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <StatCircleCard
             label="stats.acceptance"
             value={Math.round(acceptance)}

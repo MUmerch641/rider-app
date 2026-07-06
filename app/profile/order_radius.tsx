@@ -153,14 +153,14 @@ export default function OrderRadiusScreen() {
           />
         )}
 
-        <View style={styles.header}>
+        <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => router.back()}
           >
             <Ionicons
               // Icon glyphs never auto-flip — mirror the back arrow manually.
-              name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+              name={font.rtl ? "arrow-forward" : "arrow-back"}
               size={scale(22)}
               color="#111"
             />
@@ -190,9 +190,9 @@ export default function OrderRadiusScreen() {
           showsUserLocation={false}
           showsMyLocationButton={false}
         >
-          <View style={styles.infoBox}>
+          <View style={[styles.infoBox, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <SvgXml xml={INFO_SVG} width={scale(24)} height={scale(24)} />
-            <Text style={[styles.infoText, { fontFamily: font.regular }]}>
+            <Text style={[styles.infoText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
               {t("orderRadius.description")}
             </Text>
           </View>
@@ -226,7 +226,7 @@ export default function OrderRadiusScreen() {
             {t("orderRadius.km")}
           </Text>
 
-          <View style={styles.rangeLabels}>
+          <View style={[styles.rangeLabels, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <Text style={[styles.rangeText, { fontFamily: font.regular }]}>
               2{t("orderRadius.km")}
             </Text>
@@ -240,7 +240,7 @@ export default function OrderRadiusScreen() {
             // Slider tracks don't auto-mirror under native RTL — flip manually.
             style={[
               styles.slider,
-              { transform: I18nManager.isRTL ? [{ scaleX: -1 }] : [] },
+              { transform: font.rtl ? [{ scaleX: -1 }] : [] },
             ]}
             minimumValue={2}
             maximumValue={10}
@@ -259,7 +259,7 @@ export default function OrderRadiusScreen() {
             style={[styles.buttonGrad, saving && { opacity: 0.7 }]}
           >
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
               activeOpacity={0.85}
               onPress={handleSetRadius}
               disabled={saving}

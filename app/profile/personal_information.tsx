@@ -122,7 +122,7 @@ export default function PersonalInformationScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons
             name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
@@ -174,12 +174,12 @@ export default function PersonalInformationScreen() {
         {/* ── Personal Details Card (read-only — managed by admin) ── */}
         <View style={styles.contactCard}>
           {/* Name */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.fullName", { defaultValue: "Name" })}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {fullName || t("personalInfo.notSet")}
               </Text>
             </View>
@@ -188,12 +188,12 @@ export default function PersonalInformationScreen() {
           <View style={styles.contactDivider} />
 
           {/* Nickname */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.nickname")}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {driver?.nickname || t("personalInfo.notSet")}
               </Text>
             </View>
@@ -202,12 +202,12 @@ export default function PersonalInformationScreen() {
           <View style={styles.contactDivider} />
 
           {/* Date Of Birth */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.dateOfBirth")}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {driver?.dateOfBirth || t("personalInfo.notSet")}
               </Text>
             </View>
@@ -217,12 +217,12 @@ export default function PersonalInformationScreen() {
         {/* ── Contact Info Card (read-only) ── */}
         <View style={styles.contactCard}>
           {/* Email */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.emailAddress")}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {driver?.email ?? t("personalInfo.notSet")}
               </Text>
             </View>
@@ -231,12 +231,12 @@ export default function PersonalInformationScreen() {
           <View style={styles.contactDivider} />
 
           {/* Phone */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.phoneNumber")}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {driver?.phone ?? t("personalInfo.notSet")}
               </Text>
             </View>
@@ -246,14 +246,14 @@ export default function PersonalInformationScreen() {
         {/* ── Vehicle Card (read-only — vehicle is admin-managed) ── */}
         <View style={styles.contactCard}>
           {/* Vehicle Type */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.vehicleTypeLabel", {
                   defaultValue: "Vehicle Type",
                 })}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {vehicleTypeLabel}
               </Text>
             </View>
@@ -262,14 +262,14 @@ export default function PersonalInformationScreen() {
           <View style={styles.contactDivider} />
 
           {/* Plate Number */}
-          <View style={styles.contactRow}>
-            <View style={styles.contactInfo}>
-              <Text style={[styles.contactLabel, { fontFamily: font.regular }]}>
+          <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={[styles.contactInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.contactLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("personalInfo.plateNumber", {
                   defaultValue: "Plate Number",
                 })}
               </Text>
-              <Text style={[styles.contactValue, { fontFamily: font.medium }]}>
+              <Text style={[styles.contactValue, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
                 {driver?.vehiclePlate ??
                   t("personalInfo.notSet", { defaultValue: "Not set" })}
               </Text>
@@ -279,7 +279,7 @@ export default function PersonalInformationScreen() {
 
         {/* Delete Account trigger — required by Apple guideline 5.1.1(v) */}
         <TouchableOpacity
-          style={styles.deleteAccountBtn}
+          style={[styles.deleteAccountBtn, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           activeOpacity={0.8}
           onPress={() => setShowDeleteModal(true)}
         >
@@ -309,7 +309,7 @@ export default function PersonalInformationScreen() {
           <Pressable style={styles.deleteModalBackdrop} />
           <View style={styles.deleteModalCenter} pointerEvents="box-none">
             <View style={styles.deleteModalCard}>
-              <View style={styles.deleteModalTopRow}>
+              <View style={[styles.deleteModalTopRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <View style={styles.deleteFeaturedIconOuter}>
                   <View style={styles.deleteFeaturedIconInner}>
                     <Ionicons name="trash-outline" size={22} color="#DC2626" />
@@ -325,14 +325,14 @@ export default function PersonalInformationScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.deleteModalTextBlock}>
+              <View style={[styles.deleteModalTextBlock, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
                 <Text
-                  style={[styles.deleteModalTitle, { fontFamily: font.medium }]}
+                  style={[styles.deleteModalTitle, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}
                 >
                   {t("personalInfo.deleteAccount")}
                 </Text>
                 <Text
-                  style={[styles.deleteModalBody, { fontFamily: font.regular }]}
+                  style={[styles.deleteModalBody, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                 >
                   {t("personalInfo.deleteConfirm")}
                 </Text>

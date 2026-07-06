@@ -90,8 +90,8 @@ export default function NewPasswordScreen() {
         colors={["#DFCFFF", "#F5EEFF", "#FFFFFF", "#FFF8F0"]}
         locations={[0, 0.1, 0.6, 1]}
         // Gradient coords don't auto-mirror under native RTL — flip manually.
-        start={{ x: I18nManager.isRTL ? 0.9 : 0, y: 0 }}
-        end={{ x: I18nManager.isRTL ? 0 : 0.9, y: 1 }}
+        start={{ x: font.rtl ? 0.9 : 0, y: 0 }}
+        end={{ x: font.rtl ? 0 : 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView
@@ -170,7 +170,7 @@ export default function NewPasswordScreen() {
                 {t("newPassword.successSubtitle")}
               </Text>
               <TouchableOpacity
-                style={styles.continueBtn}
+                style={[styles.continueBtn, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                 onPress={handleContinue}
                 activeOpacity={0.85}
               >
@@ -181,7 +181,7 @@ export default function NewPasswordScreen() {
                 </Text>
                 <Ionicons
                   // Icon glyphs never auto-flip — mirror the chevron manually.
-                  name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+                  name={font.rtl ? "chevron-back" : "chevron-forward"}
                   size={scale(18)}
                   color="#fff"
                 />

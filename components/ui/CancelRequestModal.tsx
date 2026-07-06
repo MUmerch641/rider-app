@@ -198,7 +198,7 @@ export function CancelRequestModal({
           </Text>
 
           {/* Reason chips — native RTL mirrors the row automatically */}
-          <View style={styles.chipsWrap}>
+          <View style={[styles.chipsWrap, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             {REASONS.map(({ key, i18nKey, fallback }) => {
               const active = selected === key;
               return (
@@ -222,7 +222,7 @@ export function CancelRequestModal({
           </View>
 
           {/* Optional note */}
-          <Text style={[styles.noteLabel, { fontFamily: font.semibold }]}>
+          <Text style={[styles.noteLabel, { fontFamily: font.semibold, textAlign: font.rtl ? "right" : "left" }]}>
             {t("cancelRequest.noteLabel", "DETAILS (OPTIONAL)")}
           </Text>
           <TextInput
@@ -232,20 +232,20 @@ export function CancelRequestModal({
             placeholderTextColor={Colors.textMuted}
             multiline
             maxLength={500}
-            style={[styles.textarea, { fontFamily: font.regular }]}
+            style={[styles.textarea, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
           />
 
           {/* Submit */}
           <Pressable
             disabled={!canSubmit}
             onPress={() => selected && onSubmit(selected, note.trim())}
-            style={[styles.submitBtn, !canSubmit && { opacity: 0.5 }]}
+            style={[styles.submitBtn, { flexDirection: font.rtl ? "row-reverse" : "row" }, !canSubmit && { opacity: 0.5 }]}
           >
             <Ionicons
               name="paper-plane"
               size={moderateScale(18)}
               color="#fff"
-              style={{ marginRight: scale(6) }}
+              style={{ marginRight: font.rtl ? 0 : scale(6), marginLeft: font.rtl ? scale(6) : 0 }}
             />
             <Text style={[styles.submitText, { fontFamily: font.semibold }]}>
               {submitting

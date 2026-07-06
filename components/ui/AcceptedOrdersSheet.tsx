@@ -158,9 +158,9 @@ export function AcceptedOrdersSheet({
   return (
     <View style={[styles.container, style]}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Leading: icon + title */}
-        <View style={styles.headerLeft}>
+        <View style={[styles.headerLeft, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <SvgXml xml={PACKAGE_ICON_SVG} width={scale(22)} height={scale(22)} />
           <Text style={[styles.headerTitle, { fontFamily: font.bold }]}>
             {t("orders.acceptedOrders")}
@@ -169,7 +169,7 @@ export function AcceptedOrdersSheet({
 
         {/* Trailing: collapse pill with chevron + count */}
         <TouchableOpacity
-          style={styles.collapsePill}
+          style={[styles.collapsePill, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           onPress={handleToggle}
           activeOpacity={0.72}
           hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
@@ -220,7 +220,7 @@ export function AcceptedOrdersSheet({
               relocated here from the removed Orders tab. */}
           {nearbyOrders.length > 0 && (
             <>
-              <View style={styles.sectionHeaderRow}>
+              <View style={[styles.sectionHeaderRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <Text
                   style={[styles.sectionHeaderText, { fontFamily: font.bold }]}
                 >
@@ -369,7 +369,7 @@ function OrderCard({
       style={[styles.card, !isLast && styles.cardGap, active && styles.cardActive]}
     >
       {/* ── Row 1: Avatar + Restaurant Name + Price ── */}
-      <View style={styles.cardTopRow}>
+      <View style={[styles.cardTopRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Avatar */}
         <View style={styles.avatarRing}>
           {storeAvatar ? (
@@ -388,12 +388,12 @@ function OrderCard({
         <View
           style={{
             flex: 1,
-            marginLeft: scale(10),
-            alignItems: "flex-start",
+            marginHorizontal: scale(10),
+            alignItems: font.rtl ? "flex-end" : "flex-start",
           }}
         >
           <Text
-            style={[styles.restaurantName, { fontFamily: font.bold }]}
+            style={[styles.restaurantName, { fontFamily: font.bold, textAlign: font.rtl ? "right" : "left" }]}
             numberOfLines={1}
           >
             {storeName}
@@ -437,12 +437,12 @@ function OrderCard({
       </View>
 
       {/* ── Row 2: Route (pickup → [connector] → dropoff) ── */}
-      <View style={[styles.routeRow, { marginTop: verticalScale(10) }]}>
+      <View style={[styles.routeRow, { marginTop: verticalScale(10), flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Pickup point */}
-        <View style={styles.routePoint}>
+        <View style={[styles.routePoint, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <View style={styles.pickupDot} />
           <Text
-            style={[styles.routeText, { fontFamily: font.regular }]}
+            style={[styles.routeText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
             numberOfLines={1}
           >
             {t("orders.pickup")}: {pickup}
@@ -456,12 +456,12 @@ function OrderCard({
             <View style={styles.routeConnector} />
 
             {/* Dropoff */}
-            <View style={styles.routePoint}>
+            <View style={[styles.routePoint, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <View style={styles.dropoffDotOuter}>
                 <View style={styles.dropoffDotInner} />
               </View>
               <Text
-                style={[styles.routeText, { fontFamily: font.regular }]}
+                style={[styles.routeText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                 numberOfLines={1}
               >
                 {t("orders.dropoff")}: {dropoff}
@@ -487,7 +487,7 @@ function OrderCard({
               return (
                 <View
                   key={`${label}-${idx}`}
-                  style={styles.inlineDetailRow}
+                  style={[styles.inlineDetailRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                 >
                   {it.image ? (
                     <SafeImage
@@ -499,9 +499,9 @@ function OrderCard({
                   ) : (
                     <View style={[styles.inlineItemThumb, styles.avatarFallback]} />
                   )}
-                  <View style={styles.inlineDetailBody}>
+                  <View style={[styles.inlineDetailBody, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
                     <Text
-                      style={[styles.inlineDetailText, { fontFamily: font.regular }]}
+                      style={[styles.inlineDetailText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                       numberOfLines={2}
                     >
                       {it.quantity ?? 1}× {label}
@@ -516,7 +516,7 @@ function OrderCard({
                     ) : null}
                     {it.notes ? (
                       <Text
-                        style={[styles.inlineNotesText, { fontFamily: font.regular }]}
+                        style={[styles.inlineNotesText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                         numberOfLines={2}
                       >
                         {it.notes}
@@ -539,7 +539,7 @@ function OrderCard({
             </Text>
           )}
           {summary.customer?.name ? (
-            <Text style={[styles.inlineMeta, { fontFamily: font.medium }]}>
+            <Text style={[styles.inlineMeta, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
               {t("onmap.customer", "Customer")}: {summary.customer.name}
             </Text>
           ) : null}
@@ -547,13 +547,13 @@ function OrderCard({
           {/* #16: store call / WhatsApp moved up beside the store name (header). */}
 
           <View style={styles.contactSection}>
-            <Text style={[styles.contactSectionLabel, { fontFamily: font.semibold }]}>
+            <Text style={[styles.contactSectionLabel, { fontFamily: font.semibold, textAlign: font.rtl ? "right" : "left" }]}>
               {t("onmap.customer", "Customer")} · {customerName}
             </Text>
             {customerPhone ? (
-              <View style={styles.contactRow}>
+              <View style={[styles.contactRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <TouchableOpacity
-                  style={styles.contactChip}
+                  style={[styles.contactChip, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                   activeOpacity={0.82}
                   onPress={() => dial(customerPhone)}
                 >
@@ -563,7 +563,7 @@ function OrderCard({
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.contactChip, styles.contactChipWhatsApp]}
+                  style={[styles.contactChip, styles.contactChipWhatsApp, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                   activeOpacity={0.82}
                   onPress={() => whatsapp(customerPhone)}
                 >
@@ -580,7 +580,7 @@ function OrderCard({
                 </TouchableOpacity>
               </View>
             ) : (
-              <Text style={[styles.contactUnavailable, { fontFamily: font.regular }]}>
+              <Text style={[styles.contactUnavailable, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t("onmap.customerPhoneUnavailable", "Customer phone unavailable")}
               </Text>
             )}
@@ -589,11 +589,11 @@ function OrderCard({
       ) : null}
 
       {/* ── Row 3: Status chip (toggle) + Advance CTA ── */}
-      <View style={[styles.actionRow, { marginTop: verticalScale(16) }]}>
+      <View style={[styles.actionRow, { marginTop: verticalScale(16), flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <TouchableOpacity
           onPress={onToggleExpand}
           activeOpacity={0.82}
-          style={styles.statusChip}
+          style={[styles.statusChip, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           accessibilityRole="button"
           accessibilityState={{ expanded: !!expanded }}
         >
@@ -604,7 +604,7 @@ function OrderCard({
             name={expanded ? "chevron-up" : "chevron-down"}
             size={scale(14)}
             color={Colors.primary}
-            style={{ marginLeft: 4 }}
+            style={{ marginHorizontal: 4 }}
           />
         </TouchableOpacity>
 
@@ -675,7 +675,7 @@ function NearbyOrderCard({
   return (
     <View style={[styles.card, !isLast && styles.cardGap]}>
       {/* ── Row 1: Avatar + Restaurant Name + Price ── */}
-      <View style={styles.cardTopRow}>
+      <View style={[styles.cardTopRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <View style={styles.avatarRing}>
           {storeAvatar ? (
             <SafeImage
@@ -692,12 +692,12 @@ function NearbyOrderCard({
         <View
           style={{
             flex: 1,
-            marginLeft: scale(10),
-            alignItems: "flex-start",
+            marginHorizontal: scale(10),
+            alignItems: font.rtl ? "flex-end" : "flex-start",
           }}
         >
           <Text
-            style={[styles.restaurantName, { fontFamily: font.bold }]}
+            style={[styles.restaurantName, { fontFamily: font.bold, textAlign: font.rtl ? "right" : "left" }]}
             numberOfLines={1}
           >
             {storeName}
@@ -716,11 +716,11 @@ function NearbyOrderCard({
       </View>
 
       {/* ── Row 2: Route (pickup → [connector] → dropoff) ── */}
-      <View style={[styles.routeRow, { marginTop: verticalScale(10) }]}>
-        <View style={styles.routePoint}>
+      <View style={[styles.routeRow, { marginTop: verticalScale(10), flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+        <View style={[styles.routePoint, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <View style={styles.pickupDot} />
           <Text
-            style={[styles.routeText, { fontFamily: font.regular }]}
+            style={[styles.routeText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
             numberOfLines={1}
           >
             {t("orders.pickup")}: {pickup}
@@ -730,12 +730,12 @@ function NearbyOrderCard({
         {dropoff ? (
           <>
             <View style={styles.routeConnector} />
-            <View style={styles.routePoint}>
+            <View style={[styles.routePoint, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <View style={styles.dropoffDotOuter}>
                 <View style={styles.dropoffDotInner} />
               </View>
               <Text
-                style={[styles.routeText, { fontFamily: font.regular }]}
+                style={[styles.routeText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                 numberOfLines={1}
               >
                 {t("orders.dropoff")}: {dropoff}
@@ -746,9 +746,9 @@ function NearbyOrderCard({
       </View>
 
       {/* ── Row 3: Decline / Accept ── */}
-      <View style={[styles.actionRow, { marginTop: verticalScale(16) }]}>
+      <View style={[styles.actionRow, { marginTop: verticalScale(16), flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <TouchableOpacity
-          style={styles.declineBtn}
+          style={[styles.declineBtn, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           activeOpacity={0.75}
           disabled={acting}
           onPress={() => onDecline?.(assignment.orderId)}
@@ -760,7 +760,7 @@ function NearbyOrderCard({
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.acceptBtn, acting && styles.actionBtnBusy]}
+          style={[styles.acceptBtn, acting && styles.actionBtnBusy, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           activeOpacity={0.85}
           disabled={acting}
           onPress={() => onAccept?.(assignment.orderId)}

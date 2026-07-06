@@ -179,10 +179,10 @@ export default function OrdersScreen() {
       >
         {/* ── Header ── Online/offline availability now lives on the Profile
             screen (R8); this header only shows the rider identity. */}
-        <View style={styles.header}>
+        <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <TouchableOpacity
             onPress={() => router.push("/profile/profile_screen")}
-            style={styles.profileRow}
+            style={[styles.profileRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           >
             <View style={styles.profileWrap}>
               <Image
@@ -207,14 +207,14 @@ export default function OrdersScreen() {
 
         {/* ── Today's Summary Card ── */}
         <View style={styles.summaryCard}>
-          <View style={styles.summaryTop}>
+          <View style={[styles.summaryTop, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <Text style={[styles.summaryTitle, { fontFamily: font.semibold }]}>
               {t("orders.todaySummary")}
             </Text>
             <Ionicons name="bar-chart-outline" size={scale(22)} color="#fff" />
           </View>
-          <View style={styles.summaryBottom}>
-            <View style={{ alignItems: "flex-start" }}>
+          <View style={[styles.summaryBottom, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+            <View style={{ alignItems: font.rtl ? "flex-end" : "flex-start" }}>
               <Text
                 style={[
                   styles.earningsLabel,
@@ -223,11 +223,11 @@ export default function OrdersScreen() {
               >
                 {t("orders.earnings")}
               </Text>
-              <Text style={[styles.earningsAmount, { fontFamily: font.bold }]}>
+              <Text style={[styles.earningsAmount, { fontFamily: font.bold, textAlign: font.rtl ? "right" : "left" }]}>
                 {todayEarnings} {t("common.iqd")}
               </Text>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
+            <View style={{ alignItems: font.rtl ? "flex-start" : "flex-end" }}>
               <Text
                 style={[
                   styles.ordersLabel,
@@ -244,7 +244,7 @@ export default function OrdersScreen() {
         </View>
 
         {/* ── Active Orders ── */}
-        <View style={styles.sectionRow}>
+        <View style={[styles.sectionRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <Text style={[styles.sectionTitle, { fontFamily: font.semibold }]}>
             {t("orders.activeOrders")}
           </Text>
@@ -264,10 +264,10 @@ export default function OrdersScreen() {
             order id. */}
         {activeOrders.map((activeOrder) => (
           <View key={activeOrder.id} style={styles.activeCard}>
-            <View style={styles.activeTop}>
+            <View style={[styles.activeTop, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <View
                 style={{
-                  flexDirection: "row",
+                  flexDirection: font.rtl ? "row-reverse" : "row",
                   alignItems: "center",
                   gap: scale(10),
                   flex: 1,
@@ -277,29 +277,29 @@ export default function OrdersScreen() {
                   source={storeSource(activeOrder.order?.store?.avatar)}
                   style={styles.restaurantLogo}
                 />
-                <View style={{ flex: 1, alignItems: "flex-start" }}>
+                <View style={{ flex: 1, alignItems: font.rtl ? "flex-end" : "flex-start" }}>
                   <Text
-                    style={[styles.restaurantName, { fontFamily: font.bold }]}
+                    style={[styles.restaurantName, { fontFamily: font.bold, textAlign: font.rtl ? "right" : "left" }]}
                   >
                     {localizeName(activeOrder.order?.store?.name, langKey)}
                   </Text>
                   <Text
-                    style={[styles.customerName, { fontFamily: font.regular }]}
+                    style={[styles.customerName, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                   >
                     {t("orders.customer")}:{" "}
                     {activeOrder.order?.customer?.name ?? "—"}
                   </Text>
                 </View>
               </View>
-              <View style={{ alignItems: "flex-end" }}>
-                <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
+              <View style={{ alignItems: font.rtl ? "flex-start" : "flex-end" }}>
+                <Text style={[styles.orderPrice, { fontFamily: font.bold, textAlign: font.rtl ? "left" : "right" }]}>
                   {formatCurrency(
                     activeOrder.order?.total,
                     activeOrder.order?.currency ?? "IQD",
                   )}
                 </Text>
                 <Text
-                  style={[styles.orderDistance, { fontFamily: font.regular }]}
+                  style={[styles.orderDistance, { fontFamily: font.regular, textAlign: font.rtl ? "left" : "right" }]}
                 >
                   {Number(activeOrder.distanceKm ?? 0).toFixed(1)}{" "}
                   {t("orders.kmAway")}
@@ -307,10 +307,10 @@ export default function OrdersScreen() {
               </View>
             </View>
 
-            <View style={styles.activeBottom}>
+            <View style={[styles.activeBottom, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <View
                 style={{
-                  flexDirection: "row",
+                  flexDirection: font.rtl ? "row-reverse" : "row",
                   alignItems: "center",
                   gap: scale(4),
                 }}
@@ -321,12 +321,12 @@ export default function OrdersScreen() {
                   color={Colors.textSecondary}
                 />
                 <Text
-                  style={[styles.locationText, { fontFamily: font.regular }]}
+                  style={[styles.locationText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                 >
                   {activeOrder.order?.store?.address ?? ""}
                 </Text>
               </View>
-              <View style={styles.timerPill}>
+              <View style={[styles.timerPill, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <Ionicons
                   name="time-outline"
                   size={scale(13)}
@@ -346,7 +346,7 @@ export default function OrdersScreen() {
               style={styles.startBtn}
             >
               <TouchableOpacity
-                style={styles.startBtnInner}
+                style={[styles.startBtnInner, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                 activeOpacity={0.85}
                 onPress={() => router.push("/(tabs)/onmap")}
               >
@@ -362,7 +362,7 @@ export default function OrdersScreen() {
 
         {/* ── New Orders Nearby ── */}
         <View style={styles.newOrder}>
-          <View style={styles.sectionRow}>
+          <View style={[styles.sectionRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <Text style={[styles.sectionTitle, { fontFamily: font.semibold }]}>
               {t("orders.newOrdersNearby")}
             </Text>
@@ -399,28 +399,28 @@ export default function OrdersScreen() {
             return (
               <View key={a.id} style={styles.nearbyCard}>
                 {/* Top row */}
-                <View style={styles.nearbyTop}>
+                <View style={[styles.nearbyTop, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                   <View
                     style={{
-                      flexDirection: "row",
+                      flexDirection: font.rtl ? "row-reverse" : "row",
                       alignItems: "center",
                       gap: scale(10),
                       flex: 1,
                     }}
                   >
                     <Image source={storeSource(logo)} style={styles.nearbyLogo} />
-                    <View style={{ flex: 1, alignItems: "flex-start" }}>
+                    <View style={{ flex: 1, alignItems: font.rtl ? "flex-end" : "flex-start" }}>
                       <Text
                         style={[
                           styles.restaurantName,
-                          { fontFamily: font.bold },
+                          { fontFamily: font.bold, textAlign: font.rtl ? "right" : "left" },
                         ]}
                       >
                         {restaurant}
                       </Text>
                       <View
                         style={{
-                          flexDirection: "row",
+                          flexDirection: font.rtl ? "row-reverse" : "row",
                           alignItems: "center",
                           gap: scale(3),
                         }}
@@ -441,7 +441,7 @@ export default function OrdersScreen() {
                       </View>
                     </View>
                   </View>
-                  <Text style={[styles.orderPrice, { fontFamily: font.bold }]}>
+                  <Text style={[styles.orderPrice, { fontFamily: font.bold, textAlign: font.rtl ? "left" : "right" }]}>
                     {price}
                   </Text>
                 </View>
@@ -450,7 +450,7 @@ export default function OrdersScreen() {
                 <View style={styles.routeContainer}>
                   <View
                     style={{
-                      flexDirection: "row",
+                      flexDirection: font.rtl ? "row-reverse" : "row",
                       alignItems: "center",
                       gap: scale(10),
                     }}
@@ -460,14 +460,14 @@ export default function OrdersScreen() {
                       <View style={styles.connectorLine} />
                     </View>
                     <Text
-                      style={[styles.routeText, { fontFamily: font.regular }]}
+                      style={[styles.routeText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                     >
                       {t("orders.pickup")}: {pickup}
                     </Text>
                   </View>
                   <View
                     style={{
-                      flexDirection: "row",
+                      flexDirection: font.rtl ? "row-reverse" : "row",
                       alignItems: "center",
                       gap: scale(10),
                     }}
@@ -476,7 +476,7 @@ export default function OrdersScreen() {
                       <View style={styles.dotGreenInner} />
                     </View>
                     <Text
-                      style={[styles.routeText, { fontFamily: font.regular }]}
+                      style={[styles.routeText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                     >
                       {t("orders.dropoff")}: {dropoffText}
                     </Text>
@@ -484,7 +484,7 @@ export default function OrdersScreen() {
                 </View>
 
                 {/* Action buttons */}
-                <View style={styles.actionRow}>
+                <View style={[styles.actionRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                   <TouchableOpacity
                     style={styles.declineBtn}
                     activeOpacity={0.75}

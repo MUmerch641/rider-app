@@ -68,7 +68,7 @@ export default function ReviewsScreen() {
           />
         }
       >
-        <Text style={[styles.reviewsCount, { fontFamily: font.semibold }]}>
+        <Text style={[styles.reviewsCount, { fontFamily: font.semibold, textAlign: font.rtl ? "right" : "left" }]}>
           {t("reviews.reviewsCount", {
             count: totalReviews,
           })}
@@ -77,11 +77,11 @@ export default function ReviewsScreen() {
         {/* Review Cards */}
         <View style={styles.reviewsList}>
           {reviewsList.map((review) => (
-            <View key={review.id} style={styles.reviewCard}>
-              <Text style={[styles.reviewText, { fontFamily: font.regular }]}>
+            <View key={review.id} style={[styles.reviewCard, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+              <Text style={[styles.reviewText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {review.comment ?? ""}
               </Text>
-              <View style={styles.reviewRating}>
+              <View style={[styles.reviewRating, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <StarRating rating={1} maxStars={1} size={scale(18)} />
                 <Text
                   style={[styles.reviewRatingText, { fontFamily: font.bold }]}

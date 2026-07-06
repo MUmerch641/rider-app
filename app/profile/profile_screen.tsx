@@ -231,7 +231,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Back button */}
         <TouchableOpacity
           style={styles.headerBtn}
@@ -273,22 +273,22 @@ export default function ProfileScreen() {
         {/* ── Availability toggle ── moved here from the removed Orders tab
             (R8). This is now THE place riders go online/offline; it calls the
             same AuthContext.updateStatus the Orders header used. */}
-        <View style={styles.availabilityRow}>
-          <View style={styles.availabilityLeft}>
+        <View style={[styles.availabilityRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+          <View style={[styles.availabilityLeft, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <View
               style={[
                 styles.availabilityDot,
                 { backgroundColor: driver?.isOnline ? "#22c55e" : "#9ca3af" },
               ]}
             />
-            <View style={{ alignItems: "flex-start" }}>
+            <View style={{ alignItems: font.rtl ? "flex-end" : "flex-start" }}>
               <Text
-                style={[styles.availabilityLabel, { fontFamily: font.medium }]}
+                style={[styles.availabilityLabel, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}
               >
                 {t("profile.availability", "Availability")}
               </Text>
               <Text
-                style={[styles.availabilityState, { fontFamily: font.semibold }]}
+                style={[styles.availabilityState, { fontFamily: font.semibold, textAlign: font.rtl ? "right" : "left" }]}
               >
                 {driver?.isOnline
                   ? t("profile.online", "Online")
@@ -326,7 +326,7 @@ export default function ProfileScreen() {
             onPress={() => router.push("/profile/revenue_screen")}
             activeOpacity={0.75}
           >
-            <View style={styles.statIconWrapper}>
+            <View style={[styles.statIconWrapper, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <CartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.orders")}
@@ -342,13 +342,13 @@ export default function ProfileScreen() {
             onPress={() => router.push("/profile/revenue_screen")}
             activeOpacity={0.75}
           >
-            <View style={styles.statIconWrapper}>
+            <View style={[styles.statIconWrapper, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <ChartIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.onTime", "On-Time")}
               </Text>
             </View>
-            <View style={styles.profitRow}>
+            <View style={[styles.profitRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <Text style={[styles.statValue, { fontFamily: font.medium }]}>
                 {onTimeRate == null ? "—" : `${Math.round(onTimeRate)}%`}
               </Text>
@@ -369,7 +369,7 @@ export default function ProfileScreen() {
             onPress={() => router.push("/profile/reviews_screen")}
             activeOpacity={0.75}
           >
-            <View style={styles.statIconWrapper}>
+            <View style={[styles.statIconWrapper, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <StarIcon size={scale(20)} />
               <Text style={[styles.statLabel, { fontFamily: font.medium }]}>
                 {t("profile.rating")}
@@ -385,7 +385,7 @@ export default function ProfileScreen() {
           {MENU_ITEMS.map((item, index) => (
             <TouchableOpacity
               key={item.key}
-              style={styles.menuItem}
+              style={[styles.menuItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
               onPress={() => item.onPress(router)}
               activeOpacity={0.7}
             >
@@ -395,7 +395,7 @@ export default function ProfileScreen() {
               </View>
 
               {/* Label */}
-              <Text style={[styles.menuLabel, { fontFamily: font.regular }]}>
+              <Text style={[styles.menuLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
                 {t(item.labelKey, item.labelFallback)}
               </Text>
             </TouchableOpacity>
@@ -404,7 +404,7 @@ export default function ProfileScreen() {
 
         {/* ── Sign out ── */}
         <TouchableOpacity
-          style={styles.signOutCard}
+          style={[styles.signOutCard, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           onPress={handleSignOut}
           activeOpacity={0.8}
         >

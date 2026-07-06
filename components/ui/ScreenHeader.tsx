@@ -13,6 +13,8 @@ import {
     View,
     ViewStyle,
 } from "react-native";
+import { isRTL } from "@/constants/i18n";
+import { useTranslation } from "react-i18next";
 
 interface ScreenHeaderProps {
   title: string;
@@ -33,6 +35,8 @@ export function ScreenHeader({
 }: ScreenHeaderProps) {
   const router = useRouter();
   const font = useAppFont();
+  const { i18n } = useTranslation();
+  const rtl = isRTL(i18n.language);
 
   const handleBack = () => {
     if (onBack) {
@@ -43,9 +47,9 @@ export function ScreenHeader({
   };
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style, { flexDirection: rtl ? "row-reverse" : "row" }]}>
       {/* LEADING SECTION — native RTL mirrors the row automatically */}
-      <View style={styles.leftSection}>
+      <View style={[styles.leftSection, { flexDirection: rtl ? "row-reverse" : "row" }]}>
         {showBack ? (
           <TouchableOpacity
             onPress={handleBack}
@@ -54,7 +58,7 @@ export function ScreenHeader({
           >
             <Ionicons
               // Icon glyphs never auto-flip — mirror the back arrow manually.
-              name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+              name={rtl ? "arrow-forward" : "arrow-back"}
               size={scale(22)}
               color={Colors.textPrimary}
             />
@@ -69,11 +73,11 @@ export function ScreenHeader({
       </View>
 
       {/* TRAILING SECTION */}
-      <View style={styles.rightSection}>
+      <View style={[styles.rightSection, { flexDirection: rtl ? "row-reverse" : "row" }]}>
         {showLanguage && <LanguageSelector />}
 
         {rightElement ? (
-          <View style={styles.right}>{rightElement}</View>
+          <View style={[styles.right, { flexDirection: rtl ? "row-reverse" : "row" }]}>{rightElement}</View>
         ) : (
           <View style={styles.placeholder} />
         )}

@@ -225,7 +225,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
           style={[styles.banner, { opacity: cardOpacity }]}
         >
           <TouchableOpacity
-            style={styles.bannerMain}
+            style={[styles.bannerMain, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
             activeOpacity={0.85}
             onPress={onExpand}
           >
@@ -244,7 +244,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
                 </View>
               )}
             </View>
-            <View style={styles.bannerTextCol}>
+            <View style={[styles.bannerTextCol, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
               <Text style={styles.bannerTitle} numberOfLines={1}>
                 {restaurantName}
               </Text>
@@ -258,14 +258,14 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
             </View>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.bannerAccept}
+            style={[styles.bannerAccept, { marginLeft: font.rtl ? 0 : scale(8), marginRight: font.rtl ? scale(8) : 0 }]}
             onPress={onAccept}
             activeOpacity={0.85}
           >
             <Text style={styles.bannerAcceptIcon}>✓</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.bannerDecline}
+            style={[styles.bannerDecline, { marginLeft: font.rtl ? 0 : scale(6), marginRight: font.rtl ? scale(6) : 0 }]}
             onPress={onDecline}
             activeOpacity={0.7}
           >
@@ -300,7 +300,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
 
         <View style={styles.cardInner}>
           {/* ── Restaurant Row ── */}
-          <View style={styles.restaurantRow}>
+          <View style={[styles.restaurantRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             {/* Logo */}
             <View style={styles.logoContainer}>
               {restaurantLogo ? (
@@ -321,11 +321,11 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
             </View>
 
             {/* Name + Location */}
-            <View style={styles.restaurantInfo}>
-              <Text style={[styles.restaurantName]} numberOfLines={1}>
+            <View style={[styles.restaurantInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+              <Text style={[styles.restaurantName, { textAlign: font.rtl ? "right" : "left" }]} numberOfLines={1}>
                 {restaurantName}
               </Text>
-              <View style={styles.locationRow}>
+              <View style={[styles.locationRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <SvgXml xml={LOCATION_SVG} width={16} height={16} />
                 <Text style={styles.locationText}>{restaurantLocation}</Text>
               </View>
@@ -341,17 +341,17 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
 
           {/* ── Stats Row ── */}
           {(totalDistance || totalDuration) && (
-            <View style={styles.statsRow}>
+            <View style={[styles.statsRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               {totalDistance && (
-                <View style={styles.statItem}>
+                <View style={[styles.statItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                   <SvgXml xml={ROUTE_SVG} width={13} height={13} />
-                  <Text style={styles.statText}>{totalDistance}</Text>
+                  <Text style={[styles.statText, font.rtl ? { marginLeft: 0, marginRight: 6 } : {}]}>{totalDistance}</Text>
                 </View>
               )}
               {totalDuration && (
-                <View style={styles.statItem}>
+                <View style={[styles.statItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                   <SvgXml xml={DURATION_SVG} width={18} height={18} />
-                  <Text style={styles.statText}>{totalDuration}</Text>
+                  <Text style={[styles.statText, font.rtl ? { marginLeft: 0, marginRight: 6 } : {}]}>{totalDuration}</Text>
                 </View>
               )}
             </View>
@@ -362,7 +362,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
             <Text
               style={[
                 styles.sectionLabel,
-                { fontFamily: font.medium, letterSpacing: rtl ? 0 : 1.2 },
+                { fontFamily: font.medium, letterSpacing: rtl ? 0 : 1.2, textAlign: font.rtl ? "right" : "left" },
               ]}
             >
               {t("orderRequestCard.orderItems")}
@@ -384,7 +384,7 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
             style={styles.acceptBtnGrad}
           >
             <TouchableOpacity
-              style={styles.acceptBtn}
+              style={[styles.acceptBtn, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
               onPress={onAccept}
               activeOpacity={0.85}
             >
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#1A1A2E",
-    marginLeft: 8,
+    marginHorizontal: 8,
   },
   itemPrice: {
     fontSize: 14,

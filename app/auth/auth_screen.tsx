@@ -181,7 +181,7 @@ export default function AuthScreen() {
 
           <TouchableOpacity
             // Native RTL flips alignSelf flex-start automatically.
-            style={styles.forgotRow}
+            style={[styles.forgotRow, { alignSelf: font.rtl ? "flex-end" : "flex-start" }]}
             onPress={() => router.push("/auth/forgetPassword_screen")}
           >
             <Text style={[styles.forgotText, { fontFamily: font.medium }]}>

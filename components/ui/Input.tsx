@@ -214,37 +214,38 @@ export function Input({
     // Native RTL mirrors rows and text alignment automatically.
     <View style={[styles.wrapper, containerStyle]}>
       {label && (
-        <Text style={[styles.label, { fontFamily: font.medium }]}>
+        <Text style={[styles.label, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
           {label}
         </Text>
       )}
       <View
         style={[
           styles.container,
+          { flexDirection: font.rtl ? "row-reverse" : "row" },
           hasError && styles.containerError,
           borderColor ? { borderColor, borderWidth: 1.5 } : null,
           props.editable === false && styles.containerDisabled,
         ]}
       >
         {prefix && (
-          <View style={styles.prefixBox}>
+          <View style={[styles.prefixBox, font.rtl ? { paddingRight: 0, paddingLeft: Spacing.sm, borderRightWidth: 0, borderLeftWidth: 1, borderLeftColor: Colors.border, marginRight: 0, marginLeft: Spacing.sm } : {}]}>
             <Text style={[styles.prefixText, { fontFamily: font.medium }]}>
               {prefix}
             </Text>
           </View>
         )}
-        {iconLeft && <View style={styles.iconLeft}>{iconLeft}</View>}
+        {iconLeft && <View style={[styles.iconLeft, font.rtl ? { marginRight: 0, marginLeft: Spacing.sm } : {}]}>{iconLeft}</View>}
         <TextInput
           {...props}
           secureTextEntry={isPassword && !visible}
-          style={[styles.input, { fontFamily: font.regular }, props.style]}
+          style={[styles.input, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }, props.style]}
           placeholderTextColor={Colors.textMuted}
           autoCapitalize="none"
         />
         {isPassword ? (
           <TouchableOpacity
             onPress={() => setVisible((v) => !v)}
-            style={styles.iconRight}
+            style={[styles.iconRight, font.rtl ? { marginLeft: 0, marginRight: Spacing.sm } : {}]}
           >
             <Ionicons
               name={visible ? "eye-outline" : "eye-off-outline"}
@@ -253,11 +254,11 @@ export function Input({
             />
           </TouchableOpacity>
         ) : iconRight ? (
-          <View style={styles.iconRight}>{iconRight}</View>
+          <View style={[styles.iconRight, font.rtl ? { marginLeft: 0, marginRight: Spacing.sm } : {}]}>{iconRight}</View>
         ) : null}
       </View>
       {hasError && (
-        <Text style={[styles.errorText, { fontFamily: font.regular }]}>
+        <Text style={[styles.errorText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
           {error}
         </Text>
       )}
@@ -396,15 +397,16 @@ export function PhoneInput({
     // Native RTL mirrors rows and text alignment automatically.
     <View style={styles.wrapper}>
       {label && (
-        <Text style={[styles.label, { fontFamily: font.medium }]}>
+        <Text style={[styles.label, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
           {label}
         </Text>
       )}
-      <View style={styles.phoneRow}>
+      <View style={[styles.phoneRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <TouchableOpacity
           style={[
             styles.container,
             styles.codeBox,
+            { flexDirection: font.rtl ? "row-reverse" : "row" },
             !!error && styles.containerError,
           ]}
           onPress={() => setPickerVisible(true)}
@@ -420,13 +422,14 @@ export function PhoneInput({
           style={[
             styles.container,
             styles.phoneBox,
+            { flexDirection: font.rtl ? "row-reverse" : "row" },
             !!error && styles.containerError,
           ]}
         >
           <TextInput
             value={phone}
             onChangeText={onChangePhone}
-            style={[styles.input, { fontFamily: font.regular }]}
+            style={[styles.input, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
             keyboardType="phone-pad"
             placeholderTextColor={Colors.textMuted}
             placeholder={t("auth.phone")}
@@ -434,7 +437,7 @@ export function PhoneInput({
         </View>
       </View>
       {!!error && (
-        <Text style={[styles.errorText, { fontFamily: font.regular }]}>
+        <Text style={[styles.errorText, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
           {error}
         </Text>
       )}

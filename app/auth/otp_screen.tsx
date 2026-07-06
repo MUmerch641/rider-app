@@ -134,8 +134,8 @@ export default function OtpScreen() {
         colors={["#DFCFFF", "#F5EEFF", "#FFFFFF", "#FFF8F0"]}
         locations={[0, 0.1, 0.6, 1]}
         // Gradient coords don't auto-mirror under native RTL — flip manually.
-        start={{ x: I18nManager.isRTL ? 0.9 : 0, y: 0 }}
-        end={{ x: I18nManager.isRTL ? 0 : 0.9, y: 1 }}
+        start={{ x: font.rtl ? 0.9 : 0, y: 0 }}
+        end={{ x: font.rtl ? 0 : 0.9, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
       <KeyboardAvoidingView
@@ -161,7 +161,7 @@ export default function OtpScreen() {
             </Text>
           </View>
 
-          <View style={styles.otpRow}>
+          <View style={[styles.otpRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             {Array(OTP_LENGTH)
               .fill(0)
               .map((_, i) => (
@@ -206,7 +206,7 @@ export default function OtpScreen() {
           <TouchableOpacity
             onPress={handleResend}
             disabled={!canResend}
-            style={styles.resendRow}
+            style={[styles.resendRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
             activeOpacity={0.7}
           >
             <Text
