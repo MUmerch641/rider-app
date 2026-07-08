@@ -201,9 +201,9 @@ export default function RevenueScreen() {
         {/* ── Stats row ── */}
         <LinearGradient
           colors={["#fadecd", "#fadecd56", "#e6dcfa5e", "#e6dcfa"]}
-          start={{ x: rtl ? 1.2 : 0, y: 0 }}
-          end={{ x: rtl ? 0 : 1, y: 1 }}
-          style={styles.statsRow}
+          start={{ x: font.rtl ? 1.2 : 0, y: 0 }}
+          end={{ x: font.rtl ? 0 : 1, y: 1 }}
+          style={[styles.statsRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
         >
           {/* Orders */}
           <TouchableOpacity style={styles.statCard} activeOpacity={0.75}>

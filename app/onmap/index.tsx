@@ -8,6 +8,7 @@ import { useAuth, useSocket, useActiveAssignments } from "@/context";
 import { formatDistanceKm, formatDurationMinutes } from "@/utils/format";
 import { storeSource } from "@/utils/placeholders";
 import { localizeName, type LangKey } from "@/utils/localize";
+import { isRTL } from "@/constants/i18n";
 import {
   ACTIVE_STATUSES,
   nextStatus,
@@ -86,6 +87,7 @@ export default function OnMap() {
   const router = useNavGuard();
   const dialog = useDialog();
   const { i18n } = useTranslation();
+  const rtl = isRTL(i18n.language);
   const mapRef = useRef<MapView>(null);
   // Monotonic id for GET /driver/orders — only the latest fetch may commit so
   // a poll started before a status PATCH can't overwrite the post-advance list.
@@ -928,7 +930,7 @@ export default function OnMap() {
           {/* ── GPS acquiring indicator (before first fix) ── */}
           {!gpsReady && (
             <View style={styles.loadingContainer}>
-              <View style={styles.loadingBox}>
+              <View style={[styles.loadingBox, { flexDirection: rtl ? "row-reverse" : "row" }]}>
                 <ActivityIndicator size="small" color="#7900F3" />
                 <Text style={styles.loadingText}>
                   {t("onmap.acquiringLocation", "Acquiring location…")}
@@ -1146,8 +1148,8 @@ export default function OnMap() {
               ticking down to estimatedReadyAt. Hidden while an offer card is on
               screen so the two never stack. */}
           {activeOrder && !currentRequest && (liveRouteInfo || activeInfo?.readyAt || activeInfo?.forceReady) && (
-            <View style={styles.activeInfoCard} pointerEvents="none">
-              <View style={styles.activeInfoStats}>
+            <View style={[styles.activeInfoCard, { flexDirection: rtl ? "row-reverse" : "row" }]} pointerEvents="none">
+              <View style={[styles.activeInfoStats, { flexDirection: rtl ? "row-reverse" : "row" }]}>
                 {!!liveRouteInfo?.distance && (
                   <View style={styles.activeInfoStat}>
                     <Ionicons
@@ -1271,7 +1273,7 @@ const styles = StyleSheet.create({
     borderRadius: scale(20),
     paddingVertical: scale(10),
     paddingHorizontal: spacing.lg,
-    flexDirection: "row",
+    flexDirection: "row", // Overridden dynamically inline below
     alignItems: "center",
     gap: scale(8),
     ...Shadow.card,
@@ -1287,7 +1289,7 @@ const styles = StyleSheet.create({
     top: verticalScale(60),
     left: spacing.lg,
     right: spacing.lg,
-    flexDirection: "row",
+    flexDirection: "row", // Overridden dynamically inline below
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: Colors.background,
@@ -1298,7 +1300,7 @@ const styles = StyleSheet.create({
     ...Shadow.card,
   },
   activeInfoStats: {
-    flexDirection: "row",
+    flexDirection: "row", // Overridden dynamically inline below
     alignItems: "center",
     gap: spacing.lg,
   },

@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { isRTL } from "@/constants/i18n";
 
 const FOOTER_ROUTE_ORDER = ["onmap", "inbox", "profile"] as const;
 
@@ -23,8 +24,9 @@ export default function RiderTabBar({
   descriptors,
   navigation,
 }: BottomTabBarProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const font = useAppFont();
+  const rtl = isRTL(i18n.language);
   const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
 
@@ -41,7 +43,7 @@ export default function RiderTabBar({
     >
       <RiderActiveOrderBar hidden={hideBar} />
       <View style={styles.topShadow} />
-      <View style={styles.tabRow}>
+      <View style={[styles.tabRow, { flexDirection: rtl ? "row-reverse" : "row" }]}>
         {footerRoutes.map((route) => {
           if (!route) return null;
           const isFocused = state.index === state.routes.indexOf(route);

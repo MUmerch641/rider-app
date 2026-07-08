@@ -44,7 +44,7 @@ export function PeriodTabs({ activeTab, onChange, style }: PeriodTabsProps) {
     <View
       style={[styles.wrapper, style, { backgroundColor: Colors.background }]}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {TABS.map((tab) => {
           const isActive = tab === activeTab;
           return (

@@ -28,13 +28,12 @@ export function SectionHeader({
   const font = useAppFont();
 
   return (
-    // Native RTL mirrors the row automatically.
-    <View style={[styles.row, style]}>
+    <View style={[styles.row, style, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
       <Text style={[styles.title, { fontFamily: font.regular }]}>{title}</Text>
       {(actionLabel || actionIcon) && (
         <TouchableOpacity
           onPress={onAction}
-          style={styles.action}
+          style={[styles.action, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
           activeOpacity={0.7}
         >
           {actionIcon}

@@ -74,12 +74,12 @@ export function DriverBalanceCard({
     <LinearGradient
       colors={["#ffffffce", "#e6dcfa", "#faf6f6", "#fadecd"]}
       // Gradient coords don't auto-mirror under native RTL — flip manually.
-      start={{ x: I18nManager.isRTL ? 1.2 : 0, y: 0 }}
-      end={{ x: I18nManager.isRTL ? 0 : 1, y: 1 }}
+      start={{ x: font.rtl ? 1.2 : 0, y: 0 }}
+      end={{ x: font.rtl ? 0 : 1, y: 1 }}
       style={[styles.card, style]}
     >
       {/* ── Driver info row — native RTL mirrors the row automatically ── */}
-      <View style={styles.infoRow}>
+      <View style={[styles.infoRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Avatar with white ring (tappable when onAvatarPress is provided) */}
         {onAvatarPress ? (
           <TouchableOpacity
@@ -95,26 +95,26 @@ export function DriverBalanceCard({
         )}
 
         {/* Name + phone */}
-        <View style={styles.driverInfo}>
+        <View style={[styles.driverInfo, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
           <Text
-            style={[styles.driverName, { fontFamily: font.bold }]}
+            style={[styles.driverName, { fontFamily: font.bold, textAlign: font.rtl ? "right" : "left" }]}
             numberOfLines={1}
           >
             {name}
           </Text>
-          <Text style={[styles.driverPhone, { fontFamily: font.regular }]}>
+          <Text style={[styles.driverPhone, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
             {phone}
           </Text>
         </View>
       </View>
 
       {/* ── Balance section ── */}
-      <View style={styles.balanceSection}>
-        <Text style={[styles.balanceLabel, { fontFamily: font.regular }]}>
+      <View style={[styles.balanceSection, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
+        <Text style={[styles.balanceLabel, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}>
           {t("driverCard.availableBalance", "Available Balance")}
         </Text>
 
-        <View style={styles.amountRow}>
+        <View style={[styles.amountRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <Text style={[styles.balanceAmount, { fontFamily: font.bold }]}>
             {balance.toLocaleString()}
           </Text>

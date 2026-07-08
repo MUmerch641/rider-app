@@ -145,8 +145,8 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
 
   return (
     <View style={[styles.container, style]}>
-      {/* Header — native RTL mirrors the row automatically */}
-      <View style={styles.header}>
+      {/* Header */}
+      <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <Text style={[styles.title, { fontFamily: font.regular }]}>
           {t("revenue.salesOverview")}
         </Text>
@@ -160,7 +160,7 @@ export function SalesChart({ onFullReport, style, data: dataProp }: SalesChartPr
       {/* Chart Card */}
       <View style={styles.chartCard}>
         {/* Tabs */}
-        <View style={styles.subTabs}>
+        <View style={[styles.subTabs, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           {TABS.map((tab) => (
             <TouchableOpacity
               key={tab.key}

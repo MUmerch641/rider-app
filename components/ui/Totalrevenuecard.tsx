@@ -54,9 +54,15 @@ export function TotalRevenueCard({
       end={{ x: 1, y: 0 }}
       style={[styles.card, style]}
     >
-      {/* Eye icon — native RTL swaps the absolute right offset automatically */}
+      {/* Eye icon */}
       <TouchableOpacity
-        style={styles.eyeBtn}
+        style={[
+          styles.eyeBtn,
+          {
+            right: font.rtl ? undefined : spacing.md,
+            left: font.rtl ? spacing.md : undefined,
+          },
+        ]}
         onPress={() => setHidden((v) => !v)}
         activeOpacity={0.8}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -69,12 +75,12 @@ export function TotalRevenueCard({
       </TouchableOpacity>
 
       {/* Label */}
-      <Text style={[styles.label, { fontFamily: font.medium }]}>
+      <Text style={[styles.label, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>
         {t("revenue.totalRevenue")}
       </Text>
 
       {/* Amount */}
-      <View style={styles.amountRow}>
+      <View style={[styles.amountRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <Text style={[styles.amount, { fontFamily: font.extrabold }]}>
           {hidden ? "••••••" : totalRevenue.toLocaleString()}
         </Text>
@@ -92,6 +98,7 @@ export function TotalRevenueCard({
           {
             backgroundColor: isPositive ? "#2DD67033" : "#d65d2d33",
             borderColor: isPositive ? Colors.success : Colors.danger,
+            flexDirection: font.rtl ? "row-reverse" : "row",
           },
         ]}
       >
@@ -116,8 +123,8 @@ export function TotalRevenueCard({
       </View>
 
       {/* Stats row */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statItem, { alignItems: "flex-start" }]}>
+      <View style={[styles.statsRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+        <View style={[styles.statItem, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
           <Text style={[styles.statValue, { fontFamily: font.medium }]}>
             {hidden ? "•••" : orders}
           </Text>
@@ -133,7 +140,7 @@ export function TotalRevenueCard({
             {t("revenue.netProfit")}
           </Text>
         </View>
-        <View style={[styles.statItem, { alignItems: "flex-end" }]}>
+        <View style={[styles.statItem, { alignItems: font.rtl ? "flex-start" : "flex-end" }]}>
           <Text style={[styles.statValue, { fontFamily: font.medium }]}>
             {hidden ? "•••" : formatK(commission)}
           </Text>

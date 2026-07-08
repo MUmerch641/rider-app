@@ -92,11 +92,11 @@ export function AcceptOrderSummaryDialog({
           <View style={styles.sheetBody}>
           <View style={styles.handle} />
 
-          <View style={styles.header}>
+          <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <View style={styles.headerIcon}>
               <Ionicons name="checkmark-circle" size={scale(28)} color="#22C55E" />
             </View>
-            <View style={styles.headerText}>
+            <View style={[styles.headerText, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
               <Text style={[styles.title, { fontFamily: font.bold }]}>
                 {t("onmap.acceptSummaryTitle", "Order accepted")}
               </Text>
@@ -146,7 +146,7 @@ export function AcceptOrderSummaryDialog({
             </View>
 
             <View style={styles.itemsCard}>
-              <View style={styles.itemsHeader}>
+              <View style={[styles.itemsHeader, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                 <Ionicons
                   name="receipt-outline"
                   size={scale(18)}
@@ -182,6 +182,7 @@ export function AcceptOrderSummaryDialog({
                       style={[
                         styles.itemRow,
                         idx < items.length - 1 && styles.itemRowBorder,
+                        { flexDirection: font.rtl ? "row-reverse" : "row" }
                       ]}
                     >
                       {item.image ? (
@@ -201,9 +202,9 @@ export function AcceptOrderSummaryDialog({
                           {item.quantity ?? 1}×
                         </Text>
                       </View>
-                      <View style={styles.itemTextCol}>
+                      <View style={[styles.itemTextCol, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
                         <Text
-                          style={[styles.itemName, { fontFamily: font.regular }]}
+                          style={[styles.itemName, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left" }]}
                           numberOfLines={3}
                         >
                           {label}
@@ -236,7 +237,7 @@ export function AcceptOrderSummaryDialog({
               )}
             </View>
 
-            <View style={styles.totalCard}>
+            <View style={[styles.totalCard, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <Text style={[styles.totalLabel, { fontFamily: font.medium }]}>
                 {t("onmap.total", "Total")}
               </Text>
@@ -246,12 +247,12 @@ export function AcceptOrderSummaryDialog({
             </View>
 
             <View style={styles.callSection}>
-              <View style={styles.contactGroup}>
+              <View style={[styles.contactGroup, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
                 <Text style={[styles.contactGroupLabel, { fontFamily: font.medium }]}>
                   {t("onmap.restaurant", "Restaurant")} · {storeName}
                 </Text>
                 {storePhone ? (
-                  <View style={styles.callRow}>
+                  <View style={[styles.callRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                     <Button
                       label={t("onmap.callMerchant", "Call store")}
                       onPress={() => dial(storePhone)}
@@ -273,12 +274,12 @@ export function AcceptOrderSummaryDialog({
                   </Text>
                 )}
               </View>
-              <View style={styles.contactGroup}>
+              <View style={[styles.contactGroup, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
                 <Text style={[styles.contactGroupLabel, { fontFamily: font.medium }]}>
                   {t("onmap.customer", "Customer")} · {customerName}
                 </Text>
                 {customerPhone ? (
-                  <View style={styles.callRow}>
+                  <View style={[styles.callRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                     <Button
                       label={t("onmap.callCustomer", "Call")}
                       onPress={() => dial(customerPhone)}
@@ -336,11 +337,11 @@ function SummaryRow({
   isLast?: boolean;
 }) {
   return (
-    <View style={[styles.row, !isLast && styles.rowBorder]}>
+    <View style={[styles.row, !isLast && styles.rowBorder, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
       <View style={styles.rowIconWrap}>
         <Ionicons name={icon} size={scale(16)} color={Colors.primary} />
       </View>
-      <View style={styles.rowText}>
+      <View style={[styles.rowText, { alignItems: font.rtl ? "flex-end" : "flex-start" }]}>
         <Text style={[styles.rowLabel, { fontFamily: font.medium }]}>
           {label}
         </Text>

@@ -24,8 +24,8 @@ export function RevenueBalanceCard({
     <LinearGradient
       colors={["#ffffffce", "#e6dcfa", "#faf6f6", "#fadecd"]}
       // Gradient coords don't auto-mirror under native RTL — flip manually.
-      start={{ x: I18nManager.isRTL ? 1.2 : 0, y: 0 }}
-      end={{ x: I18nManager.isRTL ? 0 : 1, y: 1 }}
+      start={{ x: font.rtl ? 1.2 : 0, y: 0 }}
+      end={{ x: font.rtl ? 0 : 1, y: 1 }}
       style={[styles.card, style]}
     >
       {/* ── Balance section — native RTL mirrors the layout automatically ── */}

@@ -157,7 +157,7 @@ export function OrderProgressCard({
   return (
     <View style={styles.card}>
       {/* ── Steps Row ── */}
-      <View style={styles.stepsRow}>
+      <View style={[styles.stepsRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Step 1 — Shop */}
         <View style={styles.stepItem}>
           <StepCircle
@@ -243,9 +243,9 @@ export function OrderProgressCard({
       <View style={styles.divider} />
 
       {/* ── Info Row ── */}
-      <View style={styles.infoRow}>
+      <View style={[styles.infoRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         {/* Distance */}
-        <View style={styles.infoItem}>
+        <View style={[styles.infoItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <SvgXml xml={distanceIconXml} width={scale(18)} height={scale(18)} />
           <Text style={[styles.infoText, { fontFamily: font.medium }]}>
             {distance}
@@ -255,7 +255,7 @@ export function OrderProgressCard({
         <View style={styles.infoDot} />
 
         {/* Duration */}
-        <View style={styles.infoItem}>
+        <View style={[styles.infoItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <SvgXml xml={timeIconXml} width={scale(18)} height={scale(18)} />
           <Text style={[styles.infoText, { fontFamily: font.medium }]}>
             {duration}
@@ -265,7 +265,7 @@ export function OrderProgressCard({
         <View style={styles.infoDot} />
 
         {/* Payment */}
-        <View style={styles.infoItem}>
+        <View style={[styles.infoItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <SvgXml xml={cashIconXml} width={scale(18)} height={scale(18)} />
           <Text style={[styles.infoText, { fontFamily: font.medium }]}>
             {paymentMethod}

@@ -205,10 +205,10 @@ const OrderRequestCard: React.FC<OrderRequestCardProps> = ({
   });
 
   const renderItem = ({ item }: { item: OrderItem }) => (
-    <View style={styles.orderItem}>
-      <Text style={styles.itemQuantity}>{item.quantity}x</Text>
-      <Text style={styles.itemName}>{item.name}</Text>
-      <Text style={styles.itemPrice}>{formatPrice(item.price)}</Text>
+    <View style={[styles.orderItem, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
+      <Text style={[styles.itemQuantity, { textAlign: font.rtl ? "right" : "left", marginRight: font.rtl ? 0 : 8, marginLeft: font.rtl ? 8 : 0 }]}>{item.quantity}x</Text>
+      <Text style={[styles.itemName, { textAlign: font.rtl ? "right" : "left" }]}>{item.name}</Text>
+      <Text style={[styles.itemPrice, { textAlign: font.rtl ? "left" : "right" }]}>{formatPrice(item.price)}</Text>
     </View>
   );
 

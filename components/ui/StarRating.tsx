@@ -32,7 +32,7 @@ export function StarRating({
   });
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
       {stars.map(({ index, variant }) => {
         if (interactive) {
           return (
@@ -51,7 +51,7 @@ export function StarRating({
         <Text
           style={[
             styles.label,
-            { fontSize: size * 0.75, fontFamily: font.bold },
+            { fontSize: size * 0.75, fontFamily: font.bold, marginLeft: font.rtl ? 0 : Spacing.xs, marginRight: font.rtl ? Spacing.xs : 0 },
           ]}
         >
           {rating.toFixed(1)}

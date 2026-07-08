@@ -125,7 +125,7 @@ export default function PersonalInformationScreen() {
       <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons
-            name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+            name={font.rtl ? "arrow-forward" : "arrow-back"}
             size={24}
             color="#0D0B12"
           />

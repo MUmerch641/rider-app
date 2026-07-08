@@ -43,7 +43,7 @@ export function OrderStatusTabs({
 
   // Native RTL mirrors the tab row and the pill's `left: 0` anchor, but
   // translateX is physical — flip its sign to move the pill the right way.
-  const direction = I18nManager.isRTL ? -1 : 1;
+  const direction = font.rtl ? -1 : 1;
 
   // ── Slide pill when active tab or tabWidth changes ────────────────────────
   useEffect(() => {
@@ -72,7 +72,7 @@ export function OrderStatusTabs({
 
   return (
     <View style={styles.container}>
-      <View style={styles.scroll} onLayout={onContainerLayout}>
+      <View style={[styles.scroll, { flexDirection: font.rtl ? "row-reverse" : "row" }]} onLayout={onContainerLayout}>
         {/* Sliding white pill — exactly one tab wide */}
         {tabWidth > 0 && (
           <Animated.View
@@ -164,7 +164,7 @@ function TabItem({
       activeOpacity={1}
     >
       <Animated.View
-        style={[styles.tabInner, { transform: [{ scale: scaleAnim }] }]}
+        style={[styles.tabInner, { transform: [{ scale: scaleAnim }], flexDirection: font.rtl ? "row-reverse" : "row" }]}
       >
         <Text
           style={[

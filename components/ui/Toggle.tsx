@@ -48,9 +48,9 @@ export function Toggle({
   });
 
   return (
-    <View style={[styles.row, style]}>
+    <View style={[styles.row, style, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
       {label && (
-        <Text style={[styles.label, { fontFamily: font.medium }]}>{label}</Text>
+        <Text style={[styles.label, { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" }]}>{label}</Text>
       )}
       <TouchableOpacity onPress={() => onToggle(!value)} activeOpacity={0.85}>
         <Animated.View style={[styles.track, { backgroundColor: bgColor }]}>

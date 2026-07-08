@@ -354,19 +354,19 @@ export default function SupportChatScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
           <Ionicons
-            name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+            name={font.rtl ? "arrow-forward" : "arrow-back"}
             size={scale(22)}
             color={Colors.textPrimary}
           />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
+        <View style={[styles.headerCenter, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
           <View style={styles.supportAvatar}>
             <SupportIcon size={scale(28)} color={Colors.dark} />
           </View>
@@ -374,7 +374,7 @@ export default function SupportChatScreen() {
             <Text style={[styles.headerName, { fontFamily: font.semibold }]}>
               {t("support.title")}
             </Text>
-            <View style={styles.onlineRow}>
+            <View style={[styles.onlineRow, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <View style={styles.onlineDot} />
               <Text style={[styles.onlineText, { fontFamily: font.regular }]}>
                 {t("support.online")}
@@ -462,7 +462,7 @@ export default function SupportChatScreen() {
         {/* ── Input Bar ── */}
         <View style={styles.inputBarWrapper}>
           {pendingAttachmentUri ? (
-            <View style={styles.pendingAttachment}>
+            <View style={[styles.pendingAttachment, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
               <Image
                 source={{ uri: pendingAttachmentUri }}
                 style={styles.pendingPreview}
@@ -477,7 +477,7 @@ export default function SupportChatScreen() {
                     "Review the image before sending.",
                   )}
                 </Text>
-                <View style={styles.pendingActions}>
+                <View style={[styles.pendingActions, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
                   <TouchableOpacity
                     style={styles.pendingCancelBtn}
                     onPress={cancelPendingAttachment}
@@ -523,7 +523,7 @@ export default function SupportChatScreen() {
               </TouchableOpacity>
             </View>
           ) : null}
-          <View style={styles.inputBar}>
+          <View style={[styles.inputBar, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
             <TouchableOpacity
               style={styles.attachButton}
               onPress={() => void handleAttachImage()}
@@ -537,7 +537,7 @@ export default function SupportChatScreen() {
               onChangeText={setInput}
               placeholder={t("support.saySomething", "Say Something")}
               placeholderTextColor={Colors.textMuted}
-              style={[styles.input, { fontFamily: font.regular }]}
+              style={[styles.input, { fontFamily: font.regular, textAlign: font.rtl ? "right" : "left", flex: 1 }]}
               returnKeyType="send"
               onSubmitEditing={sendMessage}
               multiline={false}
@@ -553,7 +553,7 @@ export default function SupportChatScreen() {
               style={[
                 styles.sendBtn,
                 // Icon glyphs never auto-flip — mirror manually in RTL.
-                { transform: I18nManager.isRTL ? [{ scaleX: -1 }] : [] },
+                { transform: font.rtl ? [{ scaleX: -1 }] : [] },
               ]}
             />
           </View>

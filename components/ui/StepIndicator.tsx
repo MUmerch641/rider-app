@@ -18,8 +18,7 @@ export function StepIndicator({
   const font = useAppFont();
 
   return (
-    // Native RTL mirrors the row automatically.
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style, { flexDirection: font.rtl ? "row-reverse" : "row" }]}>
       {Array.from({ length: totalSteps }, (_, i) => {
         const stepNum = i + 1;
         const isCompleted = stepNum < currentStep;

@@ -306,7 +306,7 @@ export default function InboxScreen() {
           >
             <Ionicons
               // Icon glyphs never auto-flip — mirror the back arrow manually.
-              name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+              name={font.rtl ? "arrow-forward" : "arrow-back"}
               size={scale(22)}
               color={Colors.textPrimary}
             />
@@ -318,6 +318,7 @@ export default function InboxScreen() {
       <View
         style={[
           styles.tabRow,
+          { flexDirection: font.rtl ? "row-reverse" : "row" },
           // The header already supplies top spacing; collapse the tab row's
           // own margin so the switcher doesn't sit too low when pushed.
           router.canGoBack() && { marginTop: spacing.md },
@@ -357,9 +358,9 @@ export default function InboxScreen() {
               activeOpacity={0.75}
               accessibilityLabel={t("inbox.clearAll")}
               style={{
-                flexDirection: "row",
+                flexDirection: font.rtl ? "row-reverse" : "row",
                 alignItems: "center",
-                alignSelf: "flex-end",
+                alignSelf: font.rtl ? "flex-start" : "flex-end",
                 gap: scale(6),
                 paddingVertical: verticalScale(6),
               }}
@@ -381,7 +382,7 @@ export default function InboxScreen() {
               <Text
                 style={[
                   styles.groupLabel,
-                  { fontFamily: font.medium },
+                  { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" },
                 ]}
               >
                 {t(group.group, {
@@ -397,7 +398,7 @@ export default function InboxScreen() {
                 {group.items.map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.card}
+                    style={[styles.card, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                     activeOpacity={0.75}
                     onPress={() => handleNotificationPress(item)}
                   >
@@ -406,6 +407,7 @@ export default function InboxScreen() {
                       <View
                         style={[
                           styles.cardTopRow,
+                          { flexDirection: font.rtl ? "row-reverse" : "row" }
                         ]}
                       >
                         <Text
@@ -420,7 +422,7 @@ export default function InboxScreen() {
                         <Text
                           style={[
                             styles.cardTime,
-                            { fontFamily: font.regular },
+                            { fontFamily: font.regular, textAlign: font.rtl ? "left" : "right" },
                           ]}
                         >
                           {item.time}
@@ -429,6 +431,7 @@ export default function InboxScreen() {
                       <View
                         style={[
                           styles.cardBottomRow,
+                          { flexDirection: font.rtl ? "row-reverse" : "row" }
                         ]}
                       >
                         <Text
@@ -473,7 +476,7 @@ export default function InboxScreen() {
                 <Text
                   style={[
                     styles.groupLabel,
-                    { fontFamily: font.medium },
+                    { fontFamily: font.medium, textAlign: font.rtl ? "right" : "left" },
                   ]}
                 >
                   {t(group.group, {
@@ -489,7 +492,7 @@ export default function InboxScreen() {
                   {group.items.map((chat) => (
                     <TouchableOpacity
                       key={chat.id}
-                      style={[styles.card, chat.active && styles.cardActive]}
+                      style={[styles.card, chat.active && styles.cardActive, { flexDirection: font.rtl ? "row-reverse" : "row" }]}
                       activeOpacity={0.75}
                       onPress={() =>
                         router.push({
@@ -508,6 +511,7 @@ export default function InboxScreen() {
                         <View
                           style={[
                             styles.cardTopRow,
+                            { flexDirection: font.rtl ? "row-reverse" : "row" }
                           ]}
                         >
                           <Text
@@ -522,7 +526,7 @@ export default function InboxScreen() {
                           <Text
                             style={[
                               styles.cardTime,
-                              { fontFamily: font.regular },
+                              { fontFamily: font.regular, textAlign: font.rtl ? "left" : "right" },
                             ]}
                           >
                             {chat.date}
