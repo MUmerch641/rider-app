@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "node init && expo start",
     "i18n:audit": "node scripts/i18n-audit.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
